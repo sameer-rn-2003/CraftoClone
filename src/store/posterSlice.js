@@ -19,6 +19,10 @@ const initialState = {
     messageColor: null,      // null = use template default
     nameFontSize: null,      // null = use template default (number override)
     messageFontSize: null,
+    namePosition: { x: 0, y: 0 },
+    nameScale: 1.0,
+    messagePosition: { x: 0, y: 0 },
+    messageScale: 1.0,
     nameBold: true,
     nameItalic: false,
     messageBold: false,
@@ -57,6 +61,10 @@ const posterSlice = createSlice({
         setSelectedTemplate(state, { payload }) {
             state.selectedTemplate = payload;
             state.photoPosition = { x: 0, y: 0 };
+            state.namePosition = { x: 0, y: 0 };
+            state.nameScale = 1.0;
+            state.messagePosition = { x: 0, y: 0 };
+            state.messageScale = 1.0;
         },
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
@@ -74,6 +82,10 @@ const posterSlice = createSlice({
         // Font size
         setNameFontSize(state, { payload }) { state.nameFontSize = payload; },
         setMessageFontSize(state, { payload }) { state.messageFontSize = payload; },
+        setNamePosition(state, { payload }) { state.namePosition = payload; },
+        setNameScale(state, { payload }) { state.nameScale = payload; },
+        setMessagePosition(state, { payload }) { state.messagePosition = payload; },
+        setMessageScale(state, { payload }) { state.messageScale = payload; },
 
         // Font style
         setNameBold(state, { payload }) { state.nameBold = payload; },
@@ -109,8 +121,8 @@ const posterSlice = createSlice({
         },
         updateStickerPosition(state, { payload }) {
             // payload: { id, x, y }
-            const s = state.stickers.find(s => s.id === payload.id);
-            if (s) { s.x = payload.x; s.y = payload.y; }
+            const sticker = state.stickers.find(item => item.id === payload.id);
+            if (sticker) { sticker.x = payload.x; sticker.y = payload.y; }
         },
         removeSticker(state, { payload }) {
             // payload: id string
@@ -136,6 +148,10 @@ const posterSlice = createSlice({
             state.messageColor = null;
             state.nameFontSize = null;
             state.messageFontSize = null;
+            state.namePosition = { x: 0, y: 0 };
+            state.nameScale = 1.0;
+            state.messagePosition = { x: 0, y: 0 };
+            state.messageScale = 1.0;
             state.nameBold = true;
             state.nameItalic = false;
             state.messageBold = false;
@@ -160,6 +176,7 @@ export const {
     setPhotoPosition, setPhotoScale,
     setNameColor, setMessageColor,
     setNameFontSize, setMessageFontSize,
+    setNamePosition, setNameScale, setMessagePosition, setMessageScale,
     setNameBold, setNameItalic, setMessageBold, setMessageItalic,
     setTextAlign, setTextShadow, setShowName, setShowMessage,
     setPhotoShape, setAccentColorOverride,

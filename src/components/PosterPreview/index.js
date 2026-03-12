@@ -1,12 +1,3 @@
-// src/components/PosterPreview/index.js
-// Composited poster — 6 layers:
-//   1. Header (colours + pattern + optional overlay)
-//   2. Photo — DRAGGABLE (1 finger) + PINCH-TO-RESIZE (2 fingers)
-//   3. Name text  (hidden when showName=false)
-//   4. Message text  (hidden when showMessage=false)
-//   5. Draggable stickers
-//   6. Footer / watermark
-
 import React, { useRef } from 'react';
 import {
     Animated,
@@ -17,19 +8,26 @@ import {
     View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { setPhotoPosition, setPhotoScale, updateStickerPosition } from '../../store/posterSlice';
+import {
+    setMessagePosition,
+    setMessageScale,
+    setNamePosition,
+    setNameScale,
+    setPhotoPosition,
+    setPhotoScale,
+    updateStickerPosition,
+} from '../../store/posterSlice';
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
 
-// ─── Helpers ──────────────────────────────────────────────────────
-
-/** Euclidean distance between two touch points */
 const getTouchDistance = touches => {
     const dx = touches[0].pageX - touches[1].pageX;
     const dy = touches[0].pageY - touches[1].pageY;
     return Math.sqrt(dx * dx + dy * dy);
 };
 
-/** Resolve photo frame border-radius by shape override */
+const MIN_TEXT_SCALE = 0.25;
+const MAX_TEXT_SCALE = 3.0;
+
 const resolveFrameRadius = (photoShape, templateRadius) => {
     switch (photoShape) {
         case 'circle': return 999;
@@ -38,8 +36,6 @@ const resolveFrameRadius = (photoShape, templateRadius) => {
         default: return templateRadius;
     }
 };
-
-// ─── Pattern layers ───────────────────────────────────────────────
 
 const DiagonalPattern = ({ color }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -102,13 +98,6 @@ const PatternLayer = ({ pattern, accentColor }) => {
         default: return null;
     }
 };
-
-// ─── DraggablePhoto — 1-finger drag + 2-finger pinch-to-resize ────
-//
-// WHY pinch is detected in onPanResponderMove, not onPanResponderGrant:
-//   PanResponder.grant fires for the FIRST touch only (touches.length===1).
-//   The second finger appears ONLY in subsequent onPanResponderMove events.
-//   So pinch initialisation must happen inside onMove when touches.length becomes 2.
 
 const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoScale }) => {
     const dispatch = useDispatch();
@@ -251,8 +240,6 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
     );
 };
 
-// ─── StaticPhoto — for capture (reads committed Redux values) ─────
-
 const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoScale }) => {
     const borderRadius = resolveFrameRadius(photoShape, photoFrame.borderRadius);
     // Scale grows from the frame's centre point
@@ -281,8 +268,6 @@ const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoSca
         </View>
     );
 };
-
-// ─── Draggable sticker ────────────────────────────────────────────
 
 const DraggableSticker = ({ sticker, interactive }) => {
     const dispatch = useDispatch();
@@ -324,14 +309,172 @@ const DraggableSticker = ({ sticker, interactive }) => {
     );
 };
 
-// ─── Text shadow helper ───────────────────────────────────────────
-
 const buildTextShadow = enabled =>
     enabled
         ? { textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 3 }
         : {};
 
-// ─── Main PosterPreview ────────────────────────────────────────────
+const resolveTextBounds = field => ({
+    top: field.y,
+    left: field.x ?? 16,
+    width: field.fieldWidth ?? undefined,
+    right: field.fieldWidth !== undefined ? undefined
+        : field.x !== undefined ? undefined
+            : 16,
+});
+
+const DraggableText = ({
+    text,
+    numberOfLines,
+    field,
+    textStyle,
+    textPosition,
+    textScale,
+    setPositionAction,
+    setScaleAction,
+}) => {
+    const dispatch = useDispatch();
+
+    const pan = useRef(new Animated.ValueXY({ x: textPosition.x, y: textPosition.y })).current;
+    const scaleAnim = useRef(new Animated.Value(textScale)).current;
+
+    const committed = useRef({ x: textPosition.x, y: textPosition.y });
+    const committedScale = useRef(textScale);
+
+    const isPinching = useRef(false);
+    const initPinchDist = useRef(null);
+    const initPinchScale = useRef(textScale);
+    const localScale = useRef(textScale);
+
+    const prevTextPosition = useRef(textPosition);
+    if (
+        (prevTextPosition.current.x !== textPosition.x || prevTextPosition.current.y !== textPosition.y)
+        && !isPinching.current
+    ) {
+        prevTextPosition.current = textPosition;
+        committed.current = { x: textPosition.x, y: textPosition.y };
+        pan.setOffset({ x: 0, y: 0 });
+        pan.setValue({ x: textPosition.x, y: textPosition.y });
+    }
+
+    const prevTextScale = useRef(textScale);
+    if (prevTextScale.current !== textScale && !isPinching.current) {
+        prevTextScale.current = textScale;
+        scaleAnim.setValue(textScale);
+        committedScale.current = textScale;
+        localScale.current = textScale;
+    }
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+
+            onPanResponderGrant: () => {
+                isPinching.current = false;
+                initPinchDist.current = null;
+                pan.setOffset(committed.current);
+                pan.setValue({ x: 0, y: 0 });
+            },
+
+            onPanResponderMove: (evt, gesture) => {
+                const touches = evt.nativeEvent.touches;
+
+                if (touches.length >= 2) {
+                    if (!initPinchDist.current) {
+                        isPinching.current = true;
+                        initPinchDist.current = getTouchDistance(touches);
+                        initPinchScale.current = committedScale.current;
+                        localScale.current = committedScale.current;
+                        pan.flattenOffset();
+                    } else {
+                        const dist = getTouchDistance(touches);
+                        const ratio = dist / initPinchDist.current;
+                        const newScale = Math.min(MAX_TEXT_SCALE, Math.max(
+                            MIN_TEXT_SCALE,
+                            initPinchScale.current * ratio,
+                        ));
+                        localScale.current = newScale;
+                        scaleAnim.setValue(newScale);
+                    }
+                } else if (!isPinching.current) {
+                    Animated.event(
+                        [null, { dx: pan.x, dy: pan.y }],
+                        { useNativeDriver: false },
+                    )(evt, gesture);
+                }
+            },
+
+            onPanResponderRelease: (_, gesture) => {
+                if (isPinching.current) {
+                    committedScale.current = localScale.current;
+                    dispatch(setScaleAction(localScale.current));
+                    isPinching.current = false;
+                    initPinchDist.current = null;
+                } else {
+                    pan.flattenOffset();
+                    const next = {
+                        x: committed.current.x + gesture.dx,
+                        y: committed.current.y + gesture.dy,
+                    };
+                    committed.current = next;
+                    dispatch(setPositionAction(next));
+                }
+            },
+
+            onPanResponderTerminate: () => {
+                isPinching.current = false;
+                initPinchDist.current = null;
+                pan.flattenOffset();
+            },
+        }),
+    ).current;
+
+    return (
+        <Animated.Text
+            style={[
+                styles.textField,
+                resolveTextBounds(field),
+                textStyle,
+                {
+                    transform: [
+                        { scale: scaleAnim },
+                        ...pan.getTranslateTransform(),
+                    ],
+                },
+            ]}
+            numberOfLines={numberOfLines}
+            adjustsFontSizeToFit
+            {...panResponder.panHandlers}>
+            {text}
+        </Animated.Text>
+    );
+};
+
+const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textScale }) => (
+    <Text
+        style={[
+            styles.textField,
+            resolveTextBounds(field),
+            textStyle,
+            {
+                transform: [
+                    { scale: textScale },
+                    { translateX: textPosition.x },
+                    { translateY: textPosition.y },
+                ],
+            },
+        ]}
+        numberOfLines={numberOfLines}
+        adjustsFontSizeToFit>
+        {text}
+    </Text>
+);
+
+const DraggableNameText = props => <DraggableText {...props} numberOfLines={1} />;
+const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2} />;
+const StaticNameText = props => <StaticText {...props} numberOfLines={1} />;
+const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
 const PosterPreview = ({ posterRef, interactive = false }) => {
     const p = useSelector(s => s.poster);
@@ -355,6 +498,22 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
     const msgFontWeight = p.messageBold ? 'bold' : 'normal';
     const msgFontStyle = p.messageItalic ? 'italic' : 'normal';
     const shadowStyle = buildTextShadow(p.textShadow);
+    const nameTextStyle = nameField ? {
+        fontSize: p.nameFontSize ?? nameField.fontSize,
+        fontWeight: nameFontWeight,
+        fontStyle: nameFontStyle,
+        color: p.nameColor ?? nameField.color,
+        textAlign: nameField.x !== undefined ? (nameField.align || 'left') : p.textAlign,
+        ...shadowStyle,
+    } : null;
+    const messageTextStyle = messageField ? {
+        fontSize: p.messageFontSize ?? messageField.fontSize,
+        fontWeight: msgFontWeight,
+        fontStyle: msgFontStyle,
+        color: p.messageColor ?? messageField.color,
+        textAlign: messageField.x !== undefined ? (messageField.align || 'left') : p.textAlign,
+        ...shadowStyle,
+    } : null;
 
     return (
         <View
@@ -406,48 +565,40 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
 
             {/* ── 3. Name text (hidden if showName=false) ── */}
             {p.showName && nameField && (
-                <Text
-                    style={[styles.textField, {
-                        top: nameField.y,
-                        left: nameField.x ?? 16,
-                        width: nameField.fieldWidth ?? undefined,
-                        right: nameField.fieldWidth !== undefined ? undefined
-                            : nameField.x !== undefined ? undefined
-                                : 16,
-                        fontSize: p.nameFontSize ?? nameField.fontSize,
-                        fontWeight: nameFontWeight,
-                        fontStyle: nameFontStyle,
-                        color: p.nameColor ?? nameField.color,
-                        textAlign: nameField.x !== undefined ? (nameField.align || 'left') : p.textAlign,
-                        ...shadowStyle,
-                    }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit>
-                    {p.userName || nameField.label}
-                </Text>
+                interactive
+                    ? <DraggableNameText
+                        field={nameField}
+                        text={p.userName || nameField.label}
+                        textStyle={nameTextStyle}
+                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                        textScale={p.nameScale ?? 1}
+                        setPositionAction={setNamePosition}
+                        setScaleAction={setNameScale} />
+                    : <StaticNameText
+                        field={nameField}
+                        text={p.userName || nameField.label}
+                        textStyle={nameTextStyle}
+                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                        textScale={p.nameScale ?? 1} />
             )}
 
             {/* ── 4. Message (hidden if showMessage=false) ── */}
             {p.showMessage && messageField && (
-                <Text
-                    style={[styles.textField, {
-                        top: messageField.y,
-                        left: messageField.x ?? 16,
-                        width: messageField.fieldWidth ?? undefined,
-                        right: messageField.fieldWidth !== undefined ? undefined
-                            : messageField.x !== undefined ? undefined
-                                : 16,
-                        fontSize: p.messageFontSize ?? messageField.fontSize,
-                        fontWeight: msgFontWeight,
-                        fontStyle: msgFontStyle,
-                        color: p.messageColor ?? messageField.color,
-                        textAlign: messageField.x !== undefined ? (messageField.align || 'left') : p.textAlign,
-                        ...shadowStyle,
-                    }]}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit>
-                    {p.userMessage || messageField.label}
-                </Text>
+                interactive
+                    ? <DraggableMessageText
+                        field={messageField}
+                        text={p.userMessage || messageField.label}
+                        textStyle={messageTextStyle}
+                        textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                        textScale={p.messageScale ?? 1}
+                        setPositionAction={setMessagePosition}
+                        setScaleAction={setMessageScale} />
+                    : <StaticMessageText
+                        field={messageField}
+                        text={p.userMessage || messageField.label}
+                        textStyle={messageTextStyle}
+                        textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                        textScale={p.messageScale ?? 1} />
             )}
 
             {/* ── 5. Stickers ──────────────────────────── */}
