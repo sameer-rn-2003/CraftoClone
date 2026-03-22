@@ -61,6 +61,7 @@ const posterSlice = createSlice({
         setSelectedTemplate(state, { payload }) {
             state.selectedTemplate = payload;
             state.photoPosition = { x: 0, y: 0 };
+            state.photoScale = 1.0;
             state.namePosition = { x: 0, y: 0 };
             state.nameScale = 1.0;
             state.messagePosition = { x: 0, y: 0 };
@@ -69,6 +70,7 @@ const posterSlice = createSlice({
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
             state.photoPosition = { x: 0, y: 0 };
+            state.photoScale = 1.0;
         },
         setUserName(state, { payload }) { state.userName = payload; },
         setUserMessage(state, { payload }) { state.userMessage = payload; },
@@ -144,6 +146,7 @@ const posterSlice = createSlice({
             state.userName = '';
             state.userMessage = '';
             state.photoPosition = { x: 0, y: 0 };
+            state.photoScale = 1.0;
             state.nameColor = null;
             state.messageColor = null;
             state.nameFontSize = null;

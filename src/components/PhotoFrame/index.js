@@ -1,18 +1,18 @@
 // src/components/PhotoFrame/index.js
 // Circular/rounded photo frame with PanResponder-based drag
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef } from 'react';
 import {
     Animated,
     Image,
     PanResponder,
     StyleSheet,
-    Text,
     View,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPhotoPosition } from '../../store/posterSlice';
-import { COLORS, SPACING } from '../../utils/constants';
+import { COLORS } from '../../utils/constants';
 
 const PhotoFrame = ({
     width = 150,
@@ -75,7 +75,7 @@ const PhotoFrame = ({
     if (!userPhoto) {
         return (
             <View style={containerStyle}>
-                <Text style={styles.placeholder}>👤</Text>
+                <MaterialCommunityIcons name="account-outline" style={styles.placeholder} />
             </View>
         );
     }
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         fontSize: 48,
+        color: COLORS.textMuted,
     },
 });
 

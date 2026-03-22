@@ -14,6 +14,8 @@ import {
     View,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { setSelectedTemplate } from '../../store/posterSlice';
 import { TEMPLATES } from '../../services/templateService';
 import BannerCard from '../../components/BannerCard';
@@ -26,8 +28,6 @@ import {
     SHADOW,
 } from '../../utils/constants';
 
-const ALL_CATEGORIES = [{ id: 'all', label: 'All', icon: '✨', color: COLORS.primary }, ...CATEGORIES];
-
 // ─── Animated Back Button ─────────────────────────────────────────
 const BackButton = ({ onPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -38,7 +38,7 @@ const BackButton = ({ onPress }) => {
                 onPress={onPress}
                 onPressIn={() => Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: true, speed: 60 }).start()}
                 onPressOut={() => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start()}>
-                <Text style={styles.backIcon}>←</Text>
+                <MaterialCommunityIcons name="arrow-left" style={styles.backIcon} />
             </Pressable>
         </Animated.View>
     );
@@ -46,6 +46,7 @@ const BackButton = ({ onPress }) => {
 
 const TemplateScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const initialCategory = route.params?.categoryId || 'all';
     const [selected, setSelected] = useState(initialCategory);
 
@@ -62,19 +63,24 @@ const TemplateScreen = ({ navigation, route }) => {
         [dispatch, navigation],
     );
 
+    const ALL_CATEGORIES = [
+        { id: 'all', label: t('categories.all'), icon: 'star-four-points-outline', color: COLORS.primary },
+        ...CATEGORIES.map(c => ({ ...c, label: t(`categories.${c.id}`) })),
+    ];
+
     const activeCategory = ALL_CATEGORIES.find(c => c.id === selected);
     const activeCatColor = activeCategory?.color || COLORS.primary;
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
             {/* ── Header ─────────────────────────────── */}
             <View style={styles.header}>
                 <BackButton onPress={() => navigation.goBack()} />
                 <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>Templates</Text>
-                    <Text style={styles.headerSub}>{filtered.length} designs</Text>
+                    <Text style={styles.headerTitle}>{t('templates.title')}</Text>
+                    <Text style={styles.headerSub}>{t('templates.designCount', { count: filtered.length })}</Text>
                 </View>
                 <View style={styles.headerRight} />
             </View>
@@ -105,7 +111,10 @@ const TemplateScreen = ({ navigation, route }) => {
                                 },
                             ]}
                             onPress={() => setSelected(cat.id)}>
-                            <Text style={styles.pillEmoji}>{cat.icon}</Text>
+                            <MaterialCommunityIcons
+                                name={cat.icon}
+                                style={[styles.pillIcon, isActive && styles.pillIconActive]}
+                            />
                             <Text style={[styles.pillLabel, isActive && styles.pillLabelActive]}>
                                 {cat.label}
                             </Text>
@@ -202,7 +211,8 @@ const styles = StyleSheet.create({
         borderColor: COLORS.glassBorder,
         gap: 5,
     },
-    pillEmoji: { fontSize: 14 },
+    pillIcon: { fontSize: 15, color: COLORS.textSecondary },
+    pillIconActive: { color: COLORS.white },
     pillLabel: {
         fontSize: FONTS.sizes.sm,
         color: COLORS.textSecondary,

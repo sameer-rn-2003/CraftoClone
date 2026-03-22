@@ -7,7 +7,9 @@ import {
     Text,
     View,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
     setMessagePosition,
     setMessageScale,
@@ -102,6 +104,7 @@ const PatternLayer = ({ pattern, accentColor }) => {
 const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoScale }) => {
     const dispatch = useDispatch();
     const { photoPosition } = useSelector(s => s.poster);
+    const { t } = useTranslation();
 
     const pan = useRef(new Animated.ValueXY({ x: photoPosition.x, y: photoPosition.y })).current;
     const scaleAnim = useRef(new Animated.Value(photoScale)).current;
@@ -115,6 +118,18 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
     const initPinchDist = useRef(null);   // null = pinch not active
     const initPinchScale = useRef(photoScale);
     const localScale = useRef(photoScale); // tracks value during active pinch
+
+    // ── Sync from external photoPosition changes ──────────────────────
+    const prevPhotoPosition = useRef(photoPosition);
+    if (
+        (prevPhotoPosition.current.x !== photoPosition.x || prevPhotoPosition.current.y !== photoPosition.y)
+        && !isPinching.current
+    ) {
+        prevPhotoPosition.current = photoPosition;
+        committed.current = { x: photoPosition.x, y: photoPosition.y };
+        pan.setOffset({ x: 0, y: 0 });
+        pan.setValue({ x: photoPosition.x, y: photoPosition.y });
+    }
 
     // ── Sync from external photoScale changes (preset buttons) ────────
     // useRef values don't update on re-render, so we sync manually.
@@ -226,10 +241,10 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
             {...panResponder.panHandlers}>
 
             {photoUri
-                ? <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
                 : <View style={styles.photoPlaceholder}>
-                    <Text style={styles.placeholderIcon}>👤</Text>
-                    <Text style={styles.placeholderText}>Upload a photo</Text>
+                    <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
+                    <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
                 </View>}
 
             {/* Gesture hint badge */}
@@ -261,9 +276,9 @@ const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoSca
             borderWidth: photoFrame.borderWidth,
         }]}>
             {photoUri
-                ? <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
                 : <View style={styles.photoPlaceholder}>
-                    <Text style={styles.placeholderIcon}>👤</Text>
+                    <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                 </View>}
         </View>
     );
@@ -296,7 +311,7 @@ const DraggableSticker = ({ sticker, interactive }) => {
     if (!interactive) {
         return (
             <View style={{ position: 'absolute', left: sticker.x, top: sticker.y }} pointerEvents="none">
-                <Text style={styles.stickerEmoji}>{sticker.emoji}</Text>
+                <MaterialCommunityIcons name={sticker.emoji} style={styles.stickerIcon} />
             </View>
         );
     }
@@ -304,7 +319,7 @@ const DraggableSticker = ({ sticker, interactive }) => {
     return (
         <Animated.View style={[styles.stickerWrapper, { transform: pan.getTranslateTransform() }]}
             {...panResponder.panHandlers}>
-            <Text style={styles.stickerEmoji}>{sticker.emoji}</Text>
+            <MaterialCommunityIcons name={sticker.emoji} style={styles.stickerIcon} />
         </Animated.View>
     );
 };
@@ -478,6 +493,7 @@ const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
 const PosterPreview = ({ posterRef, interactive = false }) => {
     const p = useSelector(s => s.poster);
+    const { t } = useTranslation();
 
     if (!p.selectedTemplate) return null;
 
@@ -487,6 +503,7 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
         footerColor, pattern, photoFrame, textFields,
         layout = 'top',
     } = selectedTemplate;
+    const templateImage = selectedTemplate.Image;
 
 
     const accentColor = p.accentColorOverride || templateAccent;
@@ -521,20 +538,30 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
             style={[styles.poster, { backgroundColor }]}
             collapsable={false}>
 
-            {/* ── 1. Background layer ────────────────── */}
-            {layout === 'left' ? (
-                // Vertical coloured bar on the left ~40% of width
-                <View style={[styles.leftBar, { backgroundColor: headerColor }]}>
-                    <PatternLayer pattern={pattern} accentColor={accentColor} />
-                    <View style={[styles.leftBarAccent, { backgroundColor: accentColor }]} />
-                </View>
-            ) : (
-                // Default top header band
-                <View style={[styles.header, { backgroundColor: headerColor }]}>
-                    <PatternLayer pattern={pattern} accentColor={accentColor} />
-                    <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
-                </View>
-            )}
+            {/* ── 0. Template Image (optional) ─────────── */}
+            {templateImage ? (
+                <Image
+                    source={templateImage}
+                    style={{height:"100%", width:"100%"}}
+                    resizeMode="cover"
+                />
+            ) : null}
+
+            {!templateImage ? (
+                layout === 'left' ? (
+                    // Vertical coloured bar on the left ~40% of width
+                    <View style={[styles.leftBar, { backgroundColor: headerColor }]}>
+                        <PatternLayer pattern={pattern} accentColor={accentColor} />
+                        <View style={[styles.leftBarAccent, { backgroundColor: accentColor }]} />
+                    </View>
+                ) : (
+                    // Default top header band
+                    <View style={[styles.header, { backgroundColor: headerColor }]}>
+                        <PatternLayer pattern={pattern} accentColor={accentColor} />
+                        <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+                    </View>
+                )
+            ) : null}
 
             {/* ── Background overlay (optional) ─────────── */}
             {p.bgOverlayColor && (
@@ -547,7 +574,6 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                 />
             )}
 
-            {/* ── 2. Photo ─────────────────────────────── */}
             {interactive
                 ? <DraggablePhoto
                     photoFrame={photoFrame}
@@ -563,7 +589,6 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                     photoScale={p.photoScale ?? 1} />}
 
 
-            {/* ── 3. Name text (hidden if showName=false) ── */}
             {p.showName && nameField && (
                 interactive
                     ? <DraggableNameText
@@ -578,7 +603,7 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                         field={nameField}
                         text={p.userName || nameField.label}
                         textStyle={nameTextStyle}
-                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                        textPosition={p.namePosition ?? { x: 0, y: 50 }}
                         textScale={p.nameScale ?? 1} />
             )}
 
@@ -608,7 +633,7 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
 
             {/* ── 6. Footer ─────────────────────────────── */}
             <View style={[styles.footer, { backgroundColor: footerColor }]}>
-                <Text style={styles.watermark}>Made with CraftoClone</Text>
+                <Text style={styles.watermark}>{t('poster.watermark')}</Text>
             </View>
         </View>
     );
@@ -655,7 +680,7 @@ const styles = StyleSheet.create({
         flex: 1, alignItems: 'center', justifyContent: 'center',
         backgroundColor: COLORS.card,
     },
-    placeholderIcon: { fontSize: 48 },
+    placeholderIcon: { fontSize: 48, color: COLORS.textMuted },
     placeholderText: {
         fontSize: 11, color: COLORS.textMuted, marginTop: 6,
         textAlign: 'center', paddingHorizontal: 8,
@@ -668,7 +693,13 @@ const styles = StyleSheet.create({
     },
     dragHandleIcon: { fontSize: 14, color: '#FFFFFF' },
     stickerWrapper: { position: 'absolute', zIndex: 10 },
-    stickerEmoji: { fontSize: 48 },
+    stickerIcon: {
+        fontSize: 44,
+        color: COLORS.text,
+        textShadowColor: 'rgba(255,255,255,0.6)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 2,
+    },
     textField: {
         position: 'absolute', left: 16, right: 16,
     },

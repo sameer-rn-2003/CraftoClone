@@ -4,6 +4,7 @@
 import { Platform, PermissionsAndroid, Alert } from 'react-native';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
+import i18n from '../i18n';
 
 /**
  * Request Android storage permission (for Android < 13)
@@ -16,10 +17,10 @@ const requestStoragePermission = async () => {
         const granted = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
             {
-                title: 'Storage Permission',
-                message: 'CraftoClone needs access to your storage to save posters.',
-                buttonPositive: 'Allow',
-                buttonNegative: 'Deny',
+                title: i18n.t('alerts.storagePermissionTitle'),
+                message: i18n.t('alerts.storagePermissionMsg'),
+                buttonPositive: i18n.t('alerts.allow'),
+                buttonNegative: i18n.t('alerts.deny'),
             },
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -37,7 +38,7 @@ const requestStoragePermission = async () => {
 export const saveToGallery = async uri => {
     const hasPermission = await requestStoragePermission();
     if (!hasPermission) {
-        Alert.alert('Permission Denied', 'Storage permission is required to save images.');
+        Alert.alert(i18n.t('alerts.permissionDeniedTitle'), i18n.t('alerts.permissionDeniedMsg'));
         throw new Error('Storage permission denied');
     }
 
@@ -89,12 +90,12 @@ export const shareImage = async uri => {
         await Share.open({
             url: shareUrl,
             type: 'image/jpeg',
-            title: 'Share your Crafto Poster',
-            message: 'Check out my poster made with CraftoClone! 🎨',
+            title: i18n.t('alerts.shareSheetTitle'),
+            message: i18n.t('alerts.shareSheetMessage'),
         });
     } catch (error) {
         if (error.message !== 'User did not share') {
-            Alert.alert('Share Failed', 'Could not share the poster. Please try again.');
+            Alert.alert(i18n.t('alerts.shareFailedTitle'), i18n.t('alerts.shareFailedMsg'));
             console.error('Share error:', error);
         }
     }

@@ -1,0 +1,255 @@
+{
+    "common": {
+        "ok": "ठीक आहे",
+        "auto": "ऑटो"
+    },
+    "languageSelection": {
+        "title": "तुमची भाषा निवडा",
+        "subtitle": "तुम्ही ती नंतर बदलू शकता"
+    },
+    "navigation": {
+        "tabs": {
+            "home": "होम",
+            "myPosters": "माझे पोस्टर्स",
+            "trending": "ट्रेंडिंग",
+            "profile": "प्रोफाइल"
+        },
+        "myPosters": {
+            "title": "माझे पोस्टर्स",
+            "subtitle": "जतन केलेले पोस्टर्स इथे दिसतील"
+        }
+    },
+    "categories": {
+        "all": "सर्व",
+        "political": "राजकीय",
+        "festival": "सण",
+        "birthday": "वाढदिवस",
+        "business": "व्यवसाय",
+        "motivational": "प्रेरणादायी"
+    },
+    "home": {
+        "heroBadge": "एआय पोस्टर स्टुडिओ",
+        "heroTitle": {
+            "create": "तयार करा",
+            "stunning": "दमदार",
+            "posters": "पोस्टर्स"
+        },
+        "heroSubtitle": "टेम्पलेट निवडा, वैयक्तिक करा, सेकंदांत शेअर करा",
+        "searchPlaceholder": "पोस्टर, सण किंवा उद्धरण शोधा",
+        "exploreCta": "एक्सप्लोर",
+        "section": {
+            "explore": "एक्सप्लोर",
+            "categories": "श्रेणी",
+            "handpicked": "निवडक",
+            "featured": "फीचर्ड"
+        },
+        "seeAll": "सर्व पहा",
+        "profileUpdated": "प्रोफाइल फोटो अपडेट झाला.",
+        "actions": {
+            "shareWhatsApp": "WhatsApp वर शेअर करा",
+            "download": "डाउनलोड",
+            "edit": "एडिट",
+            "changeImage": "इमेज बदला"
+        },
+        "underDevelopment": {
+            "title": "माहिती",
+            "message": "हे फीचर सध्या विकसित होत आहे."
+        }
+    },
+    "templates": {
+        "title": "टेम्पलेट्स",
+        "designCount": "{{count}} डिझाइन्स"
+    },
+    "editor": {
+        "title": "पोस्टर संपादित करा",
+        "preview": "प्रीव्ह्यू",
+        "noPhoto": {
+            "title": "फोटो नाही",
+            "message": "प्रीव्ह्यू करण्यापूर्वी फोटो अपलोड करा."
+        },
+        "tabs": {
+            "photo": "फोटो",
+            "text": "टेक्स्ट",
+            "style": "स्टाइल",
+            "stickers": "स्टिकर्स"
+        },
+        "visibility": {
+            "showName": "नाव दाखवा",
+            "showMessage": "संदेश दाखवा",
+            "visible": "● पोस्टरवर दिसते",
+            "hidden": "○ पोस्टरवरून लपलेले"
+        },
+        "photo": {
+            "fromDevice": {
+                "title": "डिव्हाइस मधून",
+                "subtitle": "तुमचा कॅमेरा रोल"
+            },
+            "fromBackend": {
+                "title": "बॅकएंड मधून",
+                "subtitle": "तुमच्या सर्व्हरवरील टेम्पलेट्स"
+            },
+            "upload": {
+                "selecting": "निवडत आहे…",
+                "changePhoto": "फोटो बदला",
+                "uploadPhoto": "फोटो अपलोड करा",
+                "tapToReplace": "बदलीसाठी टॅप करा",
+                "formats": "JPG, PNG समर्थित"
+            },
+            "dragHint": "वरच्या पोस्टरवरील फोटो ड्रॅग करून जागा बदला!",
+            "size": "फोटोचा आकार",
+            "frameSize": "फ्रेम आकार: {{width}}×{{height}}",
+            "pinchHint": "सूक्ष्म बदलासाठी पिंच करा"
+        },
+        "text": {
+            "name": {
+                "label": "नाव",
+                "placeholder": "तुमचे नाव",
+                "colour": "नावाचा रंग",
+                "size": "नावाचा आकार",
+                "style": "नावाची शैली"
+            },
+            "message": {
+                "label": "संदेश",
+                "placeholder": "तुमचा संदेश / टॅगलाइन",
+                "colour": "संदेशाचा रंग",
+                "size": "संदेशाचा आकार",
+                "style": "संदेशाची शैली"
+            },
+            "alignment": "मांडणी",
+            "align": {
+                "left": "डावा",
+                "center": "मध्य",
+                "right": "उजवा"
+            },
+            "shadow": {
+                "label": "टेक्स्ट शॅडो",
+                "subtitle": "टेक्स्टला खोली देते"
+            }
+        },
+        "style": {
+            "photoFrame": "फोटो फ्रेम",
+            "accentColour": "अॅक्सेंट रंग",
+            "backgroundOverlay": "पार्श्वभूमी ओव्हरले",
+            "photoShape": {
+                "default": "डीफॉल्ट",
+                "circle": "वर्तुळ",
+                "rounded": "गोल कोपरे",
+                "square": "चौकोन"
+            },
+            "bgOverlay": {
+                "none": "काही नाही",
+                "darkHalf": "डार्क ½",
+                "darkQuarter": "डार्क ¼",
+                "light": "हलका",
+                "blue": "निळा",
+                "red": "लाल"
+            }
+        },
+        "stickers": {
+            "hint": "पोस्टरवर ठेवण्यासाठी टॅप करा • जागा बदलण्यासाठी ड्रॅग करा • काढण्यासाठी पुन्हा टॅप करा",
+            "added": "जोडलेले स्टिकर्स — पोस्टरवर ड्रॅग करून जागा बदला"
+        }
+    },
+    "preview": {
+        "title": "तुमचा पोस्टर",
+        "actions": {
+            "save": "सेव्ह",
+            "saveSub": "गॅलरीत",
+            "share": "शेअर",
+            "shareSub": "अॅप्समध्ये"
+        },
+        "secondary": {
+            "editAgain": "← पुन्हा संपादित करा",
+            "newPoster": "नवीन पोस्टर"
+        }
+    },
+    "poster": {
+        "uploadPhoto": "फोटो अपलोड करा",
+        "watermark": "CraftoClone ने तयार केले"
+    },
+    "backendMedia": {
+        "loadingTemplates": "टेम्पलेट्स लोड होत आहेत…",
+        "failedToLoad": "टेम्पलेट्स लोड होऊ शकले नाही",
+        "couldntLoad": "लोड होऊ शकले नाही",
+        "retry": "पुन्हा प्रयत्न",
+        "noTemplates": "टेम्पलेट्स नाहीत",
+        "setApiUrlIn": "API URL येथे सेट करा",
+        "refresh": "रिफ्रेश",
+        "templatesCount": "{{count}} टेम्पलेट्स"
+    },
+    "alerts": {
+        "error": "त्रुटी",
+        "posterNotReady": "पोस्टर व्ह्यू तयार नाही.",
+        "captureFailedTitle": "कॅप्चर अयशस्वी",
+        "captureFailedMsg": "पोस्टर रेंडर करू शकलो नाही. पुन्हा प्रयत्न करा.",
+        "savedTitle": "सेव्ह झाले!",
+        "savedMsg": "तुमचा पोस्टर गॅलरीत सेव्ह झाला आहे.",
+        "storagePermissionTitle": "स्टोरेज परवानगी",
+        "storagePermissionMsg": "पोस्टर सेव्ह करण्यासाठी CraftoClone ला स्टोरेज प्रवेश हवा आहे.",
+        "allow": "परवानगी द्या",
+        "deny": "नकारा",
+        "permissionDeniedTitle": "परवानगी नाकारली",
+        "permissionDeniedMsg": "इमेज सेव्ह करण्यासाठी स्टोरेज परवानगी आवश्यक आहे.",
+        "shareSheetTitle": "तुमचा Crafto पोस्टर शेअर करा",
+        "shareSheetMessage": "CraftoClone ने तयार केलेला माझा पोस्टर पहा!",
+        "shareFailedTitle": "शेअर अयशस्वी",
+        "shareFailedMsg": "पोस्टर शेअर होऊ शकला नाही. पुन्हा प्रयत्न करा."
+    },
+    "auth": {
+        "login": {
+            "headerTitle": "लॉगिन",
+            "title": "पोस्टर मेकर",
+            "subtitle": "काही मिनिटांत आकर्षक डिझाइन्स तयार करा.\nसुरू करण्यासाठी तुमचा मोबाईल नंबर टाका.",
+            "country": "देश",
+            "mobileNumber": "मोबाईल नंबर",
+            "mobilePlaceholder": "00000 00000",
+            "sendOtp": "OTP पाठवा",
+            "terms": {
+                "prefix": "पुढे जाताना, तुम्ही आमच्या",
+                "termsOfService": "सेवेच्या अटी",
+                "and": " आणि",
+                "privacyPolicy": "गोपनीयता धोरण"
+            },
+            "errors": {
+                "enterMobile": "कृपया तुमचा मोबाईल नंबर टाका.",
+                "invalidMobile": "कृपया वैध 10 अंकी नंबर टाका."
+            },
+            "success": {
+                "otpSent": "OTP यशस्वीरित्या पाठवला गेला आहे."
+            }
+        },
+        "otp": {
+            "headerTitle": "व्हेरिफिकेशन",
+            "title": "OTP व्हेरिफिकेशन",
+            "subtitle": "पाठवलेला 6 अंकी कोड टाका",
+            "resendIn": "कोड पुन्हा पाठविण्यासाठी",
+            "min": "मि",
+            "sec": "से",
+            "verifyNow": "आता पडताळा",
+            "didntReceive": "कोड मिळाला नाही?",
+            "resendOtp": "OTP पुन्हा पाठवा",
+            "phoneMask": "+91 98765 43210",
+            "errors": {
+                "enterCompleteCode": "कृपया पूर्ण 6 अंकी कोड टाका.",
+                "waitBeforeResend": "नवीन कोड मागण्यापूर्वी थोडा वेळ थांबा."
+            },
+            "success": {
+                "verified": "OTP यशस्वीरित्या पडताळला गेला आहे.",
+                "resent": "नवीन OTP पाठवला गेला आहे."
+            }
+        }
+    },
+    "userSetup": {
+        "title": "तुमचा प्रोफाइल सेट करा",
+        "subtitle": "पोस्टर्स वैयक्तिक करण्यासाठी तुमचा फोटो आणि नाव जोडा.",
+        "loading": "लोड होत आहे...",
+        "addPhoto": "फोटो जोडा",
+        "yourName": "तुमचे नाव",
+        "namePlaceholder": "तुमचे नाव टाका",
+        "continue": "पुढे जा",
+        "errors": {
+            "selectImage": "कृपया तुमचा फोटो निवडा.",
+            "enterName": "कृपया तुमचे नाव टाका."
+        }
+    }
+}

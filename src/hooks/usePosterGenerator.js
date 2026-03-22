@@ -5,12 +5,14 @@ import { useCallback, useRef, useState } from 'react';
 import { captureRef } from 'react-native-view-shot';
 import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { addSavedPoster } from '../store/posterSlice';
 import { saveToGallery, shareImage } from '../services/imageService';
 
 const usePosterGenerator = () => {
     const posterRef = useRef(null);
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const [isSaving, setIsSaving] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
 
@@ -19,7 +21,7 @@ const usePosterGenerator = () => {
      */
     const capturePoster = useCallback(async () => {
         if (!posterRef.current) {
-            Alert.alert('Error', 'Poster view is not ready.');
+            Alert.alert(t('alerts.error'), t('alerts.posterNotReady'));
             return null;
         }
         try {
@@ -31,10 +33,10 @@ const usePosterGenerator = () => {
             return `data:image/jpeg;base64,${uri}`;
         } catch (error) {
             console.error('capturePoster error:', error);
-            Alert.alert('Capture Failed', 'Could not render the poster. Please try again.');
+            Alert.alert(t('alerts.captureFailedTitle'), t('alerts.captureFailedMsg'));
             return null;
         }
-    }, []);
+    }, [t]);
 
     /**
      * Save poster to gallery
@@ -46,13 +48,13 @@ const usePosterGenerator = () => {
             if (!uri) return;
             const filePath = await saveToGallery(uri);
             dispatch(addSavedPoster({ uri: filePath }));
-            Alert.alert('Saved! 🎉', 'Your poster has been saved to the gallery.');
+            Alert.alert(t('alerts.savedTitle'), t('alerts.savedMsg'));
         } catch (error) {
             console.error('savePoster error:', error);
         } finally {
             setIsSaving(false);
         }
-    }, [capturePoster, dispatch]);
+    }, [capturePoster, dispatch, t]);
 
     /**
      * Share poster via system share sheet

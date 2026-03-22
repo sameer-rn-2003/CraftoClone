@@ -1,0 +1,255 @@
+{
+    "common": {
+        "ok": "OK",
+        "auto": "AUTO"
+    },
+    "languageSelection": {
+        "title": "Choose your language",
+        "subtitle": "You can change it later"
+    },
+    "navigation": {
+        "tabs": {
+            "home": "Home",
+            "myPosters": "My Posters",
+            "trending": "Trending",
+            "profile": "Profile"
+        },
+        "myPosters": {
+            "title": "My Posters",
+            "subtitle": "Saved posters will appear here"
+        }
+    },
+    "categories": {
+        "all": "All",
+        "political": "Political",
+        "festival": "Festival",
+        "birthday": "Birthday",
+        "business": "Business",
+        "motivational": "Motivational"
+    },
+    "home": {
+        "heroBadge": "AI Poster Studio",
+        "heroTitle": {
+            "create": "Create",
+            "stunning": "Stunning",
+            "posters": "Posters"
+        },
+        "heroSubtitle": "Pick a template, personalize, share in seconds",
+        "searchPlaceholder": "Search posters, festivals, or quotes",
+        "exploreCta": "Explore",
+        "section": {
+            "explore": "EXPLORE",
+            "categories": "Categories",
+            "handpicked": "HANDPICKED",
+            "featured": "Featured"
+        },
+        "seeAll": "See all",
+        "profileUpdated": "Profile image updated.",
+        "actions": {
+            "shareWhatsApp": "Share to WhatsApp",
+            "download": "Download",
+            "edit": "Edit",
+            "changeImage": "Change Image"
+        },
+        "underDevelopment": {
+            "title": "Info",
+            "message": "This feature is under development."
+        }
+    },
+    "templates": {
+        "title": "Templates",
+        "designCount": "{{count}} designs"
+    },
+    "editor": {
+        "title": "Edit Poster",
+        "preview": "Preview",
+        "noPhoto": {
+            "title": "No Photo",
+            "message": "Upload a photo first to preview your poster."
+        },
+        "tabs": {
+            "photo": "Photo",
+            "text": "Text",
+            "style": "Style",
+            "stickers": "Stickers"
+        },
+        "visibility": {
+            "showName": "Show Name",
+            "showMessage": "Show Message",
+            "visible": "● Visible on poster",
+            "hidden": "○ Hidden from poster"
+        },
+        "photo": {
+            "fromDevice": {
+                "title": "From Device",
+                "subtitle": "Your camera roll"
+            },
+            "fromBackend": {
+                "title": "From Backend",
+                "subtitle": "Templates from your server"
+            },
+            "upload": {
+                "selecting": "Selecting…",
+                "changePhoto": "Change Photo",
+                "uploadPhoto": "Upload Photo",
+                "tapToReplace": "Tap to replace",
+                "formats": "JPG, PNG supported"
+            },
+            "dragHint": "Drag the photo on the poster above to reposition it!",
+            "size": "Photo Size",
+            "frameSize": "Frame size: {{width}}×{{height}}",
+            "pinchHint": "pinch to fine-tune"
+        },
+        "text": {
+            "name": {
+                "label": "Name",
+                "placeholder": "Your name",
+                "colour": "Name Colour",
+                "size": "Name Size",
+                "style": "Name Style"
+            },
+            "message": {
+                "label": "Message",
+                "placeholder": "Your message / tagline",
+                "colour": "Message Colour",
+                "size": "Message Size",
+                "style": "Message Style"
+            },
+            "alignment": "Alignment",
+            "align": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right"
+            },
+            "shadow": {
+                "label": "Text Shadow",
+                "subtitle": "Adds depth to text"
+            }
+        },
+        "style": {
+            "photoFrame": "Photo Frame",
+            "accentColour": "Accent Colour",
+            "backgroundOverlay": "Background Overlay",
+            "photoShape": {
+                "default": "Default",
+                "circle": "Circle",
+                "rounded": "Rounded",
+                "square": "Square"
+            },
+            "bgOverlay": {
+                "none": "None",
+                "darkHalf": "Dark ½",
+                "darkQuarter": "Dark ¼",
+                "light": "Light",
+                "blue": "Blue",
+                "red": "Red"
+            }
+        },
+        "stickers": {
+            "hint": "Tap to place on poster • Drag to reposition • Tap again to remove",
+            "added": "Added stickers — drag on poster to reposition"
+        }
+    },
+    "preview": {
+        "title": "Your Poster",
+        "actions": {
+            "save": "Save",
+            "saveSub": "to Gallery",
+            "share": "Share",
+            "shareSub": "to apps"
+        },
+        "secondary": {
+            "editAgain": "← Edit Again",
+            "newPoster": "New Poster"
+        }
+    },
+    "poster": {
+        "uploadPhoto": "Upload a photo",
+        "watermark": "Made with CraftoClone"
+    },
+    "backendMedia": {
+        "loadingTemplates": "Loading templates…",
+        "failedToLoad": "Failed to load templates",
+        "couldntLoad": "Couldn't load",
+        "retry": "Retry",
+        "noTemplates": "No templates",
+        "setApiUrlIn": "Set your API URL in",
+        "refresh": "Refresh",
+        "templatesCount": "{{count}} templates"
+    },
+    "alerts": {
+        "error": "Error",
+        "posterNotReady": "Poster view is not ready.",
+        "captureFailedTitle": "Capture Failed",
+        "captureFailedMsg": "Could not render the poster. Please try again.",
+        "savedTitle": "Saved!",
+        "savedMsg": "Your poster has been saved to the gallery.",
+        "storagePermissionTitle": "Storage Permission",
+        "storagePermissionMsg": "CraftoClone needs access to your storage to save posters.",
+        "allow": "Allow",
+        "deny": "Deny",
+        "permissionDeniedTitle": "Permission Denied",
+        "permissionDeniedMsg": "Storage permission is required to save images.",
+        "shareSheetTitle": "Share your Crafto Poster",
+        "shareSheetMessage": "Check out my poster made with CraftoClone!",
+        "shareFailedTitle": "Share Failed",
+        "shareFailedMsg": "Could not share the poster. Please try again."
+    },
+    "auth": {
+        "login": {
+            "headerTitle": "Login",
+            "title": "Poster Maker",
+            "subtitle": "Create stunning designs in minutes.\nEnter your mobile number to get started.",
+            "country": "Country",
+            "mobileNumber": "Mobile Number",
+            "mobilePlaceholder": "00000 00000",
+            "sendOtp": "Send OTP",
+            "terms": {
+                "prefix": "By continuing, you agree to our",
+                "termsOfService": "Terms of Service",
+                "and": " and",
+                "privacyPolicy": "Privacy Policy"
+            },
+            "errors": {
+                "enterMobile": "Please enter your mobile number.",
+                "invalidMobile": "Please enter a valid 10-digit number."
+            },
+            "success": {
+                "otpSent": "OTP sent successfully."
+            }
+        },
+        "otp": {
+            "headerTitle": "Verification",
+            "title": "OTP Verification",
+            "subtitle": "Enter the 6-digit code sent to",
+            "resendIn": "RESEND CODE IN",
+            "min": "MIN",
+            "sec": "SEC",
+            "verifyNow": "Verify Now",
+            "didntReceive": "Didn't receive the code?",
+            "resendOtp": "Resend OTP",
+            "phoneMask": "+91 98765 43210",
+            "errors": {
+                "enterCompleteCode": "Please enter the complete 6-digit code.",
+                "waitBeforeResend": "Please wait before requesting a new code."
+            },
+            "success": {
+                "verified": "OTP verified successfully.",
+                "resent": "A new OTP has been sent."
+            }
+        }
+    },
+    "userSetup": {
+        "title": "Set Up Your Profile",
+        "subtitle": "Add your photo and name to personalize posters.",
+        "loading": "Loading...",
+        "addPhoto": "Add Photo",
+        "yourName": "Your Name",
+        "namePlaceholder": "Enter your name",
+        "continue": "Continue",
+        "errors": {
+            "selectImage": "Please select your image.",
+            "enterName": "Please enter your name."
+        }
+    }
+}

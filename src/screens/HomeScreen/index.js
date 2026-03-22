@@ -1,409 +1,319 @@
 // src/screens/HomeScreen/index.js
-// Premium landing screen — hero header, glassmorphism search, elevated category cards
 
-import React, { useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Animated,
-    FlatList,
+    Alert,
+    Dimensions,
     Pressable,
     SafeAreaView,
-    ScrollView,
+    FlatList,
     StatusBar,
     StyleSheet,
     Text,
     View,
+    Image,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { setActiveCategory } from '../../store/posterSlice';
-import { TEMPLATES } from '../../services/templateService';
-import BannerCard from '../../components/BannerCard';
+import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
-    COLORS,
-    FONTS,
-    SPACING,
-    BORDER_RADIUS,
-    CATEGORIES,
-    SHADOW,
-} from '../../utils/constants';
+    setActiveCategory,
+    setSelectedTemplate,
+    setUserName,
+    setUserPhoto,
+} from '../../store/posterSlice';
+import { TEMPLATES } from '../../services/templateService';
+import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
+import { CATEGORIES as APP_CATEGORIES } from '../../utils/constants';
+import { getUserProfile } from '../../utils/userStorage';
 
-// ─── Animated Category Card ───────────────────────────────────────
-const CategoryCard = ({ category, onPress }) => {
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-
-    const onPressIn = () =>
-        Animated.spring(scaleAnim, { toValue: 0.94, useNativeDriver: true, speed: 60 }).start();
-    const onPressOut = () =>
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }).start();
-
-    return (
-        <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, styles.categoryCardWrapper]}>
-            <Pressable
-                style={[styles.categoryCard, { borderColor: category.color + '40' }]}
-                onPress={onPress}
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                android_ripple={{ color: category.color + '20' }}>
-                {/* Gradient-like glowing bg */}
-                <View style={[styles.categoryGlow, { backgroundColor: category.color + '18' }]} />
-
-                <View style={[styles.categoryIconBg, {
-                    backgroundColor: category.color + '22',
-                    borderColor: category.color + '40',
-                }]}>
-                    <Text style={styles.categoryIcon}>{category.icon}</Text>
-                </View>
-                <Text style={styles.categoryLabel}>{category.label}</Text>
-                <Text style={styles.categoryArrow}>→</Text>
-
-                {/* Bottom accent strip */}
-                <View style={[styles.categoryAccent, { backgroundColor: category.color }]} />
-            </Pressable>
-        </Animated.View>
-    );
+const COLORS = {
+    pageBackground: '#EEF2F8',
+    cardBackground: '#FFFFFF',
+    primary: '#2F6BFF',
+    primaryLight: '#EAF0FF',
+    textPrimary: '#1B2238',
+    textSecondary: '#697089',
+    border: '#DCE4F2',
+    pillBorder: '#F05BB5',
+    pillActive: '#F05BB5',
+    pillText: '#3C1A3A',
 };
 
-// ─── Screen ───────────────────────────────────────────────────────
+const { height: SCREEN_H } = Dimensions.get('window');
+const ITEM_HEIGHT = Math.min(heightPixel(520), SCREEN_H - heightPixel(260));
+const ITEM_SPACING = heightPixel(14);
+const REEL_MEDIA_HEIGHT = ITEM_HEIGHT - heightPixel(160);
+
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
-    const activeCategory = useSelector(s => s.poster.activeCategory);
+    const { t } = useTranslation();
+    const [activeCategory, setActiveCategoryUi] = useState('festival');
 
-    const featuredTemplates = TEMPLATES.slice(0, 6);
+    const categories = useMemo(() => ([
+        ...APP_CATEGORIES.map(item => ({
+            id: item.id,
+            label: t(`categories.${item.id}`) || item.label,
+        })),
+        { id: 'motivational', label: t('categories.motivational') },
+    ]), [t]);
 
-    const handleCategoryPress = useCallback(
-        catId => {
-            dispatch(setActiveCategory(catId));
-            navigation.navigate('TemplateScreen', { categoryId: catId });
-        },
-        [dispatch, navigation],
-    );
+    const reelsData = useMemo(() => TEMPLATES, []);
+
+    useEffect(() => {
+        (async () => {
+            const stored = await getUserProfile();
+            if (stored?.name) dispatch(setUserName(stored.name));
+            if (stored?.imageUri) dispatch(setUserPhoto(stored.imageUri));
+        })();
+    }, [dispatch]);
+
+    const handleCategoryPress = (id) => {
+        const isKnown = APP_CATEGORIES.some(cat => cat.id === id);
+        const targetId = isKnown ? id : 'all';
+        setActiveCategoryUi(id);
+        dispatch(setActiveCategory(targetId));
+        navigation?.navigate?.('TemplateScreen', { categoryId: targetId });
+    };
+
+    const openEditor = (item) => {
+        dispatch(setSelectedTemplate(item));
+        navigation?.navigate?.('EditorScreen', { templateId: item.id });
+    };
+
+    const showUnderDevelopmentAlert = () => {
+        Alert.alert(t('home.underDevelopment.title'), t('home.underDevelopment.message'));
+    };
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
-            <ScrollView
-                style={styles.scroll}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}>
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.pageBackground} />
 
-                {/* ── Hero Header ─────────────────────────────── */}
-                <View style={styles.hero}>
-                    {/* Decorative orb */}
-                    <View style={styles.heroOrb} />
-                    <View style={styles.heroOrb2} />
-
-                    <View style={styles.heroContent}>
-                        <View style={styles.heroBadge}>
-                            <View style={styles.heroBadgeDot} />
-                            <Text style={styles.heroBadgeText}>AI Poster Studio</Text>
-                        </View>
-                        <Text style={styles.heroTitle}>
-                            Create{'\n'}
-                            <Text style={styles.heroTitleAccent}>Stunning</Text> Posters
-                        </Text>
-                        <Text style={styles.heroSubtitle}>
-                            Pick a template, personalize, share in seconds
-                        </Text>
-                    </View>
-
-                    {/* Avatar */}
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarEmoji}>🎨</Text>
-                        <View style={styles.avatarGlow} />
-                    </View>
+            <View style={styles.staticHeader}>
+                <View style={styles.searchBar}>
+                    <Text style={styles.searchText}>{t('home.searchPlaceholder')}</Text>
                 </View>
 
-                {/* ── Search bar ──────────────────────────────── */}
-                <Pressable
-                    style={styles.searchBar}
-                    onPress={() => navigation.navigate('TemplateScreen', { categoryId: 'all' })}>
-                    <View style={styles.searchIconWrapper}>
-                        <Text style={styles.searchIcon}>🔍</Text>
-                    </View>
-                    <Text style={styles.searchPlaceholder}>Search templates…</Text>
-                    <View style={styles.searchChip}>
-                        <Text style={styles.searchChipText}>Explore</Text>
-                    </View>
-                </Pressable>
-
-                {/* ── Section: Categories ─────────────────────── */}
                 <View style={styles.sectionHeader}>
-                    <View>
-                        <Text style={styles.sectionLabel}>EXPLORE</Text>
-                        <Text style={styles.sectionTitle}>Categories</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>{t('home.section.categories')}</Text>
                 </View>
 
-                <View style={styles.categoryGrid}>
-                    {CATEGORIES.map(cat => (
-                        <CategoryCard
-                            key={cat.id}
-                            category={cat}
-                            onPress={() => handleCategoryPress(cat.id)}
-                        />
-                    ))}
+                <View style={styles.pillRow}>
+                    {categories.map(item => {
+                        const isActive = activeCategory === item.id;
+                        return (
+                            <Pressable
+                                key={item.id}
+                                style={[styles.pill, isActive && styles.pillActive]}
+                                onPress={() => handleCategoryPress(item.id)}>
+                                <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
                 </View>
+            </View>
 
-                {/* ── Section: Featured ───────────────────────── */}
-                <View style={[styles.sectionHeader, { marginTop: SPACING.lg }]}>
-                    <View>
-                        <Text style={styles.sectionLabel}>HANDPICKED</Text>
-                        <Text style={styles.sectionTitle}>Featured</Text>
-                    </View>
-                    <Pressable
-                        style={styles.seeAllBtn}
-                        onPress={() => navigation.navigate('TemplateScreen', { categoryId: 'all' })}>
-                        <Text style={styles.seeAllText}>See all</Text>
-                        <Text style={styles.seeAllArrow}>→</Text>
+            <FlatList
+                data={reelsData}
+                keyExtractor={item => item.id}
+                showsVerticalScrollIndicator={false}
+                pagingEnabled
+                snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
+                decelerationRate="fast"
+                contentContainerStyle={styles.reelsContent}
+                renderItem={({ item }) => (
+                    <Pressable style={styles.reelCard} onPress={() => openEditor(item)}>
+                        <View style={styles.reelMedia}>
+                            {item.Image ? (
+                                <Image source={item.Image} style={styles.reelImage} resizeMode="cover" />
+                            ) : (
+                                <View style={[styles.reelFallback, { backgroundColor: item.accentColor }]} />
+                            )}
+                        </View>
+                        <View style={styles.reelMeta}>
+                            <View style={styles.actionRow}>
+                                <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Text style={styles.actionText}>{t('home.actions.shareWhatsApp')}</Text>
+                                </Pressable>
+                                <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Text style={styles.actionText}>{t('home.actions.download')}</Text>
+                                </Pressable>
+                                <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Text style={styles.actionText}>{t('home.actions.edit')}</Text>
+                                </Pressable>
+                            </View>
+                            <Pressable style={styles.changeImageBtn} onPress={showUnderDevelopmentAlert}>
+                                <Text style={styles.changeImageText}>{t('home.actions.changeImage')}</Text>
+                            </Pressable>
+                        </View>
                     </Pressable>
-                </View>
-
-                <FlatList
-                    data={featuredTemplates}
-                    keyExtractor={item => item.id}
-                    numColumns={2}
-                    columnWrapperStyle={styles.columnWrapper}
-                    scrollEnabled={false}
-                    renderItem={({ item }) => (
-                        <BannerCard
-                            template={item}
-                            onPress={() => navigation.navigate('EditorScreen', { templateId: item.id })}
-                        />
-                    )}
-                />
-
-                <View style={{ height: SPACING.xxxl }} />
-            </ScrollView>
+                )}
+            />
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: COLORS.background },
-    scroll: { flex: 1 },
-    scrollContent: { paddingHorizontal: SPACING.base, paddingTop: SPACING.md },
-
-    // ── Hero ──────────────────────────────────────────────────────
-    hero: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: SPACING.xl,
-        marginTop: SPACING.sm,
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    heroOrb: {
-        position: 'absolute',
-        width: 160,
-        height: 160,
-        borderRadius: 80,
-        backgroundColor: COLORS.primary + '10',
-        top: -60,
-        left: -40,
-    },
-    heroOrb2: {
-        position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: COLORS.secondary + '08',
-        bottom: -30,
-        right: 40,
-    },
-    heroContent: { flex: 1 },
-    heroBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: SPACING.sm,
-    },
-    heroBadgeDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: COLORS.accent,
-    },
-    heroBadgeText: {
-        fontSize: FONTS.sizes.xs,
-        fontWeight: FONTS.weights.semiBold,
-        color: COLORS.accent,
-        letterSpacing: 1.2,
-        textTransform: 'uppercase',
-    },
-    heroTitle: {
-        fontSize: FONTS.sizes.xxxl,
-        fontWeight: FONTS.weights.black,
-        color: COLORS.text,
-        lineHeight: 42,
-        marginBottom: SPACING.sm,
-    },
-    heroTitleAccent: {
-        color: COLORS.primaryLight,
-    },
-    heroSubtitle: {
-        fontSize: FONTS.sizes.sm,
-        color: COLORS.textMuted,
-        lineHeight: 18,
-        maxWidth: 180,
-    },
-    avatar: {
-        marginLeft: SPACING.md,
-        position: 'relative',
-    },
-    avatarEmoji: {
-        fontSize: 42,
-    },
-    avatarGlow: {
-        position: 'absolute',
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: COLORS.primary + '15',
-        top: -4,
-        left: -4,
-    },
-
-    // ── Search ────────────────────────────────────────────────────
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.surface,
-        borderRadius: BORDER_RADIUS.xl,
-        paddingHorizontal: SPACING.base,
-        paddingVertical: SPACING.md,
-        marginBottom: SPACING.xl,
-        borderWidth: 1,
-        borderColor: COLORS.glassBorder,
-        gap: SPACING.sm,
-        ...SHADOW.small,
-    },
-    searchIconWrapper: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        backgroundColor: COLORS.primary + '18',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    searchIcon: { fontSize: 14 },
-    searchPlaceholder: {
+    safeArea: {
         flex: 1,
-        color: COLORS.textMuted,
-        fontSize: FONTS.sizes.base,
+        backgroundColor: COLORS.pageBackground,
     },
-    searchChip: {
-        backgroundColor: COLORS.primary + '20',
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        borderColor: COLORS.primary + '40',
+    staticHeader: {
+        paddingHorizontal: widthPixel(20),
+        paddingTop: heightPixel(10),
+        paddingBottom: heightPixel(10),
     },
-    searchChipText: {
-        fontSize: FONTS.sizes.xs,
-        color: COLORS.primaryLight,
-        fontWeight: FONTS.weights.semiBold,
+    searchBar: {
+        width: '100%',
+        height: heightPixel(44),
+        borderRadius: widthPixel(12),
+        backgroundColor: COLORS.cardBackground,
+        borderWidth: widthPixel(1),
+        borderColor: COLORS.border,
+        justifyContent: 'center',
+        paddingHorizontal: widthPixel(12),
+        marginBottom: heightPixel(14),
     },
-
-    // ── Sections ──────────────────────────────────────────────────
-    sectionLabel: {
-        fontSize: FONTS.sizes.xs,
-        fontWeight: FONTS.weights.semiBold,
-        color: COLORS.textMuted,
-        letterSpacing: 1.5,
-        marginBottom: 2,
-    },
-    sectionTitle: {
-        fontSize: FONTS.sizes.xl,
-        fontWeight: FONTS.weights.extraBold,
-        color: COLORS.text,
+    searchText: {
+        fontSize: widthPixel(12.5),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.textSecondary,
     },
     sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-        marginBottom: SPACING.base,
-    },
-    seeAllBtn: {
+        width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: SPACING.xs,
-        backgroundColor: COLORS.primary + '14',
-        borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        borderColor: COLORS.primary + '35',
+        justifyContent: 'space-between',
+        marginBottom: heightPixel(10),
     },
-    seeAllText: {
-        fontSize: FONTS.sizes.sm,
-        color: COLORS.primaryLight,
-        fontWeight: FONTS.weights.semiBold,
+    sectionTitle: {
+        fontSize: widthPixel(14),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.textPrimary,
     },
-    seeAllArrow: {
-        fontSize: FONTS.sizes.sm,
-        color: COLORS.primaryLight,
-    },
-
-    // ── Category Grid ──────────────────────────────────────────────
-    categoryGrid: {
+    pillRow: {
+        width: '100%',
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: SPACING.sm,
-        marginBottom: SPACING.sm,
+        gap: widthPixel(8),
+        marginBottom: heightPixel(16),
     },
-    categoryCardWrapper: {
-        width: '48%',
+    pill: {
+        paddingHorizontal: widthPixel(13),
+        paddingVertical: heightPixel(7),
+        borderRadius: widthPixel(16),
+        borderWidth: widthPixel(1),
+        borderColor: "#5B6CFF",
+        backgroundColor: COLORS.cardBackground,
     },
-    categoryCard: {
-        paddingVertical: SPACING.lg,
-        paddingHorizontal: SPACING.base,
-        borderRadius: BORDER_RADIUS.xl,
-        borderWidth: 1,
-        alignItems: 'center',
-        position: 'relative',
+    pillActive: {
+        backgroundColor: "#5B6CFF",
+    },
+    pillText: {
+        fontSize: widthPixel(11),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.pillText,
+    },
+    pillTextActive: {
+        color: '#FFFFFF',
+        fontFamily: fonts.FONT_FAMILY.Bold,
+    },
+    reelsContent: {
+        paddingHorizontal: widthPixel(20),
+        paddingBottom: heightPixel(96),
+        paddingTop: heightPixel(2),
+    },
+    reelCard: {
+        width: '100%',
+        height: ITEM_HEIGHT,
+        borderRadius: widthPixel(20),
+        backgroundColor: COLORS.cardBackground,
+        borderWidth: widthPixel(1),
+        borderColor: COLORS.border,
         overflow: 'hidden',
-        backgroundColor: COLORS.surface,
+        marginBottom: ITEM_SPACING,
+        justifyContent: 'flex-start',
+        shadowColor: '#15213A',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
+        elevation: 3,
     },
-    categoryGlow: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: BORDER_RADIUS.xl,
-    },
-    categoryIconBg: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        borderWidth: 1,
+    reelMedia: {
+        width: '100%',
+        height: REEL_MEDIA_HEIGHT,
+        backgroundColor: '#F0F2FF',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: SPACING.sm,
     },
-    categoryIcon: { fontSize: 26 },
-    categoryLabel: {
-        fontSize: FONTS.sizes.base,
-        fontWeight: FONTS.weights.bold,
-        color: COLORS.text,
-        marginBottom: 4,
+    reelImage: {
+        width: '100%',
+        height: REEL_MEDIA_HEIGHT,
     },
-    categoryArrow: {
-        fontSize: FONTS.sizes.sm,
-        color: COLORS.textMuted,
-        marginBottom: 6,
+    reelFallback: {
+        width: widthPixel(140),
+        height: heightPixel(140),
+        borderRadius: widthPixel(18),
     },
-    categoryAccent: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 3,
+    reelMeta: {
+        width: '100%',
+        height: heightPixel(160),
+        paddingHorizontal: widthPixel(16),
+        paddingVertical: heightPixel(12),
     },
-
-    // ── Featured Grid ─────────────────────────────────────────────
-    columnWrapper: { justifyContent: 'space-between' },
+    reelTitle: {
+        fontSize: widthPixel(14),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.textPrimary,
+        marginBottom: heightPixel(3),
+    },
+    reelTag: {
+        fontSize: widthPixel(10),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.textSecondary,
+    },
+    actionRow: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: heightPixel(10),
+        gap: widthPixel(6),
+    },
+    actionBtn: {
+        flex: 1,
+        minWidth: widthPixel(92),
+        height: heightPixel(34),
+        borderRadius: widthPixel(10),
+        backgroundColor: COLORS.primaryLight,
+        borderWidth: widthPixel(1),
+        borderColor: '#D5DFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: widthPixel(6),
+    },
+    actionText: {
+        fontSize: widthPixel(9.2),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.primary,
+        textAlign: 'center',
+        includeFontPadding: false,
+    },
+    changeImageBtn: {
+        height: heightPixel(34),
+        borderRadius: widthPixel(10),
+        borderWidth: widthPixel(1),
+        borderColor: COLORS.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FAFBFF',
+    },
+    changeImageText: {
+        fontSize: widthPixel(10.5),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.primary,
+    },
 });
 
 export default HomeScreen;

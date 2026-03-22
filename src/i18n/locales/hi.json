@@ -1,0 +1,255 @@
+{
+    "common": {
+        "ok": "ठीक है",
+        "auto": "ऑटो"
+    },
+    "languageSelection": {
+        "title": "अपनी भाषा चुनें",
+        "subtitle": "आप इसे बाद में बदल सकते हैं"
+    },
+    "navigation": {
+        "tabs": {
+            "home": "होम",
+            "myPosters": "मेरे पोस्टर्स",
+            "trending": "ट्रेंडिंग",
+            "profile": "प्रोफ़ाइल"
+        },
+        "myPosters": {
+            "title": "मेरे पोस्टर्स",
+            "subtitle": "सहेजे गए पोस्टर यहाँ दिखेंगे"
+        }
+    },
+    "categories": {
+        "all": "सभी",
+        "political": "राजनीतिक",
+        "festival": "त्योहार",
+        "birthday": "जन्मदिन",
+        "business": "व्यवसाय",
+        "motivational": "प्रेरणादायक"
+    },
+    "home": {
+        "heroBadge": "एआई पोस्टर स्टूडियो",
+        "heroTitle": {
+            "create": "बनाएं",
+            "stunning": "शानदार",
+            "posters": "पोस्टर्स"
+        },
+        "heroSubtitle": "टेम्पलेट चुनें, कस्टमाइज़ करें, सेकंडों में शेयर करें",
+        "searchPlaceholder": "पोस्टर, त्योहार या उद्धरण खोजें",
+        "exploreCta": "एक्सप्लोर",
+        "section": {
+            "explore": "एक्सप्लोर",
+            "categories": "श्रेणियाँ",
+            "handpicked": "चयनित",
+            "featured": "फीचर्ड"
+        },
+        "seeAll": "सभी देखें",
+        "profileUpdated": "प्रोफ़ाइल फ़ोटो अपडेट हो गई.",
+        "actions": {
+            "shareWhatsApp": "WhatsApp पर शेयर करें",
+            "download": "डाउनलोड",
+            "edit": "एडिट",
+            "changeImage": "इमेज बदलें"
+        },
+        "underDevelopment": {
+            "title": "जानकारी",
+            "message": "यह फीचर अभी विकास में है।"
+        }
+    },
+    "templates": {
+        "title": "टेम्पलेट्स",
+        "designCount": "{{count}} डिज़ाइन"
+    },
+    "editor": {
+        "title": "पोस्टर संपादित करें",
+        "preview": "प्रीव्यू",
+        "noPhoto": {
+            "title": "फोटो नहीं",
+            "message": "प्रीव्यू से पहले फोटो अपलोड करें।"
+        },
+        "tabs": {
+            "photo": "फोटो",
+            "text": "टेक्स्ट",
+            "style": "स्टाइल",
+            "stickers": "स्टिकर्स"
+        },
+        "visibility": {
+            "showName": "नाम दिखाएँ",
+            "showMessage": "संदेश दिखाएँ",
+            "visible": "● पोस्टर पर दिख रहा है",
+            "hidden": "○ पोस्टर से छिपा है"
+        },
+        "photo": {
+            "fromDevice": {
+                "title": "डिवाइस से",
+                "subtitle": "आपका कैमरा रोल"
+            },
+            "fromBackend": {
+                "title": "बैकएंड से",
+                "subtitle": "आपके सर्वर से टेम्पलेट्स"
+            },
+            "upload": {
+                "selecting": "चुन रहे हैं…",
+                "changePhoto": "फोटो बदलें",
+                "uploadPhoto": "फोटो अपलोड करें",
+                "tapToReplace": "बदलने के लिए टैप करें",
+                "formats": "JPG, PNG समर्थित"
+            },
+            "dragHint": "ऊपर पोस्टर पर फोटो को खींचकर उसकी जगह बदलें!",
+            "size": "फोटो का आकार",
+            "frameSize": "फ्रेम आकार: {{width}}×{{height}}",
+            "pinchHint": "पिंच करके सूक्ष्म समायोजन करें"
+        },
+        "text": {
+            "name": {
+                "label": "नाम",
+                "placeholder": "आपका नाम",
+                "colour": "नाम का रंग",
+                "size": "नाम का आकार",
+                "style": "नाम की शैली"
+            },
+            "message": {
+                "label": "संदेश",
+                "placeholder": "आपका संदेश / टैगलाइन",
+                "colour": "संदेश का रंग",
+                "size": "संदेश का आकार",
+                "style": "संदेश की शैली"
+            },
+            "alignment": "संरेखण",
+            "align": {
+                "left": "बाएँ",
+                "center": "बीच",
+                "right": "दाएँ"
+            },
+            "shadow": {
+                "label": "टेक्स्ट शैडो",
+                "subtitle": "टेक्स्ट में गहराई जोड़ता है"
+            }
+        },
+        "style": {
+            "photoFrame": "फोटो फ्रेम",
+            "accentColour": "एक्सेंट रंग",
+            "backgroundOverlay": "पृष्ठभूमि ओवरले",
+            "photoShape": {
+                "default": "डिफ़ॉल्ट",
+                "circle": "गोल",
+                "rounded": "गोल-कोने",
+                "square": "चौकोर"
+            },
+            "bgOverlay": {
+                "none": "कोई नहीं",
+                "darkHalf": "डार्क ½",
+                "darkQuarter": "डार्क ¼",
+                "light": "हल्का",
+                "blue": "नीला",
+                "red": "लाल"
+            }
+        },
+        "stickers": {
+            "hint": "पोस्टर पर रखने के लिए टैप करें • जगह बदलने के लिए ड्रैग करें • हटाने के लिए फिर टैप करें",
+            "added": "जोड़े गए स्टिकर्स — पोस्टर पर ड्रैग करके जगह बदलें"
+        }
+    },
+    "preview": {
+        "title": "आपका पोस्टर",
+        "actions": {
+            "save": "सेव",
+            "saveSub": "गैलरी में",
+            "share": "शेयर",
+            "shareSub": "ऐप्स में"
+        },
+        "secondary": {
+            "editAgain": "← फिर से एडिट करें",
+            "newPoster": "नया पोस्टर"
+        }
+    },
+    "poster": {
+        "uploadPhoto": "फोटो अपलोड करें",
+        "watermark": "CraftoClone से बनाया गया"
+    },
+    "backendMedia": {
+        "loadingTemplates": "टेम्पलेट लोड हो रहे हैं…",
+        "failedToLoad": "टेम्पलेट लोड नहीं हो सके",
+        "couldntLoad": "लोड नहीं हो सका",
+        "retry": "फिर कोशिश करें",
+        "noTemplates": "कोई टेम्पलेट नहीं",
+        "setApiUrlIn": "अपना API URL यहाँ सेट करें",
+        "refresh": "रिफ्रेश",
+        "templatesCount": "{{count}} टेम्पलेट्स"
+    },
+    "alerts": {
+        "error": "त्रुटि",
+        "posterNotReady": "पोस्टर व्यू तैयार नहीं है।",
+        "captureFailedTitle": "कैप्चर विफल",
+        "captureFailedMsg": "पोस्टर रेंडर नहीं हो सका। कृपया फिर कोशिश करें।",
+        "savedTitle": "सेव हो गया!",
+        "savedMsg": "आपका पोस्टर गैलरी में सेव हो गया है।",
+        "storagePermissionTitle": "स्टोरेज अनुमति",
+        "storagePermissionMsg": "पोस्टर सेव करने के लिए CraftoClone को आपके स्टोरेज तक पहुंच चाहिए।",
+        "allow": "अनुमति दें",
+        "deny": "मना करें",
+        "permissionDeniedTitle": "अनुमति अस्वीकृत",
+        "permissionDeniedMsg": "इमेज सेव करने के लिए स्टोरेज अनुमति आवश्यक है।",
+        "shareSheetTitle": "अपना Crafto पोस्टर शेयर करें",
+        "shareSheetMessage": "CraftoClone से बना मेरा पोस्टर देखें!",
+        "shareFailedTitle": "शेयर विफल",
+        "shareFailedMsg": "पोस्टर शेयर नहीं हो सका। कृपया फिर कोशिश करें।"
+    },
+    "auth": {
+        "login": {
+            "headerTitle": "लॉगिन",
+            "title": "पोस्टर मेकर",
+            "subtitle": "कुछ ही मिनटों में शानदार डिज़ाइन बनाएं।\nशुरू करने के लिए अपना मोबाइल नंबर दर्ज करें।",
+            "country": "देश",
+            "mobileNumber": "मोबाइल नंबर",
+            "mobilePlaceholder": "00000 00000",
+            "sendOtp": "OTP भेजें",
+            "terms": {
+                "prefix": "जारी रखकर, आप हमारी",
+                "termsOfService": "सेवा की शर्तें",
+                "and": " और",
+                "privacyPolicy": "गोपनीयता नीति"
+            },
+            "errors": {
+                "enterMobile": "कृपया अपना मोबाइल नंबर दर्ज करें।",
+                "invalidMobile": "कृपया सही 10 अंकों का नंबर दर्ज करें।"
+            },
+            "success": {
+                "otpSent": "OTP सफलतापूर्वक भेजा गया।"
+            }
+        },
+        "otp": {
+            "headerTitle": "सत्यापन",
+            "title": "OTP सत्यापन",
+            "subtitle": "भेजा गया 6-अंकों का कोड दर्ज करें",
+            "resendIn": "कोड दोबारा भेजें",
+            "min": "मिनट",
+            "sec": "सेकंड",
+            "verifyNow": "अभी सत्यापित करें",
+            "didntReceive": "कोड नहीं मिला?",
+            "resendOtp": "OTP फिर भेजें",
+            "phoneMask": "+91 98765 43210",
+            "errors": {
+                "enterCompleteCode": "कृपया पूरा 6-अंकों का कोड दर्ज करें।",
+                "waitBeforeResend": "कृपया नया कोड मांगने से पहले प्रतीक्षा करें।"
+            },
+            "success": {
+                "verified": "OTP सफलतापूर्वक सत्यापित हुआ।",
+                "resent": "नया OTP भेज दिया गया है।"
+            }
+        }
+    },
+    "userSetup": {
+        "title": "अपनी प्रोफ़ाइल सेट करें",
+        "subtitle": "पोस्टर को व्यक्तिगत बनाने के लिए अपनी फोटो और नाम जोड़ें।",
+        "loading": "लोड हो रहा है...",
+        "addPhoto": "फोटो जोड़ें",
+        "yourName": "आपका नाम",
+        "namePlaceholder": "अपना नाम दर्ज करें",
+        "continue": "जारी रखें",
+        "errors": {
+            "selectImage": "कृपया अपनी फोटो चुनें।",
+            "enterName": "कृपया अपना नाम दर्ज करें।"
+        }
+    }
+}

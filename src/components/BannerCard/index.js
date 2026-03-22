@@ -11,6 +11,7 @@ import {
     View,
     Dimensions,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../../utils/constants';
 
 // ─── Sizes ────────────────────────────────────────────────────────
@@ -181,7 +182,7 @@ const BannerCard = ({ template, onPress, style }) => {
                         alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                     }}>
-                        <Text style={{ fontSize: iconSize, lineHeight: iconSize * 1.2 }}>👤</Text>
+                        <MaterialCommunityIcons name="account-outline" size={iconSize} color={accentColor} />
                     </View>
 
                     {/* ── Layer 3: Name bar ───────────────────────── */}

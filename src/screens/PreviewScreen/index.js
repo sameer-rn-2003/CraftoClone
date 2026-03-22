@@ -1,7 +1,7 @@
 // src/screens/PreviewScreen/index.js
 // Premium full-screen poster preview with Save and Share actions
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
     Pressable,
     SafeAreaView,
@@ -11,8 +11,11 @@ import {
     Text,
     View,
     ActivityIndicator,
+    Dimensions,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 import AppButton from '../../components/AppButton';
@@ -25,8 +28,14 @@ import {
     POSTER_SIZE,
 } from '../../utils/constants';
 
-const PreviewScreen = ({ navigation }) => {
+const { width: SCREEN_W } = Dimensions.get('window');
+const SCALE = (SCREEN_W - SPACING.base * 2) / POSTER_SIZE.width;
+const PREVIEW_W = POSTER_SIZE.width * SCALE;
+const PREVIEW_H = POSTER_SIZE.height * SCALE;
+
+const PreviewScreen = ({ navigation, route }) => {
     const { selectedTemplate, userName } = useSelector(s => s.poster);
+    const { t } = useTranslation();
     const { posterRef, savePoster, sharePoster, isSaving, isSharing } =
         usePosterGenerator();
 
@@ -38,19 +47,32 @@ const PreviewScreen = ({ navigation }) => {
         await sharePoster();
     }, [sharePoster]);
 
+    const didAutoAction = useRef(false);
+    useEffect(() => {
+        if (didAutoAction.current) return;
+        const action = route?.params?.action;
+        if (action === 'share') {
+            didAutoAction.current = true;
+            handleShare();
+        }
+        if (action === 'save') {
+            didAutoAction.current = true;
+            handleSave();
+        }
+    }, [route, handleShare, handleSave]);
+
     const accentColor = selectedTemplate?.accentColor || COLORS.primary;
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-            {/* ── Header ─────────────────────────────── */}
             <View style={styles.header}>
                 <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-                    <Text style={styles.backIcon}>←</Text>
+                    <MaterialCommunityIcons name="arrow-left" style={styles.backIcon} />
                 </Pressable>
                 <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>Your Poster</Text>
+                    <Text style={styles.headerTitle}>{t('preview.title')}</Text>
                     {userName ? (
                         <Text style={styles.headerSub} numberOfLines={1}>
                             {userName}
@@ -66,43 +88,43 @@ const PreviewScreen = ({ navigation }) => {
 
                 {/* ── Poster ────────────────────────── */}
                 <View style={styles.posterContainer}>
-                    {/* Multi-layer glow effect */}
                     <View style={[styles.glowOuter, { backgroundColor: accentColor + '12' }]} />
                     <View style={[styles.glowInner, { backgroundColor: accentColor + '1E' }]} />
-
-                    <View style={[styles.posterWrapper, { borderColor: accentColor + '30' }]}>
-                        <PosterPreview posterRef={posterRef} />
+                    <View style={[styles.posterWrapper, { borderColor: accentColor + '30' }]} pointerEvents="none">
+                        <View style={styles.posterScaler}>
+                            <PosterPreview posterRef={posterRef} interactive />
+                        </View>
                     </View>
                 </View>
 
                 {/* ── Template badge ───────────────── */}
-                {selectedTemplate && (
+                {/* {selectedTemplate && (
                     <View style={styles.templateBadge}>
                         <View style={[styles.colorDot, { backgroundColor: accentColor }]} />
                         <Text style={styles.templateName}>{selectedTemplate.name}</Text>
                         <View style={[styles.categoryChip, { borderColor: accentColor + '50' }]}>
                             <Text style={[styles.templateCategory, { color: accentColor }]}>
-                                {selectedTemplate.category}
+                                {t(`categories.${selectedTemplate.category}`, { defaultValue: selectedTemplate.category })}
                             </Text>
                         </View>
                     </View>
-                )}
+                )} */}
 
                 {/* ── Action buttons ───────────────── */}
                 <View style={styles.actions}>
                     {/* Save */}
                     <Pressable
-                        style={[styles.actionBtn, { backgroundColor: accentColor }, isSaving && styles.btnDisabled]}
+                        style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
                         onPress={handleSave}
                         disabled={isSaving || isSharing}>
                         {isSaving ? (
                             <ActivityIndicator color={COLORS.white} size="small" />
                         ) : (
                             <>
-                                <Text style={styles.actionIcon}>💾</Text>
+                                <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
                                 <View>
-                                    <Text style={styles.actionLabel}>Save</Text>
-                                    <Text style={styles.actionSub}>to Gallery</Text>
+                                    <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
+                                    <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
                                 </View>
                             </>
                         )}
@@ -117,10 +139,10 @@ const PreviewScreen = ({ navigation }) => {
                             <ActivityIndicator color={COLORS.white} size="small" />
                         ) : (
                             <>
-                                <Text style={styles.actionIcon}>📤</Text>
+                                <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
                                 <View>
-                                    <Text style={styles.actionLabel}>Share</Text>
-                                    <Text style={styles.actionSub}>to apps</Text>
+                                    <Text style={styles.actionLabel}>{t('preview.actions.share')}</Text>
+                                    <Text style={styles.actionSub}>{t('preview.actions.shareSub')}</Text>
                                 </View>
                             </>
                         )}
@@ -130,14 +152,14 @@ const PreviewScreen = ({ navigation }) => {
                 {/* ── Secondary row ────────────────── */}
                 <View style={styles.editRow}>
                     <AppButton
-                        title="← Edit Again"
+                        title={t('preview.secondary.editAgain')}
                         onPress={() => navigation.goBack()}
                         variant="outline"
                         size="md"
                         style={styles.editBtn}
                     />
                     <AppButton
-                        title="New Poster"
+                        title={t('preview.secondary.newPoster')}
                         onPress={() => navigation.popToTop()}
                         variant="ghost"
                         size="md"
@@ -170,7 +192,7 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: COLORS.glassBorder,
     },
     backIcon: { fontSize: 20, color: COLORS.text },
-    headerCenter: { alignItems: 'center' },
+    headerCenter: { alignItems: 'center', flex: 1 },
     headerTitle: {
         fontSize: FONTS.sizes.lg,
         fontWeight: FONTS.weights.extraBold,
@@ -193,23 +215,32 @@ const styles = StyleSheet.create({
     },
     glowOuter: {
         position: 'absolute',
-        width: POSTER_SIZE.width + 40,
-        height: POSTER_SIZE.height + 40,
+        width: PREVIEW_W + 40,
+        height: PREVIEW_H + 40,
         borderRadius: 40,
         transform: [{ scaleX: 0.9 }, { translateY: 15 }],
     },
     glowInner: {
         position: 'absolute',
-        width: POSTER_SIZE.width - 20,
-        height: POSTER_SIZE.height - 40,
+        width: PREVIEW_W - 20,
+        height: PREVIEW_H - 40,
         borderRadius: 30,
         transform: [{ scaleX: 0.92 }, { translateY: 25 }],
     },
     posterWrapper: {
         borderRadius: 18,
         overflow: 'hidden',
+        width: PREVIEW_W,
+        height: PREVIEW_H,
         borderWidth: 1,
         ...SHADOW.large,
+    },
+    posterScaler: {
+        width: POSTER_SIZE.width,
+        height: POSTER_SIZE.height,
+        transform: [{ scale: SCALE }],
+        marginLeft: -(POSTER_SIZE.width * (1 - SCALE)) / 2,
+        marginTop: -(POSTER_SIZE.height * (1 - SCALE)) / 2,
     },
 
     // Template badge
@@ -267,9 +298,9 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.xl,
         ...SHADOW.medium,
     },
-    shareBtn: { backgroundColor: COLORS.secondary },
+    shareBtn: { backgroundColor: "#5B6CFF" },
     btnDisabled: { opacity: 0.55 },
-    actionIcon: { fontSize: 24 },
+    actionIcon: { fontSize: 24, color: COLORS.white },
     actionLabel: {
         fontSize: FONTS.sizes.base,
         fontWeight: FONTS.weights.extraBold,

@@ -1,0 +1,255 @@
+{
+    "common": {
+        "ok": "ಸರಿ",
+        "auto": "AUTO"
+    },
+    "languageSelection": {
+        "title": "ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+        "subtitle": "ನೀವು ಇದನ್ನು ನಂತರ ಬದಲಾಯಿಸಬಹುದು"
+    },
+    "navigation": {
+        "tabs": {
+            "home": "ಹೋಮ್",
+            "myPosters": "ನನ್ನ ಪೋಸ್ಟರ್‌ಗಳು",
+            "trending": "ಟ್ರೆಂಡಿಂಗ್",
+            "profile": "ಪ್ರೊಫೈಲ್"
+        },
+        "myPosters": {
+            "title": "ನನ್ನ ಪೋಸ್ಟರ್‌ಗಳು",
+            "subtitle": "ಉಳಿಸಿದ ಪೋಸ್ಟರ್‌ಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ"
+        }
+    },
+    "categories": {
+        "all": "ಎಲ್ಲಾ",
+        "political": "ರಾಜಕೀಯ",
+        "festival": "ಹಬ್ಬ",
+        "birthday": "ಹುಟ್ಟುಹಬ್ಬ",
+        "business": "ವ್ಯಾಪಾರ",
+        "motivational": "ಪ್ರೇರಣಾದಾಯಕ"
+    },
+    "home": {
+        "heroBadge": "AI ಪೋಸ್ಟರ್ ಸ್ಟುಡಿಯೋ",
+        "heroTitle": {
+            "create": "ಸೃಷ್ಟಿಸಿ",
+            "stunning": "ಅದ್ಭುತ",
+            "posters": "ಪೋಸ್ಟರ್‌ಗಳು"
+        },
+        "heroSubtitle": "ಟೆಂಪ್ಲೇಟ್ ಆರಿಸಿ, ವೈಯಕ್ತಿಕಗೊಳಿಸಿ, ಸೆಕೆಂಡುಗಳಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ",
+        "searchPlaceholder": "ಪೋಸ್ಟರ್‌ಗಳು, ಹಬ್ಬಗಳು ಅಥವಾ ಉಲ್ಲೇಖಗಳನ್ನು ಹುಡುಕಿ",
+        "exploreCta": "ಎಕ್ಸ್‌ಪ್ಲೋರ್",
+        "section": {
+            "explore": "ಎಕ್ಸ್‌ಪ್ಲೋರ್",
+            "categories": "ವರ್ಗಗಳು",
+            "handpicked": "ಆಯ್ಕೆ",
+            "featured": "ಫೀಚರ್ಡ್"
+        },
+        "seeAll": "ಎಲ್ಲವನ್ನೂ ನೋಡಿ",
+        "profileUpdated": "ಪ್ರೊಫೈಲ್ ಫೋಟೋ ನವೀಕರಿಸಲಾಗಿದೆ.",
+        "actions": {
+            "shareWhatsApp": "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ",
+            "download": "ಡೌನ್‌ಲೋಡ್",
+            "edit": "ಎಡಿಟ್",
+            "changeImage": "ಚಿತ್ರ ಬದಲಿಸಿ"
+        },
+        "underDevelopment": {
+            "title": "ಮಾಹಿತಿ",
+            "message": "ಈ ವೈಶಿಷ್ಟ್ಯ ಇನ್ನೂ ಅಭಿವೃದ್ಧಿಯಲ್ಲಿದೆ."
+        }
+    },
+    "templates": {
+        "title": "ಟೆಂಪ್ಲೇಟ್‌ಗಳು",
+        "designCount": "{{count}} ಡಿಸೈನ್‌ಗಳು"
+    },
+    "editor": {
+        "title": "ಪೋಸ್ಟರ್ ಸಂಪಾದಿಸಿ",
+        "preview": "ಪ್ರಿವ್ಯೂ",
+        "noPhoto": {
+            "title": "ಫೋಟೋ ಇಲ್ಲ",
+            "message": "ಪ್ರಿವ್ಯೂ ಮಾಡಲು ಮೊದಲು ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ."
+        },
+        "tabs": {
+            "photo": "ಫೋಟೋ",
+            "text": "ಟೆಕ್ಸ್ಟ್",
+            "style": "ಸ್ಟೈಲ್",
+            "stickers": "ಸ್ಟಿಕರ್‌ಗಳು"
+        },
+        "visibility": {
+            "showName": "ಹೆಸರು ತೋರಿಸಿ",
+            "showMessage": "ಸಂದೇಶ ತೋರಿಸಿ",
+            "visible": "● ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ",
+            "hidden": "○ ಪೋಸ್ಟರ್‌ನಿಂದ ಮರೆಮಾಡಲಾಗಿದೆ"
+        },
+        "photo": {
+            "fromDevice": {
+                "title": "ಡಿವೈಸ್‌ನಿಂದ",
+                "subtitle": "ನಿಮ್ಮ ಕ್ಯಾಮೆರಾ ರೋಲ್"
+            },
+            "fromBackend": {
+                "title": "ಬ್ಯಾಕ್‌ಎಂಡ್‌ನಿಂದ",
+                "subtitle": "ನಿಮ್ಮ ಸರ್ವರ್‌ನಿಂದ ಟೆಂಪ್ಲೇಟ್‌ಗಳು"
+            },
+            "upload": {
+                "selecting": "ಆಯ್ಕೆ ಮಾಡುತ್ತಿದೆ…",
+                "changePhoto": "ಫೋಟೋ ಬದಲಿಸಿ",
+                "uploadPhoto": "ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+                "tapToReplace": "ಬದಲಾಯಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+                "formats": "JPG, PNG ಬೆಂಬಲಿತ"
+            },
+            "dragHint": "ಮೇಲಿನ ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಫೋಟೋವನ್ನು ಎಳೆಯಿರಿ ಮತ್ತು ಸ್ಥಾನ ಬದಲಾಯಿಸಿ!",
+            "size": "ಫೋಟೋ ಗಾತ್ರ",
+            "frameSize": "ಫ್ರೇಮ್ ಗಾತ್ರ: {{width}}×{{height}}",
+            "pinchHint": "ಸೂಕ್ಷ್ಮ ಬದಲಾವಣೆಗೆ ಪಿಂಚ್ ಮಾಡಿ"
+        },
+        "text": {
+            "name": {
+                "label": "ಹೆಸರು",
+                "placeholder": "ನಿಮ್ಮ ಹೆಸರು",
+                "colour": "ಹೆಸರಿನ ಬಣ್ಣ",
+                "size": "ಹೆಸರಿನ ಗಾತ್ರ",
+                "style": "ಹೆಸರಿನ ಶೈಲಿ"
+            },
+            "message": {
+                "label": "ಸಂದೇಶ",
+                "placeholder": "ನಿಮ್ಮ ಸಂದೇಶ / ಟ್ಯಾಗ್‌ಲೈನ್",
+                "colour": "ಸಂದೇಶದ ಬಣ್ಣ",
+                "size": "ಸಂದೇಶದ ಗಾತ್ರ",
+                "style": "ಸಂದೇಶದ ಶೈಲಿ"
+            },
+            "alignment": "ಸರಿಹೊಂದಿಕೆ",
+            "align": {
+                "left": "ಎಡ",
+                "center": "ಮಧ್ಯ",
+                "right": "ಬಲ"
+            },
+            "shadow": {
+                "label": "ಟೆಕ್ಸ್ಟ್ ಷ್ಯಾಡೋ",
+                "subtitle": "ಟೆಕ್ಸ್ಟ್‌ಗೆ ಆಳತೆ ಕೊಡುತ್ತದೆ"
+            }
+        },
+        "style": {
+            "photoFrame": "ಫೋಟೋ ಫ್ರೇಮ್",
+            "accentColour": "ಆಕ್ಸೆಂಟ್ ಬಣ್ಣ",
+            "backgroundOverlay": "ಹಿನ್ನೆಲೆ ಓವರ್‌ಲೆ",
+            "photoShape": {
+                "default": "ಡಿಫಾಲ್ಟ್",
+                "circle": "ವೃತ್ತ",
+                "rounded": "ರೌಂಡೆಡ್",
+                "square": "ಚೌಕ"
+            },
+            "bgOverlay": {
+                "none": "ಇಲ್ಲ",
+                "darkHalf": "ಡಾರ್ಕ್ ½",
+                "darkQuarter": "ಡಾರ್ಕ್ ¼",
+                "light": "ಲೈಟ್",
+                "blue": "ನೀಲಿ",
+                "red": "ಕೆಂಪು"
+            }
+        },
+        "stickers": {
+            "hint": "ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಇಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ • ಸ್ಥಳ ಬದಲಿಸಲು ಎಳೆಯಿರಿ • ತೆಗೆದುಹಾಕಲು ಮತ್ತೆ ಟ್ಯಾಪ್ ಮಾಡಿ",
+            "added": "ಸೇರಿಸಿದ ಸ್ಟಿಕರ್‌ಗಳು — ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಎಳೆದು ಸ್ಥಳ ಬದಲಾಯಿಸಿ"
+        }
+    },
+    "preview": {
+        "title": "ನಿಮ್ಮ ಪೋಸ್ಟರ್",
+        "actions": {
+            "save": "ಸೇವ್",
+            "saveSub": "ಗ್ಯಾಲರಿಯಲ್ಲಿ",
+            "share": "ಹಂಚಿಕೆ",
+            "shareSub": "ಆ್ಯಪ್‌ಗಳಿಗೆ"
+        },
+        "secondary": {
+            "editAgain": "← ಮತ್ತೆ ಸಂಪಾದಿಸಿ",
+            "newPoster": "ಹೊಸ ಪೋಸ್ಟರ್"
+        }
+    },
+    "poster": {
+        "uploadPhoto": "ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
+        "watermark": "CraftoClone ಮೂಲಕ ನಿರ್ಮಿಸಲಾಗಿದೆ"
+    },
+    "backendMedia": {
+        "loadingTemplates": "ಟೆಂಪ್ಲೇಟ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡುತ್ತಿದೆ…",
+        "failedToLoad": "ಟೆಂಪ್ಲೇಟ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+        "couldntLoad": "ಲೋಡ್ ಆಗಲಿಲ್ಲ",
+        "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+        "noTemplates": "ಟೆಂಪ್ಲೇಟ್‌ಗಳು ಇಲ್ಲ",
+        "setApiUrlIn": "API URL ಅನ್ನು ಇಲ್ಲಿ ಸೆಟ್ ಮಾಡಿ",
+        "refresh": "ರಿಫ್ರೆಶ್",
+        "templatesCount": "{{count}} ಟೆಂಪ್ಲೇಟ್‌ಗಳು"
+    },
+    "alerts": {
+        "error": "ದೋಷ",
+        "posterNotReady": "ಪೋಸ್ಟರ್ ವೀಕ್ಷಣೆ ಸಿದ್ಧವಿಲ್ಲ.",
+        "captureFailedTitle": "ಕ್ಯಾಪ್ಚರ್ ವಿಫಲ",
+        "captureFailedMsg": "ಪೋಸ್ಟರ್ ರೆಂಡರ್ ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+        "savedTitle": "ಸೇವ್ ಆಯಿತು!",
+        "savedMsg": "ನಿಮ್ಮ ಪೋಸ್ಟರ್ ಗ್ಯಾಲರಿಗೆ ಸೇವ್ ಆಗಿದೆ.",
+        "storagePermissionTitle": "ಸ್ಟೋರೇಜ್ ಅನುಮತಿ",
+        "storagePermissionMsg": "ಪೋಸ್ಟರ್‌ಗಳನ್ನು ಸೇವ್ ಮಾಡಲು CraftoClone ಗೆ ನಿಮ್ಮ ಸ್ಟೋರೇಜ್ ಪ್ರವೇಶ ಬೇಕಾಗಿದೆ.",
+        "allow": "ಅನುಮತಿಸಿ",
+        "deny": "ನಿರಾಕರಿಸಿ",
+        "permissionDeniedTitle": "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ",
+        "permissionDeniedMsg": "ಚಿತ್ರಗಳನ್ನು ಸೇವ್ ಮಾಡಲು ಸ್ಟೋರೇಜ್ ಅನುಮತಿ ಅಗತ್ಯ.",
+        "shareSheetTitle": "ನಿಮ್ಮ Crafto ಪೋಸ್ಟರ್ ಹಂಚಿಕೊಳ್ಳಿ",
+        "shareSheetMessage": "CraftoClone ಮೂಲಕ ಮಾಡಿದ ನನ್ನ ಪೋಸ್ಟರ್ ನೋಡಿ!",
+        "shareFailedTitle": "ಹಂಚಿಕೆ ವಿಫಲ",
+        "shareFailedMsg": "ಪೋಸ್ಟರ್ ಹಂಚಿಕೊಳ್ಳಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+    },
+    "auth": {
+        "login": {
+            "headerTitle": "ಲಾಗಿನ್",
+            "title": "ಪೋಸ್ಟರ್ ಮೇಕರ್",
+            "subtitle": "ಕೆಲವೇ ನಿಮಿಷಗಳಲ್ಲಿ ಅದ್ಭುತ ವಿನ್ಯಾಸಗಳನ್ನು ರಚಿಸಿ.\nಪ್ರಾರಂಭಿಸಲು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.",
+            "country": "ದೇಶ",
+            "mobileNumber": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆ",
+            "mobilePlaceholder": "00000 00000",
+            "sendOtp": "OTP ಕಳುಹಿಸಿ",
+            "terms": {
+                "prefix": "ಮುಂದುವರಿಯುವುದರಿಂದ, ನೀವು ನಮ್ಮ",
+                "termsOfService": "ಸೇವಾ ನಿಯಮಗಳು",
+                "and": " ಮತ್ತು",
+                "privacyPolicy": "ಗೌಪ್ಯತಾ ನೀತಿ"
+            },
+            "errors": {
+                "enterMobile": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.",
+                "invalidMobile": "ದಯವಿಟ್ಟು ಸರಿಯಾದ 10 ಅಂಕೆಯ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ."
+            },
+            "success": {
+                "otpSent": "OTP ಯಶಸ್ವಿಯಾಗಿ ಕಳುಹಿಸಲಾಗಿದೆ."
+            }
+        },
+        "otp": {
+            "headerTitle": "ದೃಢೀಕರಣ",
+            "title": "OTP ದೃಢೀಕರಣ",
+            "subtitle": "ಕಳುಹಿಸಿದ 6 ಅಂಕೆಯ ಕೋಡ್ ನಮೂದಿಸಿ",
+            "resendIn": "ಕೋಡ್ ಮರುಕಳುಹಿಸಲು",
+            "min": "ನಿ",
+            "sec": "ಸೆ",
+            "verifyNow": "ಈಗ ದೃಢೀಕರಿಸಿ",
+            "didntReceive": "ಕೋಡ್ ಸಿಗಲಿಲ್ಲವೇ?",
+            "resendOtp": "OTP ಮರುಕಳುಹಿಸಿ",
+            "phoneMask": "+91 98765 43210",
+            "errors": {
+                "enterCompleteCode": "ದಯವಿಟ್ಟು ಸಂಪೂರ್ಣ 6 ಅಂಕೆಯ ಕೋಡ್ ನಮೂದಿಸಿ.",
+                "waitBeforeResend": "ಹೊಸ ಕೋಡ್ ಕೇಳುವ ಮೊದಲು ದಯವಿಟ್ಟು ಕಾಯಿರಿ."
+            },
+            "success": {
+                "verified": "OTP ಯಶಸ್ವಿಯಾಗಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ.",
+                "resent": "ಹೊಸ OTP ಕಳುಹಿಸಲಾಗಿದೆ."
+            }
+        }
+    },
+    "userSetup": {
+        "title": "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಅನ್ನು ಸೆಟ್ ಮಾಡಿ",
+        "subtitle": "ಪೋಸ್ಟರ್‌ಗಳನ್ನು ವೈಯಕ್ತೀಕರಿಸಲು ನಿಮ್ಮ ಫೋಟೋ ಮತ್ತು ಹೆಸರನ್ನು ಸೇರಿಸಿ.",
+        "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+        "addPhoto": "ಫೋಟೋ ಸೇರಿಸಿ",
+        "yourName": "ನಿಮ್ಮ ಹೆಸರು",
+        "namePlaceholder": "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ",
+        "continue": "ಮುಂದುವರಿಸಿ",
+        "errors": {
+            "selectImage": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಫೋಟೋ ಆಯ್ಕೆಮಾಡಿ.",
+            "enterName": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ."
+        }
+    }
+}

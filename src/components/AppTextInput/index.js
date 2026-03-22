@@ -4,6 +4,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
     Animated,
+    Pressable,
     StyleSheet,
     Text,
     TextInput,
@@ -19,6 +20,8 @@ const AppTextInput = ({
     multiline = false,
     maxLength,
     keyboardType = 'default',
+    rightActionLabel,
+    onRightActionPress,
     style,
     inputStyle,
     ...rest
@@ -65,6 +68,11 @@ const AppTextInput = ({
                         <Text style={styles.counter}>
                             {(value || '').length}/{maxLength}
                         </Text>
+                    )}
+                    {rightActionLabel && onRightActionPress && (
+                        <Pressable style={styles.rightAction} onPress={onRightActionPress}>
+                            <Text style={styles.rightActionText}>{rightActionLabel}</Text>
+                        </Pressable>
                     )}
                 </View>
             )}
@@ -139,6 +147,19 @@ const styles = StyleSheet.create({
         fontSize: FONTS.sizes.xs,
         color: COLORS.textMuted,
         fontWeight: FONTS.weights.medium,
+    },
+    rightAction: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: BORDER_RADIUS.sm,
+        backgroundColor: COLORS.primary + '12',
+    },
+    rightActionText: {
+        fontSize: FONTS.sizes.xs,
+        color: COLORS.primary,
+        fontWeight: FONTS.weights.semiBold,
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
     },
 });
 

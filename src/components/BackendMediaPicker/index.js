@@ -17,6 +17,8 @@ import {
     View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { setSelectedTemplate } from '../../store/posterSlice';
 import { fetchBackendTemplates } from '../../services/backendMediaService';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../../utils/constants';
@@ -184,7 +186,7 @@ const TemplateCard = ({ template, isSelected, onPress }) => {
                         alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                     }}>
-                        <Text style={{ fontSize: iconSize, lineHeight: iconSize * 1.2 }}>👤</Text>
+                        <MaterialCommunityIcons name="account-outline" size={iconSize} color={accentColor} />
                     </View>
 
                     {/* ── 3. Name bar (at exact scaled Y position) ── */}
@@ -214,7 +216,7 @@ const TemplateCard = ({ template, isSelected, onPress }) => {
                     {/* ── 6. Selected checkmark ─────────────────── */}
                     {isSelected && (
                         <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
-                            <Text style={styles.checkIcon}>✓</Text>
+                            <MaterialCommunityIcons name="check" style={styles.checkIcon} />
                         </View>
                     )}
 
@@ -243,6 +245,7 @@ const CategoryChip = ({ label, isActive, onPress }) => (
 const BackendMediaPicker = () => {
     const dispatch = useDispatch();
     const selectedId = useSelector(s => s.poster.selectedTemplate?.id);
+    const { t } = useTranslation();
 
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -275,17 +278,17 @@ const BackendMediaPicker = () => {
             }
             setHasMore(items.length === 20);
         } catch (e) {
-            setError(e.message ?? 'Failed to load templates');
+            setError(e.message ?? t('backendMedia.failedToLoad'));
         } finally {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [category]);
+    }, [category, t]);
 
     useEffect(() => {
         setPage(1);
         load({ page: 1, category });
-    }, [category]);
+    }, [category, load]);
 
     const handleSelect = useCallback((template) => {
         dispatch(setSelectedTemplate(template));
@@ -315,18 +318,18 @@ const BackendMediaPicker = () => {
     if (loading) return (
         <View style={styles.stateBox}>
             <ActivityIndicator color={COLORS.primary} size="large" />
-            <Text style={styles.stateText}>Loading templates…</Text>
+            <Text style={styles.stateText}>{t('backendMedia.loadingTemplates')}</Text>
         </View>
     );
 
     // ── Error ──────────────────────────────────────────────────────
     if (error) return (
         <View style={styles.stateBox}>
-            <Text style={styles.stateEmoji}>⚠️</Text>
-            <Text style={styles.stateTitle}>Couldn't load</Text>
+            <MaterialCommunityIcons name="alert-circle-outline" style={styles.stateIcon} />
+            <Text style={styles.stateTitle}>{t('backendMedia.couldntLoad')}</Text>
             <Text style={styles.stateText}>{error}</Text>
             <Pressable style={styles.retryBtn} onPress={() => load({ page: 1, category })}>
-                <Text style={styles.retryText}>Retry</Text>
+                <Text style={styles.retryText}>{t('backendMedia.retry')}</Text>
             </Pressable>
         </View>
     );
@@ -334,14 +337,14 @@ const BackendMediaPicker = () => {
     // ── Empty ──────────────────────────────────────────────────────
     if (templates.length === 0) return (
         <View style={styles.stateBox}>
-            <Text style={styles.stateEmoji}>📭</Text>
-            <Text style={styles.stateTitle}>No templates</Text>
+            <MaterialCommunityIcons name="inbox-outline" style={styles.stateIcon} />
+            <Text style={styles.stateTitle}>{t('backendMedia.noTemplates')}</Text>
             <Text style={styles.stateText}>
-                Set your API URL in{'\n'}
+                {t('backendMedia.setApiUrlIn')}{'\n'}
                 <Text style={styles.codeText}>services/backendMediaService.js</Text>
             </Text>
             <Pressable style={styles.retryBtn} onPress={() => load({ page: 1, category })}>
-                <Text style={styles.retryText}>Retry</Text>
+                <Text style={styles.retryText}>{t('backendMedia.retry')}</Text>
             </Pressable>
         </View>
     );
@@ -359,7 +362,9 @@ const BackendMediaPicker = () => {
                 {categories.map(cat => (
                     <CategoryChip
                         key={cat}
-                        label={cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        label={cat === 'all'
+                            ? t('categories.all')
+                            : t(`categories.${cat}`, { defaultValue: cat.charAt(0).toUpperCase() + cat.slice(1) })}
                         isActive={category === cat}
                         onPress={() => setCategory(cat)}
                     />
@@ -368,10 +373,10 @@ const BackendMediaPicker = () => {
 
             {/* Count badge + refresh */}
             <View style={styles.metaRow}>
-                <Text style={styles.metaCount}>{templates.length} templates</Text>
+                <Text style={styles.metaCount}>{t('backendMedia.templatesCount', { count: templates.length })}</Text>
                 <Pressable style={styles.refreshBtn} onPress={() => load({ page: 1, category })}>
-                    <Text style={styles.refreshIcon}>↻</Text>
-                    <Text style={styles.refreshText}>Refresh</Text>
+                    <MaterialCommunityIcons name="refresh" style={styles.refreshIcon} />
+                    <Text style={styles.refreshText}>{t('backendMedia.refresh')}</Text>
                 </Pressable>
             </View>
 
@@ -520,7 +525,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: SPACING.sm,
     },
-    stateEmoji: { fontSize: 36 },
+    stateIcon: { fontSize: 36, color: COLORS.textMuted },
     stateTitle: {
         fontSize: FONTS.sizes.base,
         fontWeight: FONTS.weights.bold,
