@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { SUPPORTED_LANGUAGES } from '../../i18n/languages';
 import { setStoredLanguage } from '../../i18n/storage';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOW } from '../../utils/constants';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../utils/constants';
 
 const LanguageSelectionScreen = ({ navigation }) => {
     const { t } = useTranslation();
@@ -19,7 +19,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
     const handleSelect = useCallback(async (code) => {
         await setStoredLanguage(code);
         await i18n.changeLanguage(code);
-        navigation.reset({ index: 0, routes: [{ name: 'HomeTabs' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     }, [navigation]);
 
     return (
@@ -42,7 +42,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
                             <View style={styles.badge}>
                                 <Text style={styles.badgeText}>{lang.nativeLabel}</Text>
                             </View>
-                            <View style={{ flex: 1 }}>
+                            <View style={styles.cardTextWrap}>
                                 <Text style={styles.langLabel}>{lang.label}</Text>
                                 {lang.nativeLabel !== lang.label ? (
                                     <Text style={styles.langNative}>{lang.nativeLabel}</Text>
@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     cardLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, flex: 1 },
+    cardTextWrap: { flex: 1 },
     badge: {
         minWidth: 64,
         paddingHorizontal: 10,

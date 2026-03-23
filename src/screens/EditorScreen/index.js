@@ -257,7 +257,7 @@ const PhotoTab = ({ onPickImage, pickingImage, userPhoto, photoScale, onScaleCha
                     })}
                 </View>
             </View>
-
+ 
         </View>
     </ScrollView>
     );

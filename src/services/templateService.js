@@ -54,7 +54,7 @@ export const TEMPLATES = [
         pattern: 'diagonal',
         // ── Tall portrait on the LEFT third ────────────────────────
         //    x: 12  ─── left bar occupies ~160px ───────────────────
-        photoFrame: { x: 0, y:100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
+        photoFrame: { x: 12, y:100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
         textFields: [
             // Text sits to the RIGHT of the photo
             { key: 'name', label: 'Leader Name', x: 174, y: 100, fieldWidth: 212, fontSize: 22, fontWeight: '900', color: '#FFFFFF', align: 'left' },

@@ -75,7 +75,7 @@ const UserSetupScreen = ({ navigation }) => {
         await saveUserProfile(profile);
         dispatch(setUserName(profile.name));
         dispatch(setUserPhoto(profile.imageUri));
-        navigation.reset({ index: 0, routes: [{ name: 'HomeTabs' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     };
 
     return (
