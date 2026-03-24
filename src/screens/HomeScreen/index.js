@@ -12,7 +12,7 @@ import {
     View,
     Image,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -24,6 +24,10 @@ import {
 import { TEMPLATES } from '../../services/templateService';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { getUserProfile } from '../../utils/userStorage';
+import {
+    getPosterFitLayout,
+    getScaledPhotoFrameStyle,
+} from '../../utils/photoFrameLayout';
 
 const COLORS = {
     pageBackground: '#F2F4F7',
@@ -57,8 +61,76 @@ const CATEGORY_TARGET = {
     motivational: 'all',
 };
 
+const TemplatePosterPreview = ({ template, userPhoto }) => {
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const posterLayout = useMemo(
+        () => getPosterFitLayout(containerSize.width, containerSize.height),
+        [containerSize.height, containerSize.width],
+    );
+
+    const photoFrameStyle = useMemo(
+        () => getScaledPhotoFrameStyle({
+            photoFrame: template?.photoFrame,
+            posterLayout,
+            photoShape: 'template',
+            photoPosition: { x: 0, y: 0 },
+            photoScale: 1,
+        }),
+        [posterLayout, template?.photoFrame],
+    );
+
+    return (
+        <View
+            style={styles.reelMedia}
+            onLayout={event => {
+                const { width, height } = event.nativeEvent.layout;
+                if (width !== containerSize.width || height !== containerSize.height) {
+                    setContainerSize({ width, height });
+                }
+            }}>
+            {template?.Image ? (
+                <View style={{ height: "100%", width: "100%" }} >
+
+                    <Image
+                        source={template.Image}
+                        style={[
+                            styles.reelImage,
+                            {
+                                width: "100%",
+                                height: "100%",
+                            },
+                        ]}
+                        resizeMode="stretch"
+                    />
+
+                </View>
+            ) : (
+                <View
+                    style={[
+                        styles.reelFallback,
+                        {
+                            width: posterLayout.width,
+                            height: posterLayout.height,
+                            left: posterLayout.offsetX,
+                            top: posterLayout.offsetY,
+                            backgroundColor: template?.accentColor,
+                        },
+                    ]}
+                />
+            )}
+
+            {userPhoto && photoFrameStyle ? (
+                <View style={[styles.userPhotoFrame, photoFrameStyle]} pointerEvents="none">
+                    <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                </View>
+            ) : null}
+        </View>
+    );
+};
+
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
+    const userPhoto = useSelector(state => state.poster.userPhoto);
     const { t } = useTranslation();
     const [activeCategory, setActiveCategoryUi] = useState('festival');
 
@@ -167,16 +239,10 @@ const HomeScreen = ({ navigation }) => {
                 decelerationRate="fast"
                 contentContainerStyle={styles.reelsContent}
                 renderItem={({ item }) => (
-                    <View style={{ height: ITEM_HEIGHT, marginBottom: ITEM_SPACING }}   >
+                    <View style={{ height: ITEM_HEIGHT, marginBottom: ITEM_SPACING, width: "100%" }}   >
 
                         <Pressable style={styles.reelCard} onPress={() => openEditor(item)}>
-                            <View style={styles.reelMedia}>
-                                {item.Image ? (
-                                    <Image source={item.Image} style={styles.reelImage} resizeMode="cover" />
-                                ) : (
-                                    <View style={[styles.reelFallback, { backgroundColor: item.accentColor }]} />
-                                )}
-                            </View>
+                            <TemplatePosterPreview template={item} userPhoto={userPhoto} />
                             <View style={styles.reelMeta}>
                                 <View style={styles.actionRow}>
                                     <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
@@ -189,9 +255,6 @@ const HomeScreen = ({ navigation }) => {
                                         <Text style={styles.actionText}>{t('home.actions.edit')}</Text>
                                     </Pressable>
                                 </View>
-                                <Pressable style={styles.changeImageBtn} onPress={showUnderDevelopmentAlert}>
-                                    <Text style={styles.changeImageText}>{t('home.actions.changeImage')}</Text>
-                                </Pressable>
                             </View>
                         </Pressable>
 
@@ -357,8 +420,9 @@ const styles = StyleSheet.create({
     },
     reelCard: {
         width: '100%',
-        height: heightPixel(460),
+        height: heightPixel(420),
         borderRadius: widthPixel(20),
+        // backgroundColor: COLORS.cardBackground,
         backgroundColor: COLORS.cardBackground,
         borderWidth: widthPixel(1),
         borderColor: COLORS.border,
@@ -374,18 +438,24 @@ const styles = StyleSheet.create({
     reelMedia: {
         width: '100%',
         height: REEL_MEDIA_HEIGHT,
-        backgroundColor: '#F0F2FF',
+        backgroundColor: 'red',
         alignItems: 'center',
         justifyContent: 'center',
     },
     reelImage: {
-        width: '100%',
-        height: REEL_MEDIA_HEIGHT,
     },
     reelFallback: {
-        width: widthPixel(140),
-        height: heightPixel(140),
+        position: 'absolute',
         borderRadius: widthPixel(18),
+    },
+    userPhotoFrame: {
+        position: 'absolute',
+        overflow: 'hidden',
+        backgroundColor: '#FFFFFF',
+    },
+    userPhoto: {
+        width: '100%',
+        height: '100%',
     },
     reelMeta: {
         width: '100%',

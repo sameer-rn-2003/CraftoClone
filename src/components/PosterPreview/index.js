@@ -20,6 +20,10 @@ import {
     updateStickerPosition,
 } from '../../store/posterSlice';
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
+import {
+    getPhotoFrameBaseStyle,
+    getScaledPhotoFrameStyle,
+} from '../../utils/photoFrameLayout';
 
 const getTouchDistance = touches => {
     const dx = touches[0].pageX - touches[1].pageX;
@@ -29,15 +33,6 @@ const getTouchDistance = touches => {
 
 const MIN_TEXT_SCALE = 0.25;
 const MAX_TEXT_SCALE = 3.0;
-
-const resolveFrameRadius = (photoShape, templateRadius) => {
-    switch (photoShape) {
-        case 'circle': return 999;
-        case 'square': return 4;
-        case 'rounded': return 24;
-        default: return templateRadius;
-    }
-};
 
 const DiagonalPattern = ({ color }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -213,23 +208,14 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
     ).current;
 
 
-    const borderRadius = resolveFrameRadius(photoShape, photoFrame.borderRadius);
-    // Use photoFrame.x/y directly — template defines absolute poster-space position
-    const baseLeft = photoFrame.x;
-    const baseTop = photoFrame.y;
+    const frameBaseStyle = getPhotoFrameBaseStyle({ photoFrame, photoShape });
 
     return (
         <Animated.View
             style={[
                 styles.photoWrapper,
                 {
-                    left: baseLeft,
-                    top: baseTop,
-                    width: photoFrame.width,
-                    height: photoFrame.height,
-                    borderRadius,
-                    borderColor: photoFrame.borderColor,
-                    borderWidth: photoFrame.borderWidth,
+                    ...frameBaseStyle,
                     // scale + translate are both in transform — this keeps the
                     // pinch centered and the drag offset applied together
                     transform: [
@@ -256,25 +242,21 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
 };
 
 const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoScale }) => {
-    const borderRadius = resolveFrameRadius(photoShape, photoFrame.borderRadius);
-    // Scale grows from the frame's centre point
-    const scaledW = photoFrame.width * photoScale;
-    const scaledH = photoFrame.height * photoScale;
-    const centerX = photoFrame.x + photoFrame.width / 2;
-    const centerY = photoFrame.y + photoFrame.height / 2;
-    const baseLeft = centerX - scaledW / 2;
-    const baseTop = centerY - scaledH / 2;
+    const frameStyle = getScaledPhotoFrameStyle({
+        photoFrame,
+        posterLayout: {
+            scaleX: 1,
+            scaleY: 1,
+            offsetX: 0,
+            offsetY: 0,
+        },
+        photoPosition,
+        photoScale,
+        photoShape,
+    });
 
     return (
-        <View style={[styles.photoWrapper, {
-            left: baseLeft + photoPosition.x,
-            top: baseTop + photoPosition.y,
-            width: scaledW,
-            height: scaledH,
-            borderRadius,
-            borderColor: photoFrame.borderColor,
-            borderWidth: photoFrame.borderWidth,
-        }]}>
+        <View style={[styles.photoWrapper, frameStyle]}>
             {photoUri
                 ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
                 : <View style={styles.photoPlaceholder}>
@@ -714,3 +696,4 @@ const styles = StyleSheet.create({
 });
 
 export default PosterPreview;
+

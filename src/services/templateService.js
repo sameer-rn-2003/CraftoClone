@@ -52,8 +52,6 @@ export const TEMPLATES = [
         headerColor: '#1B3A56',   // used as left bar colour
         footerColor: '#0D2235',
         pattern: 'diagonal',
-        // ── Tall portrait on the LEFT third ────────────────────────
-        //    x: 12  ─── left bar occupies ~160px ───────────────────
         photoFrame: { x: 12, y:100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
         textFields: [
             // Text sits to the RIGHT of the photo
