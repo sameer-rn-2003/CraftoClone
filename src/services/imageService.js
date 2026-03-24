@@ -72,31 +72,97 @@ export const saveToGallery = async uri => {
     return filePath;
 };
 
+const getMimeType = uri => {
+    if (uri?.includes('data:video') || uri?.endsWith('.mp4') || uri?.endsWith('.mov')) {
+        return 'video/mp4';
+    }
+    return 'image/jpeg';
+};
+
+const ensureFileShareUrl = async uri => {
+    if (!uri) throw new Error('No media URI provided');
+
+    if (uri.startsWith('file://')) {
+        return { shareUrl: uri, type: getMimeType(uri) };
+    }
+
+    const type = getMimeType(uri);
+    const extension = type.startsWith('video') ? 'mp4' : 'jpg';
+
+    if (uri.startsWith('data:')) {
+        const base64Data = uri.split(',')[1];
+        const tempPath = `${RNFS.CachesDirectoryPath}/crafto_share_${Date.now()}.${extension}`;
+        await RNFS.writeFile(tempPath, base64Data, 'base64');
+        return { shareUrl: `file://${tempPath}`, type };
+    }
+
+    if (uri.startsWith('/')) {
+        return { shareUrl: `file://${uri}`, type };
+    }
+
+    const tempPath = `${RNFS.CachesDirectoryPath}/crafto_share_${Date.now()}.${extension}`;
+    await RNFS.writeFile(tempPath, uri, 'base64');
+    return { shareUrl: `file://${tempPath}`, type };
+};
+
 /**
  * Share a poster image via the system share sheet
  * @param {string} uri - base64 data URI or file path
  */
-export const shareImage = async uri => {
+export const shareImage = async (uri, message) => {
     try {
-        // If it's a base64 uri, save to temp first
-        let shareUrl = uri;
-        if (uri.startsWith('data:image') || !uri.startsWith('file://')) {
-            const base64Data = uri.startsWith('data:image') ? uri.split(',')[1] : uri;
-            const tempPath = `${RNFS.CachesDirectoryPath}/crafto_share_${Date.now()}.jpg`;
-            await RNFS.writeFile(tempPath, base64Data, 'base64');
-            shareUrl = `file://${tempPath}`;
-        }
+        const { shareUrl, type } = await ensureFileShareUrl(uri);
 
         await Share.open({
             url: shareUrl,
-            type: 'image/jpeg',
+            type,
             title: i18n.t('alerts.shareSheetTitle'),
-            message: i18n.t('alerts.shareSheetMessage'),
+            message: message || i18n.t('alerts.shareSheetMessage'),
+            failOnCancel: false,
         });
     } catch (error) {
-        if (error.message !== 'User did not share') {
+        if (error?.message !== 'User did not share') {
             Alert.alert(i18n.t('alerts.shareFailedTitle'), i18n.t('alerts.shareFailedMsg'));
             console.error('Share error:', error);
+        }
+    }
+};
+
+/**
+ * Share media directly to WhatsApp
+ * @param {string} uri - base64 data URI, absolute file path, or file:// URI
+ * @param {string} message - optional caption/message
+ */
+export const shareToWhatsApp = async (uri, message = '') => {
+    try {
+        const { shareUrl, type } = await ensureFileShareUrl(uri);
+
+        await Share.shareSingle({
+            social: Share.Social.WHATSAPP,
+            url: shareUrl,
+            type,
+            message,
+            failOnCancel: false,
+        });
+    } catch (error) {
+        const rawMessage = String(error?.message || '');
+        const lowerMessage = rawMessage.toLowerCase();
+        const appMissing =
+            lowerMessage.includes('not installed') ||
+            lowerMessage.includes('cannot open') ||
+            lowerMessage.includes('no activity found');
+
+        if (appMissing) {
+            Alert.alert(
+                i18n.t('alerts.shareFailedTitle'),
+                i18n.t('alerts.shareFailedMsg'),
+            );
+            return;
+        }
+
+        if (rawMessage !== 'User did not share') {
+            Alert.alert(i18n.t('alerts.shareFailedTitle'), i18n.t('alerts.shareFailedMsg'));
+            console.error('WhatsApp share error:', error);
         }
     }
 };

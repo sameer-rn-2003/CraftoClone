@@ -1,6 +1,6 @@
 // src/screens/HomeScreen/index.js
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Dimensions,
@@ -11,6 +11,7 @@ import {
     Text,
     View,
     Image,
+    TouchableOpacity,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -28,6 +29,8 @@ import {
     getPosterFitLayout,
     getScaledPhotoFrameStyle,
 } from '../../utils/photoFrameLayout';
+import usePosterGenerator from '../../hooks/usePosterGenerator';
+import PosterPreview from '../../components/PosterPreview';
 
 const COLORS = {
     pageBackground: '#F2F4F7',
@@ -131,8 +134,23 @@ const TemplatePosterPreview = ({ template, userPhoto }) => {
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const userPhoto = useSelector(state => state.poster.userPhoto);
+    const userName = useSelector(state => state.poster.userName);
+    const userMessage = useSelector(state => state.poster.userMessage);
     const { t } = useTranslation();
+    const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
     const [activeCategory, setActiveCategoryUi] = useState('festival');
+    const flatListRef = useRef(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const isActionInProgress = isSaving || isSharing;
+
+    const whatsappCaption = useMemo(() => {
+        const text = (userMessage || '').trim();
+        const name = (userName || '').trim();
+        if (text && name) return `${text}\n- ${name}`;
+        if (text) return text;
+        if (name) return name;
+        return '';
+    }, [userMessage, userName]);
 
     const categories = useMemo(() => (
         HEADER_CATEGORIES.map(item => ({
@@ -169,6 +187,34 @@ const HomeScreen = ({ navigation }) => {
         dispatch(setSelectedTemplate(item));
         navigation?.navigate?.('EditorScreen', { templateId: item.id });
     };
+
+    const prepareTemplateForMediaAction = useCallback(async (item) => {
+        dispatch(setSelectedTemplate(item));
+        await new Promise(resolve => setTimeout(resolve, 80));
+    }, [dispatch]);
+
+    const handleShareToWhatsApp = useCallback(async (item) => {
+        if (isActionInProgress) return;
+        await prepareTemplateForMediaAction(item);
+        await sharePosterToWhatsApp(whatsappCaption || undefined);
+    }, [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption]);
+
+    const handleDownload = useCallback(async (item) => {
+        if (isActionInProgress) return;
+        await prepareTemplateForMediaAction(item);
+        await savePoster();
+    }, [isActionInProgress, prepareTemplateForMediaAction, savePoster]);
+
+    const handleEdit = useCallback((item) => {
+        dispatch(setSelectedTemplate(item));
+        navigation?.navigate?.('EditorScreen', {
+            templateId: item.id,
+            template: item,
+            userName,
+            userMessage,
+            userPhoto,
+        });
+    }, [dispatch, navigation, userMessage, userName, userPhoto]);
 
     const showUnderDevelopmentAlert = () => {
         Alert.alert(t('home.underDevelopment.title'), t('home.underDevelopment.message'));
@@ -230,12 +276,19 @@ const HomeScreen = ({ navigation }) => {
             </View>
 
             <FlatList
+                ref={flatListRef}
                 data={reelsData}
-                keyExtractor={item => item.id}
+                keyExtractor={(item, index) => `${item.id}_${index}`}
                 showsVerticalScrollIndicator={false}
                 snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
                 snapToAlignment="start"
                 disableIntervalMomentum
+                onMomentumScrollEnd={(event) => {
+                    const index = Math.round(
+                        event.nativeEvent.contentOffset.y / (ITEM_HEIGHT + ITEM_SPACING)
+                    );
+                    setCurrentIndex(index);
+                }}
                 decelerationRate="fast"
                 contentContainerStyle={styles.reelsContent}
                 renderItem={({ item }) => (
@@ -245,13 +298,30 @@ const HomeScreen = ({ navigation }) => {
                             <TemplatePosterPreview template={item} userPhoto={userPhoto} />
                             <View style={styles.reelMeta}>
                                 <View style={styles.actionRow}>
-                                    <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Pressable
+                                        style={[styles.actionBtn, isActionInProgress && styles.actionBtnDisabled]}
+                                        disabled={isActionInProgress}
+                                        onPress={event => {
+                                            event.stopPropagation?.();
+                                            handleShareToWhatsApp(item);
+                                        }}>
                                         <Text style={styles.actionText}>{t('home.actions.shareWhatsApp')}</Text>
                                     </Pressable>
-                                    <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Pressable
+                                        style={[styles.actionBtn, isActionInProgress && styles.actionBtnDisabled]}
+                                        disabled={isActionInProgress}
+                                        onPress={event => {
+                                            event.stopPropagation?.();
+                                            handleDownload(item);
+                                        }}>
                                         <Text style={styles.actionText}>{t('home.actions.download')}</Text>
                                     </Pressable>
-                                    <Pressable style={styles.actionBtn} onPress={showUnderDevelopmentAlert}>
+                                    <Pressable
+                                        style={styles.actionBtn}
+                                        onPress={event => {
+                                            event.stopPropagation?.();
+                                            handleEdit(item);
+                                        }}>
                                         <Text style={styles.actionText}>{t('home.actions.edit')}</Text>
                                     </Pressable>
                                 </View>
@@ -259,17 +329,39 @@ const HomeScreen = ({ navigation }) => {
                         </Pressable>
 
                     </View>
-
                 )}
             />
 
-            <View style={{ height: heightPixel(30) }}>
+            <View style={styles.hiddenCaptureStage} pointerEvents="none">
+                <PosterPreview posterRef={posterRef} />
+            </View>
 
-                <Text style={{ textAlign: 'center', color: COLORS.textSecondary, fontSize: widthPixel(11), fontFamily: fonts.FONT_FAMILY.Medium }}>
-                    {t('home.footerText')}
+            <TouchableOpacity style={{
+                height: heightPixel(48), width: widthPixel(120),
+                borderRadius: widthPixel(24),
+                backgroundColor: COLORS.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'absolute',
+                bottom: heightPixel(20),
+                right: widthPixel(20)
+            }} onPress={() => {
+                const nextIndex = currentIndex + 1;
+
+                if (nextIndex < reelsData.length) {
+                    flatListRef.current?.scrollToIndex({
+                        index: nextIndex,
+                        animated: true,
+                    });
+                    setCurrentIndex(nextIndex);
+                }
+            }}>
+
+                <Text style={{ textAlign: 'center', color: "white", fontSize: widthPixel(11), fontFamily: fonts.FONT_FAMILY.Medium }}>
+                    Next
                 </Text>
 
-            </View>
+            </TouchableOpacity>
 
 
         </  >
@@ -438,7 +530,6 @@ const styles = StyleSheet.create({
     reelMedia: {
         width: '100%',
         height: REEL_MEDIA_HEIGHT,
-        backgroundColor: 'red',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -494,6 +585,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingHorizontal: widthPixel(6),
     },
+    actionBtnDisabled: {
+        opacity: 0.55,
+    },
     actionText: {
         fontSize: widthPixel(9.2),
         fontFamily: fonts.FONT_FAMILY.Bold,
@@ -514,6 +608,11 @@ const styles = StyleSheet.create({
         fontSize: widthPixel(10.5),
         fontFamily: fonts.FONT_FAMILY.Bold,
         color: COLORS.primary,
+    },
+    hiddenCaptureStage: {
+        position: 'absolute',
+        left: -5000,
+        top: 0,
     },
 });
 

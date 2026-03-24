@@ -107,7 +107,7 @@ const SIZE_PRESETS = [12, 16, 20, 24, 28, 32, 36];
 const TABS = [
     { id: 'photo', icon: 'camera-outline', labelKey: 'editor.tabs.photo' },
     { id: 'text', icon: 'format-text', labelKey: 'editor.tabs.text' },
-    // { id: 'style', icon: 'palette-outline', labelKey: 'editor.tabs.style' },
+    { id: 'style', icon: 'palette-outline', labelKey: 'editor.tabs.style' },
 ];
 
 // ─── Small reusable atoms ─────────────────────────────────────────
@@ -457,9 +457,9 @@ const StyleTab = ({ p, dispatch }) => {
             ))}
         </View>
 
-        <View style={s.divider} />
+        {/* <View style={s.divider} /> */}
 
-        <SectionLabel>{t('editor.style.accentColour')}</SectionLabel>
+        {/* <SectionLabel>{t('editor.style.accentColour')}</SectionLabel>
         <View style={s.paletteRow}>
             <Pressable onPress={() => dispatch(setAccentColorOverride(null))}
                 style={[s.swatch, s.resetSwatch, !p.accentColorOverride && s.swatchActive]}>
@@ -471,9 +471,9 @@ const StyleTab = ({ p, dispatch }) => {
             ))}
         </View>
 
-        <View style={s.divider} />
+        <View style={s.divider} /> */}
 
-        <SectionLabel>{t('editor.style.backgroundOverlay')}</SectionLabel>
+        {/* <SectionLabel>{t('editor.style.backgroundOverlay')}</SectionLabel>
         <View style={s.overlayRow}>
             {BG_OVERLAYS.map(o => (
                 <Pressable key={o.id} onPress={() => dispatch(setBgOverlayColor(o.value))}
@@ -483,7 +483,7 @@ const StyleTab = ({ p, dispatch }) => {
                     </Text>
                 </Pressable>
             ))}
-        </View>
+        </View> */}
 
         <View style={{ height: SPACING.xxl }} />
     </ScrollView>

@@ -7,7 +7,7 @@ import { Alert } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { addSavedPoster } from '../store/posterSlice';
-import { saveToGallery, shareImage } from '../services/imageService';
+import { saveToGallery, shareImage, shareToWhatsApp } from '../services/imageService';
 
 const usePosterGenerator = () => {
     const posterRef = useRef(null);
@@ -59,14 +59,30 @@ const usePosterGenerator = () => {
     /**
      * Share poster via system share sheet
      */
-    const sharePoster = useCallback(async () => {
+    const sharePoster = useCallback(async (message) => {
         setIsSharing(true);
         try {
             const uri = await capturePoster();
             if (!uri) return;
-            await shareImage(uri);
+            await shareImage(uri, message);
         } catch (error) {
             console.error('sharePoster error:', error);
+        } finally {
+            setIsSharing(false);
+        }
+    }, [capturePoster]);
+
+    /**
+     * Share poster directly to WhatsApp with optional caption
+     */
+    const sharePosterToWhatsApp = useCallback(async (message) => {
+        setIsSharing(true);
+        try {
+            const uri = await capturePoster();
+            if (!uri) return;
+            await shareToWhatsApp(uri, message);
+        } catch (error) {
+            console.error('sharePosterToWhatsApp error:', error);
         } finally {
             setIsSharing(false);
         }
@@ -77,6 +93,7 @@ const usePosterGenerator = () => {
         capturePoster,
         savePoster,
         sharePoster,
+        sharePosterToWhatsApp,
         isSaving,
         isSharing,
     };
