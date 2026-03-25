@@ -13,7 +13,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { setSelectedTemplate } from '../../store/posterSlice';
@@ -46,6 +46,7 @@ const BackButton = ({ onPress }) => {
 
 const TemplateScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
+    const userPhoto = useSelector(state => state.poster.userPhoto);
     const { t } = useTranslation();
     const initialCategory = route.params?.categoryId || 'all';
     const [selected, setSelected] = useState(initialCategory);
@@ -53,7 +54,7 @@ const TemplateScreen = ({ navigation, route }) => {
     const filtered =
         selected === 'all'
             ? TEMPLATES
-            : TEMPLATES.filter(t => t.category === selected);
+            : TEMPLATES.filter(template => template.category === selected);
 
     const handleTemplatePress = useCallback(
         template => {
@@ -134,6 +135,7 @@ const TemplateScreen = ({ navigation, route }) => {
                 renderItem={({ item }) => (
                     <BannerCard
                         template={item}
+                        userPhoto={userPhoto}
                         onPress={() => handleTemplatePress(item)}
                     />
                 )}

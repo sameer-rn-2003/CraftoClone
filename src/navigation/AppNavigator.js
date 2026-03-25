@@ -11,6 +11,7 @@ import TemplateScreen from '../screens/TemplateScreen';
 import EditorScreen from '../screens/EditorScreen';
 import PreviewScreen from '../screens/PreviewScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
+import UserSetupScreen from '../screens/UserSetupScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OtpVerificationScreen from '../screens/OtpVerificationScreen';
 import { COLORS } from '../utils/constants';
@@ -62,6 +63,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
                 <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
+                <Stack.Screen name="UserSetup" component={UserSetupScreen} />
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen
                     name="TemplateScreen"

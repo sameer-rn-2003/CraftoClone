@@ -9,6 +9,24 @@ const initialState = {
     userPhoto: null,
     userName: '',
     userMessage: '',
+    isPremium: false,
+    premiumProfile: {
+        personal: {
+            mobileNumber: '',
+            address: '',
+            socialHandle: '',
+            organizationName: '',
+            organizationLogo: '',
+        },
+        business: {
+            businessName: '',
+            businessDescription: '',
+            businessLogo: '',
+            contactMobileNumber: '',
+            contactAddress: '',
+            contactSocialHandle: '',
+        },
+    },
 
     // ── Photo drag & resize ────────────────────────────────
     photoPosition: { x: 0, y: 0 },
@@ -74,6 +92,27 @@ const posterSlice = createSlice({
         },
         setUserName(state, { payload }) { state.userName = payload; },
         setUserMessage(state, { payload }) { state.userMessage = payload; },
+        setPremiumStatus(state, { payload }) { state.isPremium = payload; },
+        hydratePremiumProfile(state, { payload }) {
+            state.premiumProfile = {
+                ...state.premiumProfile,
+                ...(payload || {}),
+                personal: {
+                    ...state.premiumProfile.personal,
+                    ...(payload?.personal || {}),
+                },
+                business: {
+                    ...state.premiumProfile.business,
+                    ...(payload?.business || {}),
+                },
+            };
+        },
+        setPremiumProfileField(state, { payload }) {
+            const { section, field, value } = payload || {};
+            if (!section || !field) return;
+            if (!state.premiumProfile[section]) return;
+            state.premiumProfile[section][field] = value;
+        },
         setPhotoPosition(state, { payload }) { state.photoPosition = payload; },
         setPhotoScale(state, { payload }) { state.photoScale = payload; },
 
@@ -168,6 +207,23 @@ const posterSlice = createSlice({
             state.bgOverlayColor = null;
             state.bgOverlayOpacity = 0.3;
             state.stickers = [];
+            state.premiumProfile = {
+                personal: {
+                    mobileNumber: '',
+                    address: '',
+                    socialHandle: '',
+                    organizationName: '',
+                    organizationLogo: '',
+                },
+                business: {
+                    businessName: '',
+                    businessDescription: '',
+                    businessLogo: '',
+                    contactMobileNumber: '',
+                    contactAddress: '',
+                    contactSocialHandle: '',
+                },
+            };
         },
 
         setActiveCategory(state, { payload }) { state.activeCategory = payload; },
@@ -176,6 +232,7 @@ const posterSlice = createSlice({
 
 export const {
     setSelectedTemplate, setUserPhoto, setUserName, setUserMessage,
+    setPremiumStatus, hydratePremiumProfile, setPremiumProfileField,
     setPhotoPosition, setPhotoScale,
     setNameColor, setMessageColor,
     setNameFontSize, setMessageFontSize,

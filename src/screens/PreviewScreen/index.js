@@ -34,9 +34,9 @@ const PREVIEW_W = POSTER_SIZE.width * SCALE;
 const PREVIEW_H = POSTER_SIZE.height * SCALE;
 
 const PreviewScreen = ({ navigation, route }) => {
-    const { selectedTemplate, userName } = useSelector(s => s.poster);
+    const { selectedTemplate, userName, isPremium } = useSelector(s => s.poster);
     const { t } = useTranslation();
-    const { posterRef, savePoster, sharePoster, isSaving, isSharing } =
+    const { posterRef, savePoster, sharePoster, sharePosterToWhatsApp, isSaving, isSharing } =
         usePosterGenerator();
 
     const handleSave = useCallback(async () => {
@@ -44,8 +44,12 @@ const PreviewScreen = ({ navigation, route }) => {
     }, [savePoster]);
 
     const handleShare = useCallback(async () => {
-        await sharePoster();
-    }, [sharePoster]);
+        if (isPremium) {
+            await sharePoster();
+            return;
+        }
+        await sharePosterToWhatsApp();
+    }, [isPremium, sharePoster, sharePosterToWhatsApp]);
 
     const didAutoAction = useRef(false);
     useEffect(() => {
@@ -141,8 +145,14 @@ const PreviewScreen = ({ navigation, route }) => {
                             <>
                                 <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
                                 <View>
-                                    <Text style={styles.actionLabel}>{t('preview.actions.share')}</Text>
-                                    <Text style={styles.actionSub}>{t('preview.actions.shareSub')}</Text>
+                                    <Text style={styles.actionLabel}>
+                                        {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
+                                    </Text>
+                                    <Text style={styles.actionSub}>
+                                        {isPremium
+                                            ? t('preview.actions.shareSub')
+                                            : t('preview.actions.shareWhatsAppSub')}
+                                    </Text>
                                 </View>
                             </>
                         )}

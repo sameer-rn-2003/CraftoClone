@@ -13,7 +13,12 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import Toast from '../../components/Toast';
 import useImagePicker from '../../hooks/useImagePicker';
-import { setUserName, setUserPhoto } from '../../store/posterSlice';
+import {
+    setUserName,
+    setUserPhoto,
+    setPremiumStatus,
+    hydratePremiumProfile,
+} from '../../store/posterSlice';
 import { getUserProfile, saveUserProfile } from '../../utils/userStorage';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 
@@ -71,10 +76,17 @@ const UserSetupScreen = ({ navigation }) => {
             showToast(t('userSetup.errors.enterName'), 'error');
             return;
         }
-        const profile = { name: name.trim(), imageUri };
+        const existing = await getUserProfile();
+        const profile = {
+            ...existing,
+            name: name.trim(),
+            imageUri,
+        };
         await saveUserProfile(profile);
         dispatch(setUserName(profile.name));
         dispatch(setUserPhoto(profile.imageUri));
+        dispatch(setPremiumStatus(!!profile.isPremium));
+        dispatch(hydratePremiumProfile(profile.premiumProfile));
         navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     };
 

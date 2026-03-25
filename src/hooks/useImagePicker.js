@@ -19,7 +19,8 @@ const useImagePicker = () => {
     const dispatch = useDispatch();
     const [loading, setLoading] = useState(false);
 
-    const pickImage = useCallback(async () => {
+    const pickImage = useCallback(async (options = {}) => {
+        const { autoStoreInProfilePhoto = true } = options;
         setLoading(true);
         try {
             const result = await launchImageLibrary(IMAGE_PICKER_OPTIONS);
@@ -37,7 +38,9 @@ const useImagePicker = () => {
 
             const asset = result.assets?.[0];
             if (asset?.uri) {
-                dispatch(setUserPhoto(asset.uri));
+                if (autoStoreInProfilePhoto) {
+                    dispatch(setUserPhoto(asset.uri));
+                }
                 setLoading(false);
                 return asset.uri;
             }

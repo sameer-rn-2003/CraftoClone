@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
     setActiveCategory,
+    hydratePremiumProfile,
+    setPremiumStatus,
     setSelectedTemplate,
     setUserName,
     setUserPhoto,
@@ -167,6 +169,10 @@ const HomeScreen = ({ navigation }) => {
             const stored = await getUserProfile();
             if (stored?.name) dispatch(setUserName(stored.name));
             if (stored?.imageUri) dispatch(setUserPhoto(stored.imageUri));
+            dispatch(setPremiumStatus(!!stored?.isPremium));
+            if (stored?.premiumProfile) {
+                dispatch(hydratePremiumProfile(stored.premiumProfile));
+            }
         })();
     }, [dispatch]);
 

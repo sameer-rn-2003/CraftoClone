@@ -5,6 +5,7 @@
 import React, { useRef, useCallback } from 'react';
 import {
     Animated,
+    Image,
     Pressable,
     StyleSheet,
     Text,
@@ -82,7 +83,7 @@ const PatternOverlay = ({ pattern, color }) => {
 };
 
 // ─── BannerCard ───────────────────────────────────────────────────
-const BannerCard = ({ template, onPress, style }) => {
+const BannerCard = ({ template, userPhoto, onPress, style }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -182,7 +183,11 @@ const BannerCard = ({ template, onPress, style }) => {
                         alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                     }}>
-                        <MaterialCommunityIcons name="account-outline" size={iconSize} color={accentColor} />
+                        {userPhoto ? (
+                            <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                        ) : (
+                            <MaterialCommunityIcons name="account-outline" size={iconSize} color={accentColor} />
+                        )}
                     </View>
 
                     {/* ── Layer 3: Name bar ───────────────────────── */}
@@ -261,6 +266,10 @@ const styles = StyleSheet.create({
         fontWeight: FONTS.weights.semiBold,
         color: COLORS.white,
         flexShrink: 1,
+    },
+    userPhoto: {
+        width: '100%',
+        height: '100%',
     },
 });
 

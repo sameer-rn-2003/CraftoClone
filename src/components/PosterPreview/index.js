@@ -96,7 +96,7 @@ const PatternLayer = ({ pattern, accentColor }) => {
     }
 };
 
-const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoScale }) => {
+const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoScale, allowPinchScale = true }) => {
     const dispatch = useDispatch();
     const { photoPosition } = useSelector(s => s.poster);
     const { t } = useTranslation();
@@ -154,6 +154,9 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
                 const touches = evt.nativeEvent.touches;
 
                 if (touches.length >= 2) {
+                    if (!allowPinchScale) {
+                        return;
+                    }
                     if (!initPinchDist.current) {
                         // ── Second finger just appeared: INITIALISE PINCH ──
                         isPinching.current = true;
@@ -329,6 +332,7 @@ const DraggableText = ({
     textScale,
     setPositionAction,
     setScaleAction,
+    allowPinchScale = true,
 }) => {
     const dispatch = useDispatch();
 
@@ -378,6 +382,9 @@ const DraggableText = ({
                 const touches = evt.nativeEvent.touches;
 
                 if (touches.length >= 2) {
+                    if (!allowPinchScale) {
+                        return;
+                    }
                     if (!initPinchDist.current) {
                         isPinching.current = true;
                         initPinchDist.current = getTouchDistance(touches);
@@ -473,7 +480,7 @@ const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2
 const StaticNameText = props => <StaticText {...props} numberOfLines={1} />;
 const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
-const PosterPreview = ({ posterRef, interactive = false }) => {
+const PosterPreview = ({ posterRef, interactive = false, allowPinchScale = interactive }) => {
     const p = useSelector(s => s.poster);
     const { t } = useTranslation();
 
@@ -562,7 +569,8 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                     photoUri={p.userPhoto}
                     accentColor={accentColor}
                     photoShape={p.photoShape ?? 'template'}
-                    photoScale={p.photoScale ?? 1} />
+                    photoScale={p.photoScale ?? 1}
+                    allowPinchScale={allowPinchScale} />
                 : <StaticPhoto
                     photoFrame={photoFrame}
                     photoUri={p.userPhoto}
@@ -580,7 +588,8 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                         textPosition={p.namePosition ?? { x: 0, y: 0 }}
                         textScale={p.nameScale ?? 1}
                         setPositionAction={setNamePosition}
-                        setScaleAction={setNameScale} />
+                        setScaleAction={setNameScale}
+                        allowPinchScale={allowPinchScale} />
                     : <StaticNameText
                         field={nameField}
                         text={p.userName || nameField.label}
@@ -599,7 +608,8 @@ const PosterPreview = ({ posterRef, interactive = false }) => {
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                         textScale={p.messageScale ?? 1}
                         setPositionAction={setMessagePosition}
-                        setScaleAction={setMessageScale} />
+                        setScaleAction={setMessageScale}
+                        allowPinchScale={allowPinchScale} />
                     : <StaticMessageText
                         field={messageField}
                         text={p.userMessage || messageField.label}

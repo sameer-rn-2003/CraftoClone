@@ -19,7 +19,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
     const handleSelect = useCallback(async (code) => {
         await setStoredLanguage(code);
         await i18n.changeLanguage(code);
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'UserSetup' }] });
     }, [navigation]);
 
     return (

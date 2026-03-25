@@ -70,6 +70,7 @@
         "tabs": {
             "photo": "Photo",
             "text": "Text",
+            "details": "Details",
             "style": "Style",
             "stickers": "Stickers"
         },
@@ -148,6 +149,31 @@
         "stickers": {
             "hint": "Tap to place on poster • Drag to reposition • Tap again to remove",
             "added": "Added stickers — drag on poster to reposition"
+        },
+        "premium": {
+            "personal": "Personal",
+            "business": "Business",
+            "personalDetails": "Personal Details",
+            "organizationDetails": "Organization Details",
+            "businessInfo": "Business Info",
+            "businessLogo": "Business Logo",
+            "contactDetails": "Contact Details",
+            "mobileNumber": "Mobile Number",
+            "mobilePlaceholder": "Enter mobile number",
+            "address": "Address",
+            "addressPlaceholder": "Enter address",
+            "socialHandle": "Social Handle",
+            "socialPlaceholder": "@username",
+            "organizationName": "Organization Name",
+            "organizationPlaceholder": "Enter organization name",
+            "uploadOrganizationLogo": "Upload Organization Logo",
+            "changeOrganizationLogo": "Change Organization Logo",
+            "businessName": "Business Name",
+            "businessNamePlaceholder": "Enter business name",
+            "businessDescription": "Business Description",
+            "businessDescriptionPlaceholder": "Describe your business",
+            "uploadBusinessLogo": "Upload Business Logo",
+            "changeBusinessLogo": "Change Business Logo"
         }
     },
     "preview": {
@@ -156,7 +182,8 @@
             "save": "Save",
             "saveSub": "to Gallery",
             "share": "Share",
-            "shareSub": "to apps"
+            "shareSub": "to apps",
+            "shareWhatsAppSub": "to WhatsApp"
         },
         "secondary": {
             "editAgain": "← Edit Again",

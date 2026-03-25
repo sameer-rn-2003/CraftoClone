@@ -10,6 +10,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../utils/constants';
 
 const AppTextInput = ({
@@ -22,6 +23,8 @@ const AppTextInput = ({
     keyboardType = 'default',
     rightActionLabel,
     onRightActionPress,
+    locked = false,
+    onLockedPress,
     style,
     inputStyle,
     ...rest
@@ -57,6 +60,8 @@ const AppTextInput = ({
         outputRange: [0, 0.25],
     });
 
+    const isEditable = rest.editable !== false && !locked;
+
     return (
         <View style={[styles.container, style]}>
             {label && (
@@ -78,6 +83,7 @@ const AppTextInput = ({
             )}
             <Animated.View style={[
                 styles.inputWrapper,
+                locked && styles.inputWrapperLocked,
                 {
                     borderColor,
                     shadowColor: COLORS.primary,
@@ -88,7 +94,7 @@ const AppTextInput = ({
                 },
             ]}>
                 <TextInput
-                    style={[styles.input, multiline && styles.multiline, inputStyle]}
+                    style={[styles.input, multiline && styles.multiline, locked && styles.inputLocked, inputStyle]}
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
@@ -100,7 +106,16 @@ const AppTextInput = ({
                     keyboardType={keyboardType}
                     selectionColor={COLORS.primary}
                     {...rest}
+                    editable={isEditable}
                 />
+                {locked && (
+                    <>
+                        <Pressable style={styles.lockTouchOverlay} onPress={onLockedPress} />
+                        <View pointerEvents="none" style={styles.lockIconWrap}>
+                            <MaterialCommunityIcons name="lock-outline" style={styles.lockIcon} />
+                        </View>
+                    </>
+                )}
             </Animated.View>
         </View>
     );
@@ -132,6 +147,9 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surface,
         overflow: 'hidden',
     },
+    inputWrapperLocked: {
+        backgroundColor: COLORS.card,
+    },
     input: {
         fontSize: FONTS.sizes.base,
         color: COLORS.text,
@@ -139,9 +157,31 @@ const styles = StyleSheet.create({
         paddingVertical: SPACING.md,
         minHeight: 48,
     },
+    inputLocked: {
+        color: COLORS.textMuted,
+        paddingRight: 42,
+    },
     multiline: {
         minHeight: 80,
         textAlignVertical: 'top',
+    },
+    lockTouchOverlay: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    lockIconWrap: {
+        position: 'absolute',
+        right: 10,
+        top: 10,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(17,24,39,0.9)',
+    },
+    lockIcon: {
+        fontSize: 13,
+        color: COLORS.white,
     },
     counter: {
         fontSize: FONTS.sizes.xs,
