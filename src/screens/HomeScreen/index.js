@@ -4,18 +4,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
     Dimensions,
-    Pressable,
     FlatList,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
     View,
-    Image,
-    TouchableOpacity,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import {
     setActiveCategory,
     hydratePremiumProfile,
@@ -35,35 +37,45 @@ import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 
 const COLORS = {
-    pageBackground: '#F2F4F7',
+    pageBackground: '#F1F1F1',
+    headerBackground: '#C9E6F7',
     cardBackground: '#FFFFFF',
-    primary: '#4D6CFF',
-    primaryLight: '#EAF0FF',
-    textPrimary: '#1E293B',
-    textSecondary: '#93A0B5',
-    border: '#D9E0EB',
-    iconBg: '#E8ECF2',
-    iconDefault: '#5A667C',
-    dot: '#E7384A',
+    primary: '#0D62DF',
+    textPrimary: '#101417',
+    textSecondary: '#6B7280',
+    border: '#9EB3C6',
+    chipBackground: '#D5E5F1',
+    chipActiveText: '#FFFFFF',
+    chipText: '#111827',
+    actionPanel: '#EFEFF0',
 };
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const ITEM_HEIGHT = Math.min(heightPixel(520), SCREEN_H - heightPixel(260));
 const ITEM_SPACING = heightPixel(14);
-const REEL_MEDIA_HEIGHT = ITEM_HEIGHT - heightPixel(160);
-const HEADER_CATEGORIES = [
-    { id: 'festival', icon: 'party-popper' },
-    { id: 'political', icon: 'bank' },
-    { id: 'birthday', icon: 'cake-variant' },
-    { id: 'business', icon: 'briefcase' },
-    { id: 'motivational', icon: 'auto-fix' },
+const REEL_MEDIA_HEIGHT = Math.min(heightPixel(420), SCREEN_H - heightPixel(320));
+const META_HEIGHT = heightPixel(114);
+const ITEM_HEIGHT = REEL_MEDIA_HEIGHT + META_HEIGHT;
+const CHIP_HEIGHT = heightPixel(34);
+const CHIP_GAP = widthPixel(8);
+const MAX_CATEGORY_LINES = 2;
+const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(40);
+
+const HEADER_CHIPS = [
+    { id: 'all', icon: null, labelKey: 'categories.all' },
+    { id: 'birthday', icon: 'cake-variant-outline', labelKey: 'categories.birthday' },
+    { id: 'festival', icon: 'party-popper', labelKey: 'categories.festival' },
+    { id: 'political', icon: 'bank-outline', labelKey: 'categories.political' },
+    { id: 'motivational', icon: 'lightbulb-on-outline', labelKey: 'categories.motivational' },
+    { id: 'business', icon: 'briefcase-outline', labelKey: 'categories.business' },
 ];
+
 const CATEGORY_TARGET = {
+    all: 'all',
+    birthday: 'birthday',
     festival: 'festival',
     political: 'political',
-    birthday: 'birthday',
-    business: 'business',
     motivational: 'all',
+    business: 'business',
 };
 
 const TemplatePosterPreview = ({ template, userPhoto }) => {
@@ -94,21 +106,7 @@ const TemplatePosterPreview = ({ template, userPhoto }) => {
                 }
             }}>
             {template?.Image ? (
-                <View style={{ height: "100%", width: "100%" }} >
-
-                    <Image
-                        source={template.Image}
-                        style={[
-                            styles.reelImage,
-                            {
-                                width: "100%",
-                                height: "100%",
-                            },
-                        ]}
-                        resizeMode="stretch"
-                    />
-
-                </View>
+                <Image source={template.Image} style={styles.reelImage} resizeMode="cover" />
             ) : (
                 <View
                     style={[
@@ -140,9 +138,10 @@ const HomeScreen = ({ navigation }) => {
     const userMessage = useSelector(state => state.poster.userMessage);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
-    const [activeCategory, setActiveCategoryUi] = useState('festival');
+    const [activeCategory, setActiveCategoryUi] = useState('all');
     const flatListRef = useRef(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
+    const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
     const isActionInProgress = isSaving || isSharing;
 
     const whatsappCaption = useMemo(() => {
@@ -154,15 +153,22 @@ const HomeScreen = ({ navigation }) => {
         return '';
     }, [userMessage, userName]);
 
-    const categories = useMemo(() => (
-        HEADER_CATEGORIES.map(item => ({
-            id: item.id,
-            icon: item.icon,
-            label: t(`categories.${item.id}`) || item.id,
-        }))
-    ), [t]);
+    const chips = useMemo(
+        () =>
+            HEADER_CHIPS.map(item => ({
+                id: item.id,
+                icon: item.icon,
+                label: item.label || t(item.labelKey),
+            })),
+        [t],
+    );
 
-    const reelsData = useMemo(() => TEMPLATES, []);
+    const reelsData = useMemo(() => {
+        const categoryId = CATEGORY_TARGET[activeCategory] || 'all';
+        if (categoryId === 'all') return TEMPLATES;
+        const filtered = TEMPLATES.filter(item => item.category === categoryId);
+        return filtered.length ? filtered : TEMPLATES;
+    }, [activeCategory]);
 
     useEffect(() => {
         (async () => {
@@ -176,51 +182,74 @@ const HomeScreen = ({ navigation }) => {
         })();
     }, [dispatch]);
 
-    const handleCategoryPress = (id) => {
-        const targetId = CATEGORY_TARGET[id] || 'all';
-        setActiveCategoryUi(id);
-        dispatch(setActiveCategory(targetId));
-        navigation?.navigate?.('TemplateScreen', { categoryId: targetId });
-    };
-
-    const handleSeeAllPress = () => {
+    const handleSeeAllPress = useCallback(() => {
+        setCategoryModalVisible(false);
         setActiveCategoryUi('all');
         dispatch(setActiveCategory('all'));
         navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
-    };
+    }, [dispatch, navigation]);
 
-    const openEditor = (item) => {
-        dispatch(setSelectedTemplate(item));
-        navigation?.navigate?.('EditorScreen', { templateId: item.id });
-    };
+    const handleCategoryPress = useCallback(
+        id => {
+            const targetId = CATEGORY_TARGET[id] || 'all';
+            setActiveCategoryUi(id);
+            dispatch(setActiveCategory(targetId));
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        },
+        [dispatch],
+    );
 
-    const prepareTemplateForMediaAction = useCallback(async (item) => {
-        dispatch(setSelectedTemplate(item));
-        await new Promise(resolve => setTimeout(resolve, 80));
-    }, [dispatch]);
+    const openEditor = useCallback(
+        item => {
+            dispatch(setSelectedTemplate(item));
+            navigation?.navigate?.('EditorScreen', { templateId: item.id });
+        },
+        [dispatch, navigation],
+    );
 
-    const handleShareToWhatsApp = useCallback(async (item) => {
-        if (isActionInProgress) return;
-        await prepareTemplateForMediaAction(item);
-        await sharePosterToWhatsApp(whatsappCaption || undefined);
-    }, [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption]);
+    const prepareTemplateForMediaAction = useCallback(
+        async item => {
+            dispatch(setSelectedTemplate(item));
+            await new Promise(resolve => setTimeout(resolve, 80));
+        },
+        [dispatch],
+    );
 
-    const handleDownload = useCallback(async (item) => {
-        if (isActionInProgress) return;
-        await prepareTemplateForMediaAction(item);
-        await savePoster();
-    }, [isActionInProgress, prepareTemplateForMediaAction, savePoster]);
+    const handleShareToWhatsApp = useCallback(
+        async item => {
+            if (isActionInProgress) return;
+            await prepareTemplateForMediaAction(item);
+            await sharePosterToWhatsApp(whatsappCaption || undefined);
+        },
+        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption],
+    );
 
-    const handleEdit = useCallback((item) => {
-        dispatch(setSelectedTemplate(item));
-        navigation?.navigate?.('EditorScreen', {
-            templateId: item.id,
-            template: item,
-            userName,
-            userMessage,
-            userPhoto,
-        });
-    }, [dispatch, navigation, userMessage, userName, userPhoto]);
+    const handleDownload = useCallback(
+        async item => {
+            if (isActionInProgress) return;
+            await prepareTemplateForMediaAction(item);
+            await savePoster();
+        },
+        [isActionInProgress, prepareTemplateForMediaAction, savePoster],
+    );
+
+    const handleEdit = useCallback(
+        item => {
+            dispatch(setSelectedTemplate(item));
+            navigation?.navigate?.('EditorScreen', {
+                templateId: item.id,
+                template: item,
+                userName,
+                userMessage,
+                userPhoto,
+            });
+        },
+        [dispatch, navigation, userMessage, userName, userPhoto],
+    );
+
+    const stopCardPress = useCallback(event => {
+        event?.stopPropagation?.();
+    }, []);
 
     const showUnderDevelopmentAlert = () => {
         Alert.alert(t('home.underDevelopment.title'), t('home.underDevelopment.message'));
@@ -228,58 +257,53 @@ const HomeScreen = ({ navigation }) => {
 
     return (
         <>
-            <StatusBar barStyle="dark-content" backgroundColor={COLORS.pageBackground} />
+            <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
 
-            <View style={styles.staticHeader}>
-                <View style={styles.topRow}>
-                    <View style={styles.titleWrap}>
-                        <View style={styles.homeBadge}>
-                            <MaterialCommunityIcons name="view-grid" style={styles.homeBadgeIcon} />
-                        </View>
-                        <Text style={styles.homeTitle}>{t('navigation.tabs.home')}</Text>
-                    </View>
-
-                    <View style={styles.headerActions}>
-                        <Pressable style={styles.headerIconBtn} onPress={showUnderDevelopmentAlert}>
-                            <MaterialCommunityIcons name="bell-outline" style={styles.headerActionIcon} />
-                        </Pressable>
-                        <Pressable style={styles.headerIconBtn} onPress={showUnderDevelopmentAlert}>
-                            <MaterialCommunityIcons name="account-circle-outline" style={styles.headerActionIcon} />
-                        </Pressable>
-                    </View>
-                </View>
-
+            <LinearGradient
+                colors={[COLORS.headerBackground, '#FFFFFF']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.staticHeader}>
                 <View style={styles.searchBar}>
                     <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
                     <Text style={styles.searchText}>{t('home.searchPlaceholder')}</Text>
                 </View>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{t('home.section.categories')}</Text>
-                    <Pressable onPress={handleSeeAllPress}>
-                        <Text style={styles.seeAllText}>{t('home.seeAll')}</Text>
-                    </Pressable>
-                </View>
 
-                <View style={styles.categoryRow}>
-                    {categories.map(item => {
+                <ScrollView
+                    style={styles.categoryPreviewScroll}
+                    contentContainerStyle={styles.chipRow}
+                    scrollEnabled={false}
+                    onContentSizeChange={(contentWidth, contentHeight) => {
+                        setHasOverflowCategories(contentHeight > CATEGORY_PREVIEW_HEIGHT + 2);
+                    }}
+                    showsVerticalScrollIndicator={false}>
+                    {chips.map(item => {
                         const isActive = activeCategory === item.id;
                         return (
                             <Pressable
                                 key={item.id}
-                                style={styles.categoryItem}
+                                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
                                 onPress={() => handleCategoryPress(item.id)}>
-                                <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
+                                {item.icon ? (
                                     <MaterialCommunityIcons
                                         name={item.icon}
-                                        style={[styles.categoryIcon, isActive && styles.categoryIconActive]}
+                                        style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
                                     />
-                                </View>
-                                <Text style={styles.categoryLabel}>{item.label}</Text>
+                                ) : null}
+                                <Text style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
+                                    {item.label}
+                                </Text>
                             </Pressable>
                         );
                     })}
-                </View>
-            </View>
+                </ScrollView>
+                {hasOverflowCategories ? (
+                    <Pressable style={styles.seeMoreBtn} onPress={() => setCategoryModalVisible(true)}>
+                        <Text style={styles.seeMoreText}>See more</Text>
+                        <MaterialCommunityIcons name="chevron-down" style={styles.seeMoreIcon} />
+                    </Pressable>
+                ) : null}
+            </LinearGradient>
 
             <FlatList
                 ref={flatListRef}
@@ -289,51 +313,89 @@ const HomeScreen = ({ navigation }) => {
                 snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
                 snapToAlignment="start"
                 disableIntervalMomentum
-                onMomentumScrollEnd={(event) => {
-                    const index = Math.round(
-                        event.nativeEvent.contentOffset.y / (ITEM_HEIGHT + ITEM_SPACING)
-                    );
-                    setCurrentIndex(index);
-                }}
                 decelerationRate="fast"
                 contentContainerStyle={styles.reelsContent}
                 renderItem={({ item }) => (
-                    <View style={{ height: ITEM_HEIGHT, marginBottom: ITEM_SPACING, width: "100%" }}   >
+                    <View style={styles.feedItemWrap}>
+                        <View style={styles.reelCard}>
+                            <Pressable style={styles.mediaTapArea} onPress={() => openEditor(item)}>
+                                <TemplatePosterPreview template={item} userPhoto={userPhoto} />
+                            </Pressable>
 
-                        <Pressable style={styles.reelCard} onPress={() => openEditor(item)}>
-                            <TemplatePosterPreview template={item} userPhoto={userPhoto} />
-                            <View style={styles.reelMeta}>
-                                <View style={styles.actionRow}>
+                            <Pressable style={styles.reelMeta} onPress={() => handleEdit(item)}>
+                                <View style={styles.metricsRow}>
+                                    <View style={styles.metricsLeft}>
+                                        <Pressable
+                                            style={styles.metricAction}
+                                            onPressIn={stopCardPress}
+                                            onPress={event => {
+                                                event.stopPropagation?.();
+                                                handleDownload(item);
+                                            }}
+                                            hitSlop={8}
+                                            disabled={isActionInProgress}>
+                                            <MaterialCommunityIcons
+                                                name="download"
+                                                style={styles.metricActionIcon}
+                                            />
+                                            <Text style={styles.metricCount}>99</Text>
+                                        </Pressable>
+
+                                        <Pressable
+                                            style={styles.metricAction}
+                                            onPressIn={stopCardPress}
+                                            onPress={event => {
+                                                event.stopPropagation?.();
+                                                handleShareToWhatsApp(item);
+                                            }}
+                                            hitSlop={8}
+                                            disabled={isActionInProgress}>
+                                            <MaterialCommunityIcons
+                                                name="share-variant-outline"
+                                                style={styles.metricActionIcon}
+                                            />
+                                            <Text style={styles.metricCount}>99</Text>
+                                        </Pressable>
+
+                                        <Pressable
+                                            style={styles.metricAction}
+                                            onPressIn={stopCardPress}
+                                            onPress={event => {
+                                                event.stopPropagation?.();
+                                                handleEdit(item);
+                                            }}
+                                            hitSlop={8}>
+                                            <MaterialCommunityIcons
+                                                name="square-edit-outline"
+                                                style={styles.metricActionIcon}
+                                            />
+                                        </Pressable>
+                                    </View>
+
                                     <Pressable
-                                        style={[styles.actionBtn, isActionInProgress && styles.actionBtnDisabled]}
-                                        disabled={isActionInProgress}
+                                        style={styles.bookmarkBtn}
+                                        onPressIn={stopCardPress}
                                         onPress={event => {
                                             event.stopPropagation?.();
-                                            handleShareToWhatsApp(item);
-                                        }}>
-                                        <Text style={styles.actionText}>{t('home.actions.shareWhatsApp')}</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        style={[styles.actionBtn, isActionInProgress && styles.actionBtnDisabled]}
-                                        disabled={isActionInProgress}
-                                        onPress={event => {
-                                            event.stopPropagation?.();
-                                            handleDownload(item);
-                                        }}>
-                                        <Text style={styles.actionText}>{t('home.actions.download')}</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        style={styles.actionBtn}
-                                        onPress={event => {
-                                            event.stopPropagation?.();
-                                            handleEdit(item);
-                                        }}>
-                                        <Text style={styles.actionText}>{t('home.actions.edit')}</Text>
+                                            showUnderDevelopmentAlert();
+                                        }}
+                                        hitSlop={10}>
+                                        <MaterialCommunityIcons name="bookmark-outline" style={styles.bookmarkIcon} />
                                     </Pressable>
                                 </View>
-                            </View>
-                        </Pressable>
 
+                                <Pressable
+                                    style={[styles.changeImageBtn, isActionInProgress && styles.actionBtnDisabled]}
+                                    onPressIn={stopCardPress}
+                                    disabled={isActionInProgress}
+                                    onPress={event => {
+                                        event.stopPropagation?.();
+                                        handleEdit(item);
+                                    }}>
+                                    <Text style={styles.changeImageText}>{t('home.actions.changeImage')}</Text>
+                                </Pressable>
+                            </Pressable>
+                        </View>
                     </View>
                 )}
             />
@@ -342,208 +404,179 @@ const HomeScreen = ({ navigation }) => {
                 <PosterPreview posterRef={posterRef} />
             </View>
 
-            <TouchableOpacity style={{
-                height: heightPixel(48), width: widthPixel(120),
-                borderRadius: widthPixel(24),
-                backgroundColor: COLORS.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'absolute',
-                bottom: heightPixel(20),
-                right: widthPixel(20)
-            }} onPress={() => {
-                const nextIndex = currentIndex + 1;
+            <Modal
+                visible={isCategoryModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setCategoryModalVisible(false)}>
+                <Pressable style={styles.modalOverlay} onPress={() => setCategoryModalVisible(false)}>
+                    <Pressable style={styles.modalCard} onPress={stopCardPress}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{t('home.section.categories')}</Text>
+                            <Pressable onPress={() => setCategoryModalVisible(false)} hitSlop={10}>
+                                <MaterialCommunityIcons name="close" style={styles.modalCloseIcon} />
+                            </Pressable>
+                        </View>
 
-                if (nextIndex < reelsData.length) {
-                    flatListRef.current?.scrollToIndex({
-                        index: nextIndex,
-                        animated: true,
-                    });
-                    setCurrentIndex(nextIndex);
-                }
-            }}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <View style={styles.modalChipWrap}>
+                                {chips.map(item => {
+                                    const isActive = activeCategory === item.id;
+                                    return (
+                                        <Pressable
+                                            key={`modal_${item.id}`}
+                                            style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                                            onPress={() => {
+                                                handleCategoryPress(item.id);
+                                                setCategoryModalVisible(false);
+                                            }}>
+                                            {item.icon ? (
+                                                <MaterialCommunityIcons
+                                                    name={item.icon}
+                                                    style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
+                                                />
+                                            ) : null}
+                                            <Text
+                                                style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
+                                                {item.label}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </ScrollView>
 
-                <Text style={{ textAlign: 'center', color: "white", fontSize: widthPixel(11), fontFamily: fonts.FONT_FAMILY.Medium }}>
-                    Next
-                </Text>
-
-            </TouchableOpacity>
-
-
-        </  >
+                        <Pressable style={styles.modalSeeAllBtn} onPress={handleSeeAllPress}>
+                            <Text style={styles.modalSeeAllText}>{t('home.seeAll')}</Text>
+                        </Pressable>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+        </>
     );
 };
 
 const styles = StyleSheet.create({
     staticHeader: {
-        paddingHorizontal: widthPixel(10),
-        paddingTop: heightPixel(10),
-        paddingBottom: heightPixel(12),
-        borderBottomWidth: widthPixel(1),
-        borderBottomColor: '#E6EAF1',
-    },
-    topRow: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: heightPixel(10),
-    },
-    titleWrap: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: widthPixel(10),
-    },
-    homeBadge: {
-        width: widthPixel(36),
-        height: heightPixel(36),
-        borderRadius: widthPixel(18),
-        backgroundColor: COLORS.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    homeBadgeIcon: {
-        fontSize: widthPixel(14),
-        color: '#FFFFFF',
-    },
-    homeTitle: {
-        fontSize: widthPixel(18),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.textPrimary,
-        includeFontPadding: false,
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: widthPixel(8),
-    },
-    headerIconBtn: {
-        width: widthPixel(38),
-        height: heightPixel(38),
-        borderRadius: widthPixel(19),
-        backgroundColor: COLORS.iconBg,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerActionIcon: {
-        fontSize: widthPixel(21),
-        color: COLORS.iconDefault,
+        paddingHorizontal: widthPixel(14),
+        paddingTop: heightPixel(12),
+        paddingBottom: heightPixel(14),
+        backgroundColor: COLORS.headerBackground,
+        // minHeight: heightPixel(120),
     },
     searchBar: {
         width: '100%',
-        height: heightPixel(46),
-        borderRadius: widthPixel(12),
-        backgroundColor: COLORS.cardBackground,
+        height: heightPixel(44),
+        borderRadius: widthPixel(22),
+        backgroundColor: '#FFFFFF',
         borderWidth: widthPixel(1),
-        borderColor: COLORS.border,
+        borderColor: '#A7C0D3',
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: widthPixel(12),
     },
     searchIcon: {
         fontSize: widthPixel(20),
-        color: '#A1AECB',
+        color: '#5E7690',
         marginRight: widthPixel(8),
     },
     searchText: {
         fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
-        color: COLORS.textSecondary,
+        color: '#6B839C',
     },
-    dot: {
-        width: widthPixel(4),
-        height: heightPixel(4),
-        borderRadius: widthPixel(2),
-        backgroundColor: COLORS.dot,
-        marginTop: heightPixel(10),
-        marginBottom: heightPixel(8),
-        marginLeft: widthPixel(38),
-    },
-    sectionHeader: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: heightPixel(8),
-    },
-    sectionTitle: {
-        fontSize: widthPixel(14),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.textPrimary,
+    chipRow: {
         marginTop: heightPixel(12),
-    },
-    seeAllText: {
-        fontSize: widthPixel(11),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.primary,
-    },
-    categoryRow: {
-        width: '100%',
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: CHIP_GAP,
     },
-    categoryItem: {
-        width: widthPixel(64),
-        alignItems: 'center',
+    categoryPreviewScroll: {
+        maxHeight: CATEGORY_PREVIEW_HEIGHT,
     },
-    categoryIconWrap: {
-        width: widthPixel(54),
-        height: heightPixel(54),
-        borderRadius: widthPixel(15),
+    categoryChip: {
+        height: CHIP_HEIGHT,
+        borderRadius: widthPixel(17),
+        paddingHorizontal: widthPixel(13),
+        backgroundColor: COLORS.chipBackground,
+        borderWidth: widthPixel(1),
+        borderColor: COLORS.border,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F2F6',
+        gap: widthPixel(6),
     },
-    categoryIconWrapActive: {
+    categoryChipActive: {
         backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
     },
-    categoryIcon: {
-        fontSize: widthPixel(22),
-        color: COLORS.iconDefault,
+    categoryChipIcon: {
+        fontSize: widthPixel(16),
+        color: '#324153',
     },
-    categoryIconActive: {
-        color: '#FFFFFF',
+    categoryChipIconActive: {
+        color: COLORS.chipActiveText,
     },
-    categoryLabel: {
-        marginTop: heightPixel(6),
-        fontSize: widthPixel(11),
+    categoryChipLabel: {
+        fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
-        color: '#384457',
-        textAlign: 'center',
+        color: COLORS.chipText,
+        includeFontPadding: false,
+    },
+    categoryChipLabelActive: {
+        color: COLORS.chipActiveText,
+        fontFamily: fonts.FONT_FAMILY.Bold,
+    },
+    seeMoreBtn: {
+        marginTop: heightPixel(8),
+        alignSelf: 'flex-end',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(2),
+    },
+    seeMoreText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.primary,
+    },
+    seeMoreIcon: {
+        fontSize: widthPixel(16),
+        color: COLORS.primary,
     },
     reelsContent: {
-        paddingHorizontal: widthPixel(20),
-        // paddingBottom: heightPixel(96),
         paddingTop: ITEM_SPACING,
+        paddingBottom: heightPixel(24),
+        backgroundColor: COLORS.pageBackground,
+    },
+    feedItemWrap: {
+        height: ITEM_HEIGHT,
+        marginBottom: ITEM_SPACING,
+        paddingHorizontal: widthPixel(10),
     },
     reelCard: {
         width: '100%',
-        height: heightPixel(420),
-        borderRadius: widthPixel(20),
-        // backgroundColor: COLORS.cardBackground,
+        borderRadius: widthPixel(16),
         backgroundColor: COLORS.cardBackground,
-        borderWidth: widthPixel(1),
-        borderColor: COLORS.border,
         overflow: 'hidden',
-        marginBottom: ITEM_SPACING,
-        justifyContent: 'flex-start',
-        shadowColor: '#15213A',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
+        borderWidth: widthPixel(1),
+        borderColor: '#DDDFE3',
+    },
+    mediaTapArea: {
+        width: '100%',
     },
     reelMedia: {
         width: '100%',
         height: REEL_MEDIA_HEIGHT,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: '#DDE5EC',
     },
     reelImage: {
+        width: '100%',
+        height: '100%',
     },
     reelFallback: {
         position: 'absolute',
-        borderRadius: widthPixel(18),
     },
     userPhotoFrame: {
         position: 'absolute',
@@ -556,69 +589,121 @@ const styles = StyleSheet.create({
     },
     reelMeta: {
         width: '100%',
-        height: heightPixel(160),
-        paddingHorizontal: widthPixel(16),
-        paddingVertical: heightPixel(12),
+        height: META_HEIGHT,
+        backgroundColor: COLORS.actionPanel,
+        paddingHorizontal: widthPixel(14),
+        paddingVertical: heightPixel(10),
     },
-    reelTitle: {
-        fontSize: widthPixel(14),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.textPrimary,
-        marginBottom: heightPixel(3),
-    },
-    reelTag: {
-        fontSize: widthPixel(10),
-        fontFamily: fonts.FONT_FAMILY.Medium,
-        color: COLORS.textSecondary,
-    },
-    actionRow: {
+    metricsRow: {
         width: '100%',
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: heightPixel(10),
-        gap: widthPixel(6),
     },
-    actionBtn: {
-        flex: 1,
-        minWidth: widthPixel(92),
-        height: heightPixel(34),
-        borderRadius: widthPixel(10),
-        backgroundColor: COLORS.primaryLight,
-        borderWidth: widthPixel(1),
-        borderColor: '#D5DFFF',
+    metricsLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(18),
+    },
+    metricAction: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: widthPixel(6),
+        gap: widthPixel(6),
+        minHeight: heightPixel(38),
+        paddingHorizontal: widthPixel(8),
+        borderRadius: widthPixel(18),
     },
-    actionBtnDisabled: {
-        opacity: 0.55,
+    metricActionIcon: {
+        fontSize: widthPixel(20),
+        color: '#222A34',
     },
-    actionText: {
-        fontSize: widthPixel(9.2),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.primary,
-        textAlign: 'center',
-        includeFontPadding: false,
+    metricCount: {
+        fontSize: widthPixel(12),
+        color: '#424A55',
+        fontFamily: fonts.FONT_FAMILY.Medium,
+    },
+    bookmarkBtn: {
+        minHeight: heightPixel(38),
+        minWidth: widthPixel(38),
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: widthPixel(19),
+    },
+    bookmarkIcon: {
+        fontSize: widthPixel(22),
+        color: '#222A34',
     },
     changeImageBtn: {
-        height: heightPixel(34),
-        borderRadius: widthPixel(10),
+        height: heightPixel(36),
+        borderRadius: widthPixel(18),
         borderWidth: widthPixel(1),
-        borderColor: COLORS.border,
+        borderColor: '#C7CCD2',
+        backgroundColor: '#F7F7F8',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FAFBFF',
     },
     changeImageText: {
-        fontSize: widthPixel(10.5),
-        fontFamily: fonts.FONT_FAMILY.Bold,
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.primary,
+    },
+    actionBtnDisabled: {
+        opacity: 0.6,
     },
     hiddenCaptureStage: {
         position: 'absolute',
         left: -5000,
         top: 0,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.36)',
+        justifyContent: 'flex-end',
+    },
+    modalCard: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: widthPixel(20),
+        borderTopRightRadius: widthPixel(20),
+        paddingHorizontal: widthPixel(16),
+        paddingTop: heightPixel(14),
+        paddingBottom: heightPixel(22),
+        maxHeight: '65%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: heightPixel(12),
+    },
+    modalTitle: {
+        fontSize: widthPixel(16),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#111827',
+    },
+    modalCloseIcon: {
+        fontSize: widthPixel(22),
+        color: '#3D4653',
+    },
+    modalChipWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: CHIP_GAP,
+    },
+    modalSeeAllBtn: {
+        marginTop: heightPixel(14),
+        height: heightPixel(40),
+        borderRadius: widthPixel(20),
+        borderWidth: widthPixel(1),
+        borderColor: '#D1D7DF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalSeeAllText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.primary,
     },
 });
 

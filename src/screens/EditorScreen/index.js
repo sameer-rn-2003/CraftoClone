@@ -854,6 +854,14 @@ const EditorScreen = ({ navigation }) => {
         navigation.navigate('PreviewScreen');
     }, [p.userPhoto, navigation, t]);
 
+    const handleBack = useCallback(() => {
+        if (navigation?.canGoBack?.()) {
+            navigation.goBack();
+            return;
+        }
+        navigation.navigate('Home');
+    }, [navigation]);
+
     const handleTextSave = useCallback(async () => {
         Keyboard.dismiss();
         await mergeUserProfile({ name: p.userName });
@@ -920,7 +928,7 @@ const EditorScreen = ({ navigation }) => {
             <View style={s.header}>
                 <Pressable
                     style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
-                    onPress={isTextTabActive ? handleTextSave : () => navigation.goBack()}>
+                    onPress={isTextTabActive ? handleTextSave : handleBack}>
                     {isTextTabActive ? (
                         <Text style={s.headerSaveBtnText}>{t('preview.actions.save')}</Text>
                     ) : (
