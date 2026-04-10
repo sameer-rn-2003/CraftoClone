@@ -50,7 +50,6 @@ export const TEMPLATES = [
         backgroundColor: '#0A1824',
         accentColor: '#F7921E',
         Image: require("../assets/images/happydiwali2.jpg"),
-        Video:"https://www.w3schools.com/html/movie.mp4",
         headerColor: '#1B3A56',   // used as left bar colour
         footerColor: '#0D2235',
         pattern: 'diagonal',
@@ -88,7 +87,6 @@ export const TEMPLATES = [
         category: 'political',
         layout: 'top',
         Image: require("../assets/images/happydiwali.jpg"),
-        Video:"https://www.w3schools.com/html/movie.mp4",
         backgroundColor: '#0D1B3E',
         accentColor: '#FF416C',
         headerColor: '#C0392B',

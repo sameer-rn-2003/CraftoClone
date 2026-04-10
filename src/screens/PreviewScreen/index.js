@@ -19,6 +19,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 import AppButton from '../../components/AppButton';
+import { hasTemplateVideo } from '../../utils/templateMedia';
 import {
     COLORS,
     FONTS,
@@ -38,6 +39,7 @@ const PreviewScreen = ({ navigation, route }) => {
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePoster, sharePosterToWhatsApp, isSaving, isSharing } =
         usePosterGenerator();
+    const hasBackgroundVideo = hasTemplateVideo(selectedTemplate);
 
     const handleSave = useCallback(async () => {
         await savePoster();
@@ -120,47 +122,68 @@ const PreviewScreen = ({ navigation, route }) => {
 
                 {/* ── Action buttons ───────────────── */}
                 <View style={styles.actions}>
-                    {/* Save */}
-                    <Pressable
-                        style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
-                        onPress={handleSave}
-                        disabled={isSaving || isSharing}>
-                        {isSaving ? (
-                            <ActivityIndicator color={COLORS.white} size="small" />
-                        ) : (
-                            <>
-                                <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
-                                <View>
-                                    <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
-                                    <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
-                                </View>
-                            </>
-                        )}
-                    </Pressable>
+                    {hasBackgroundVideo ? (
+                        <Pressable
+                            style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
+                            // onPress={handleSave}
+                            disabled={isSaving || isSharing}>
+                            {isSaving ? (
+                                <ActivityIndicator color={COLORS.white} size="small" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="download-outline" style={styles.actionIcon} />
+                                    <View>
+                                        <Text style={styles.actionLabel}>{t('preview.actions.download')}</Text>
+                                        <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
+                                    </View>
+                                </>
+                            )}
+                        </Pressable>
+                    ) : (
+                        <>
+                            {/* Save */}
+                            <Pressable
+                                style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
+                                onPress={handleSave}
+                                disabled={isSaving || isSharing}>
+                                {isSaving ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
+                                        <View>
+                                            <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
+                                            <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable>
 
-                    {/* Share */}
-                    <Pressable
-                        style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
-                        onPress={handleShare}
-                        disabled={isSaving || isSharing}>
-                        {isSharing ? (
-                            <ActivityIndicator color={COLORS.white} size="small" />
-                        ) : (
-                            <>
-                                <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
-                                <View>
-                                    <Text style={styles.actionLabel}>
-                                        {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
-                                    </Text>
-                                    <Text style={styles.actionSub}>
-                                        {isPremium
-                                            ? t('preview.actions.shareSub')
-                                            : t('preview.actions.shareWhatsAppSub')}
-                                    </Text>
-                                </View>
-                            </>
-                        )}
-                    </Pressable>
+                            {/* Share */}
+                            <Pressable
+                                style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
+                                onPress={handleShare}
+                                disabled={isSaving || isSharing}>
+                                {isSharing ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
+                                        <View>
+                                            <Text style={styles.actionLabel}>
+                                                {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
+                                            </Text>
+                                            <Text style={styles.actionSub}>
+                                                {isPremium
+                                                    ? t('preview.actions.shareSub')
+                                                    : t('preview.actions.shareWhatsAppSub')}
+                                            </Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable>
+                        </>
+                    )}
                 </View>
 
                 {/* ── Secondary row ────────────────── */}

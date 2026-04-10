@@ -112,7 +112,7 @@ const AppTextInput = ({
                     <>
                         <Pressable style={styles.lockTouchOverlay} onPress={onLockedPress} />
                         <View pointerEvents="none" style={styles.lockIconWrap}>
-                            <MaterialCommunityIcons name="lock-outline" style={styles.lockIcon} />
+                            <MaterialCommunityIcons name="crown-circle-outline" style={styles.lockIcon} />
                         </View>
                     </>
                 )}
@@ -180,8 +180,8 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(17,24,39,0.9)',
     },
     lockIcon: {
-        fontSize: 13,
-        color: COLORS.white,
+        fontSize: 22,
+        color: COLORS.warning,
     },
     counter: {
         fontSize: FONTS.sizes.xs,

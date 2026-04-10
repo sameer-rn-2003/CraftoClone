@@ -181,6 +181,7 @@
         "actions": {
             "save": "Save",
             "saveSub": "to Gallery",
+            "download": "Download",
             "share": "Share",
             "shareSub": "to apps",
             "shareWhatsAppSub": "to WhatsApp"

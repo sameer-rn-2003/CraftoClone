@@ -40,6 +40,7 @@ import SubscriptionModal from '../../components/SubscriptionModal';
 import { mergeUserProfile } from '../../utils/userStorage';
 import {
     FONTS, SPACING, BORDER_RADIUS, SHADOW, POSTER_SIZE,
+    COLORS,
 } from '../../utils/constants';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -151,7 +152,7 @@ const LockedInputWrapper = ({ locked, onUnlock, children, style, showOverlay = t
             <View pointerEvents="none">{children}</View>
             {showOverlay && <View pointerEvents="none" style={s.lockedFieldOverlay} />}
             <View pointerEvents="none" style={s.lockedBadge}>
-                <MaterialCommunityIcons name="lock-outline" style={s.lockedBadgeIcon} />
+                <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedBadgeIcon} />
                 <Text style={s.lockedBadgeText}>Premium</Text>
             </View>
         </Pressable>
@@ -291,7 +292,7 @@ const PhotoTab = ({
 
                     {photoResizeLocked && (
                         <Pressable style={s.lockedHintRow} onPress={onUnlockPremium}>
-                            <MaterialCommunityIcons name="lock-outline" style={s.lockedHintIcon} />
+                            <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedHintIcon} />
                             <Text style={s.lockedHintText}>Photo resize is premium. Tap to unlock.</Text>
                         </Pressable>
                     )}
@@ -485,7 +486,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
 
                 {locked && (
                     <Pressable style={s.lockedHintRow} onPress={onUnlockPremium}>
-                        <MaterialCommunityIcons name="lock-outline" style={s.lockedHintIcon} />
+                        <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedHintIcon} />
                         <Text style={s.lockedHintText}>Only name editing is free. Other text controls are premium.</Text>
                     </Pressable>
                 )}
@@ -549,7 +550,7 @@ const StyleTab = ({ p, dispatch, isPremium, onUnlockPremium }) => {
 
             {locked && (
                 <Pressable style={s.lockedHintRow} onPress={onUnlockPremium}>
-                    <MaterialCommunityIcons name="lock-outline" style={s.lockedHintIcon} />
+                    <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedHintIcon} />
                     <Text style={s.lockedHintText}>Style controls are premium. Tap to unlock.</Text>
                 </Pressable>
             )}
@@ -601,7 +602,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
 
             {locked && (
                 <Pressable style={s.lockedHintRow} onPress={onUnlockPremium}>
-                    <MaterialCommunityIcons name="lock-outline" style={s.lockedHintIcon} />
+                    <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedHintIcon} />
                     <Text style={s.lockedHintText}>These details are visible but locked for free users.</Text>
                 </Pressable>
             )}
@@ -973,7 +974,7 @@ const EditorScreen = ({ navigation }) => {
                                 </Text>
                                 {isActive && <View style={s.tabIndicator} />}
                                 {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
-                                    <MaterialCommunityIcons name="lock" style={s.tabLockIcon} />
+                                    <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
                                 )}
                             </Pressable>
                         );
@@ -1140,8 +1141,8 @@ const s = StyleSheet.create({
         position: 'absolute',
         top: 4,
         right: 6,
-        fontSize: 10,
-        color: EDITOR_COLORS.textMuted,
+        fontSize: 20,
+        color: COLORS.warning,
     },
 
     // Panel
@@ -1396,8 +1397,8 @@ const s = StyleSheet.create({
         backgroundColor: 'rgba(17,24,39,0.86)',
     },
     lockedBadgeIcon: {
-        fontSize: 12,
-        color: EDITOR_COLORS.white,
+        fontSize: 14,
+        color: COLORS.warning,
     },
     lockedBadgeText: {
         fontSize: 10,
