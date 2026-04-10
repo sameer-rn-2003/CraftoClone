@@ -26,6 +26,8 @@ const transform = item => ({
     id: String(item.id ?? item._id ?? Math.random()),
     name: item.name ?? item.title ?? 'Untitled',
     category: item.category ?? 'general',
+    Image: item.image ?? item.image_url ?? item.imageUrl ?? item.poster ?? item.poster_url ?? item.posterUrl ?? null,
+    Video: item.video ?? item.video_url ?? item.videoUrl ?? null,
 
     // ── Colors ────────────────────────────────────────────────────
     backgroundColor: item.background_color ?? item.backgroundColor ?? '#0D0D0D',

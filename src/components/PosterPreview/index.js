@@ -24,6 +24,8 @@ import {
     getPhotoFrameBaseStyle,
     getScaledPhotoFrameStyle,
 } from '../../utils/photoFrameLayout';
+import TemplateMedia from '../TemplateMedia';
+import { getTemplateImageSource, hasTemplateVideo } from '../../utils/templateMedia';
 
 const getTouchDistance = touches => {
     const dx = touches[0].pageX - touches[1].pageX;
@@ -480,7 +482,13 @@ const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2
 const StaticNameText = props => <StaticText {...props} numberOfLines={1} />;
 const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
-const PosterPreview = ({ posterRef, interactive = false, allowPinchScale = interactive }) => {
+const PosterPreview = ({
+    posterRef,
+    interactive = false,
+    allowPinchScale = interactive,
+    playVideo = true,
+    preferStillImageForVideo = false,
+}) => {
     const p = useSelector(s => s.poster);
     const { t } = useTranslation();
 
@@ -492,7 +500,9 @@ const PosterPreview = ({ posterRef, interactive = false, allowPinchScale = inter
         footerColor, pattern, photoFrame, textFields,
         layout = 'top',
     } = selectedTemplate;
-    const templateImage = selectedTemplate.Image;
+    const templateImage = getTemplateImageSource(selectedTemplate);
+    const templateHasVideo = hasTemplateVideo(selectedTemplate);
+    const hasTemplateMedia = !!templateImage || templateHasVideo;
 
 
     const accentColor = p.accentColorOverride || templateAccent;
@@ -528,15 +538,17 @@ const PosterPreview = ({ posterRef, interactive = false, allowPinchScale = inter
             collapsable={false}>
 
             {/* ── 0. Template Image (optional) ─────────── */}
-            {templateImage ? (
-                <Image
-                    source={templateImage}
-                    style={{height:"100%", width:"100%"}}
+            {hasTemplateMedia ? (
+                <TemplateMedia
+                    template={selectedTemplate}
+                    style={StyleSheet.absoluteFill}
                     resizeMode="cover"
+                    shouldPlay={playVideo}
+                    useImageFallbackForVideo={preferStillImageForVideo}
                 />
             ) : null}
 
-            {!templateImage ? (
+            {!hasTemplateMedia ? (
                 layout === 'left' ? (
                     // Vertical coloured bar on the left ~40% of width
                     <View style={[styles.leftBar, { backgroundColor: headerColor }]}>

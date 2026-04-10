@@ -35,6 +35,9 @@ import {
 } from '../../utils/photoFrameLayout';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
+import TemplateMedia from '../../components/TemplateMedia';
+
+const getTemplateListKey = (item, index) => `${item.id}_${index}`;
 
 const COLORS = {
     pageBackground: '#F1F1F1',
@@ -78,7 +81,7 @@ const CATEGORY_TARGET = {
     business: 'business',
 };
 
-const TemplatePosterPreview = ({ template, userPhoto }) => {
+const TemplatePosterPreview = ({ template, userPhoto, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const posterLayout = useMemo(
         () => getPosterFitLayout(containerSize.width, containerSize.height),
@@ -105,22 +108,26 @@ const TemplatePosterPreview = ({ template, userPhoto }) => {
                     setContainerSize({ width, height });
                 }
             }}>
-            {template?.Image ? (
-                <Image source={template.Image} style={styles.reelImage} resizeMode="cover" />
-            ) : (
-                <View
-                    style={[
-                        styles.reelFallback,
-                        {
-                            width: posterLayout.width,
-                            height: posterLayout.height,
-                            left: posterLayout.offsetX,
-                            top: posterLayout.offsetY,
-                            backgroundColor: template?.accentColor,
-                        },
-                    ]}
-                />
-            )}
+            <TemplateMedia
+                template={template}
+                style={styles.reelImage}
+                resizeMode="cover"
+                shouldPlay={shouldPlay}
+                fallback={
+                    <View
+                        style={[
+                            styles.reelFallback,
+                            {
+                                width: posterLayout.width,
+                                height: posterLayout.height,
+                                left: posterLayout.offsetX,
+                                top: posterLayout.offsetY,
+                                backgroundColor: template?.accentColor,
+                            },
+                        ]}
+                    />
+                }
+            />
 
             {userPhoto && photoFrameStyle ? (
                 <View style={[styles.userPhotoFrame, photoFrameStyle]} pointerEvents="none">
@@ -140,9 +147,18 @@ const HomeScreen = ({ navigation }) => {
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
     const [activeCategory, setActiveCategoryUi] = useState('all');
     const flatListRef = useRef(null);
+    const [activeMediaKey, setActiveMediaKey] = useState(null);
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
     const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
     const isActionInProgress = isSaving || isSharing;
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 70,
+    }).current;
+    const onViewableItemsChanged = useRef(({ viewableItems }) => {
+        const firstVisible = viewableItems?.find(entry => entry?.isViewable);
+        if (!firstVisible?.item) return;
+        setActiveMediaKey(getTemplateListKey(firstVisible.item, firstVisible.index ?? 0));
+    }).current;
 
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
@@ -169,6 +185,11 @@ const HomeScreen = ({ navigation }) => {
         const filtered = TEMPLATES.filter(item => item.category === categoryId);
         return filtered.length ? filtered : TEMPLATES;
     }, [activeCategory]);
+
+    useEffect(() => {
+        const firstItem = reelsData[0];
+        setActiveMediaKey(firstItem ? getTemplateListKey(firstItem, 0) : null);
+    }, [reelsData]);
 
     useEffect(() => {
         (async () => {
@@ -308,18 +329,24 @@ const HomeScreen = ({ navigation }) => {
             <FlatList
                 ref={flatListRef}
                 data={reelsData}
-                keyExtractor={(item, index) => `${item.id}_${index}`}
+                keyExtractor={getTemplateListKey}
                 showsVerticalScrollIndicator={false}
                 snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
                 snapToAlignment="start"
                 disableIntervalMomentum
                 decelerationRate="fast"
+                viewabilityConfig={viewabilityConfig}
+                onViewableItemsChanged={onViewableItemsChanged}
                 contentContainerStyle={styles.reelsContent}
-                renderItem={({ item }) => (
+                renderItem={({ item, index }) => (
                     <View style={styles.feedItemWrap}>
                         <View style={styles.reelCard}>
                             <Pressable style={styles.mediaTapArea} onPress={() => openEditor(item)}>
-                                <TemplatePosterPreview template={item} userPhoto={userPhoto} />
+                                <TemplatePosterPreview
+                                    template={item}
+                                    userPhoto={userPhoto}
+                                    shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
+                                />
                             </Pressable>
 
                             <Pressable style={styles.reelMeta} onPress={() => handleEdit(item)}>
@@ -401,7 +428,7 @@ const HomeScreen = ({ navigation }) => {
             />
 
             <View style={styles.hiddenCaptureStage} pointerEvents="none">
-                <PosterPreview posterRef={posterRef} />
+                <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
             </View>
 
             <Modal

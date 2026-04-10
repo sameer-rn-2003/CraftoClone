@@ -96,9 +96,13 @@ const PreviewScreen = ({ navigation, route }) => {
                     <View style={[styles.glowInner, { backgroundColor: accentColor + '1E' }]} />
                     <View style={[styles.posterWrapper, { borderColor: accentColor + '30' }]} pointerEvents="none">
                         <View style={styles.posterScaler}>
-                            <PosterPreview posterRef={posterRef} interactive />
+                            <PosterPreview interactive />
                         </View>
                     </View>
+                </View>
+
+                <View style={styles.hiddenCaptureStage} pointerEvents="none">
+                    <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
                 </View>
 
                 {/* ── Template badge ───────────────── */}
@@ -251,6 +255,14 @@ const styles = StyleSheet.create({
         transform: [{ scale: SCALE }],
         marginLeft: -(POSTER_SIZE.width * (1 - SCALE)) / 2,
         marginTop: -(POSTER_SIZE.height * (1 - SCALE)) / 2,
+    },
+    hiddenCaptureStage: {
+        position: 'absolute',
+        width: POSTER_SIZE.width,
+        height: POSTER_SIZE.height,
+        opacity: 0,
+        left: -POSTER_SIZE.width * 3,
+        top: 0,
     },
 
     // Template badge
