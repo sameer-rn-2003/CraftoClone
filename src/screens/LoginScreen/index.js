@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import Toast from '../../components/Toast';
+import { requestOtp } from '../../apiService/authApi';
 
 const COLORS = {
     pageBackground: '#F3F2FF',
@@ -45,7 +46,7 @@ const LoginScreen = ({ navigation }) => {
         };
     }, []);
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async() => {
         const digits = phone.replace(/\D/g, '');
         if (!digits) {
             showToast(t('auth.login.errors.enterMobile'), 'error');
@@ -55,8 +56,17 @@ const LoginScreen = ({ navigation }) => {
             showToast(t('auth.login.errors.invalidMobile'), 'error');
             return;
         }
-        showToast(t('auth.login.success.otpSent'), 'success');
-        navigation?.navigate?.('OtpVerification', { phone: digits });
+        try {
+    let res = await requestOtp(digits);
+    console.log('OTP request response:', res.data);
+    showToast('OTP sent successfully', 'success');
+    navigation.navigate('OtpVerification', { phone: digits });
+  } catch (error) {
+    showToast(
+      error?.response?.data?.message || 'Something went wrong',
+      'error'
+    );
+  }
     };
     return (
         <SafeAreaView style={styles.safeArea}>

@@ -11,6 +11,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import Toast from '../../components/Toast';
+import { verifyOtp } from '../../apiService/authApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
     pageBackground: '#F3F4FA',
@@ -81,14 +83,35 @@ const OtpVerificationScreen = ({ navigation, route }) => {
         }
     };
 
-    const handleVerify = () => {
-        if (otp.some(d => !d)) {
-            showToast(t('auth.otp.errors.enterCompleteCode'), 'error');
-            return;
-        }
-        showToast(t('auth.otp.success.verified'), 'success');
-        navigation?.navigate?.('LanguageSelection');
-    };
+ const handleVerify = async () => {
+  if (otp.some(d => !d)) {
+    showToast(t('auth.otp.errors.enterCompleteCode'), 'error');
+    return;
+  }
+
+  const finalOtp = otp.join('');
+
+  try {
+    const res = await verifyOtp({
+      phone_number: `+91${phone}`,
+      otp: finalOtp,
+    });
+console.log('OTP verification response:', res.data);
+    const { access_token, refresh_token } = res.data.data;
+
+    await AsyncStorage.setItem('access_token', access_token);
+    await AsyncStorage.setItem('refresh_token', refresh_token);
+
+    showToast('Login successful', 'success');
+
+    navigation.navigate('LanguageSelection');
+  } catch (error) {
+    showToast(
+      error?.response?.data?.message || 'Invalid OTP',
+      'error'
+    );
+  }
+};
 
     const handleResend = () => {
         if (seconds > 0) {
