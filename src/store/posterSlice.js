@@ -8,6 +8,7 @@ const initialState = {
     selectedTemplate: null,
     userPhoto: null,
     userName: '',
+    isLoggedIn: false,
     userMessage: '',
     isPremium: false,
     premiumProfile: {
@@ -76,6 +77,9 @@ const posterSlice = createSlice({
     initialState,
     reducers: {
         // Core
+        setIsLoggedIn(state, { payload }) {
+    state.isLoggedIn = payload;
+},
         setSelectedTemplate(state, { payload }) {
             state.selectedTemplate = payload;
             state.photoPosition = { x: 0, y: 0 };
@@ -242,7 +246,7 @@ export const {
     setPhotoShape, setAccentColorOverride,
     setBgOverlayColor, setBgOverlayOpacity,
     addSticker, updateStickerPosition, removeSticker,
-    addSavedPoster, resetEditor, setActiveCategory,
+    addSavedPoster, resetEditor, setActiveCategory,setIsLoggedIn,
 } = posterSlice.actions;
 
 export default posterSlice.reducer;

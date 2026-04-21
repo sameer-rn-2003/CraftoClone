@@ -1,0 +1,348 @@
+import { POSTER_SIZE } from './constants';
+
+const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
+const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
+
+const hasValue = value => value !== undefined && value !== null && value !== '';
+
+const getNumericValue = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toCamelCase = key =>
+    String(key)
+        .replace(/[-_\s]+([a-zA-Z0-9])/g, (_, char) => char.toUpperCase())
+        .replace(/^([A-Z])/, match => match.toLowerCase());
+
+const toSnakeCase = key =>
+    String(key)
+        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+        .replace(/[-\s]+/g, '_')
+        .toLowerCase();
+
+const getValueByKey = (source, key) => {
+    if (!source || !key) return undefined;
+
+    const variants = [
+        key,
+        String(key).toLowerCase(),
+        toCamelCase(key),
+        toSnakeCase(key),
+    ];
+
+    for (const variant of variants) {
+        if (hasValue(source[variant])) {
+            return source[variant];
+        }
+    }
+
+    return undefined;
+};
+
+const pickFirstValue = (...values) => {
+    for (const value of values) {
+        if (hasValue(value)) {
+            return value;
+        }
+    }
+
+    return undefined;
+};
+
+export const getTemplatePlaceholderKey = value => {
+    if (typeof value !== 'string') return null;
+    const match = value.trim().match(PLACEHOLDER_PATTERN);
+    return match ? match[1].trim() : null;
+};
+
+export const getTemplateTextPlaceholderKey = layer =>
+    getTemplatePlaceholderKey(layer?.text);
+
+export const isUserPhotoLayer = layer =>
+    layer?.id === 'user_photo' || getTemplatePlaceholderKey(layer?.src) === 'user_photo';
+
+export const isBackgroundMediaLayer = layer =>
+    layer?.id === 'bg' || getTemplatePlaceholderKey(layer?.src) === 'background_image';
+
+const TEMPLATE_TEXT_ROLE_MAP = {
+    headline: 'name',
+    title: 'name',
+    name: 'name',
+    user_name: 'name',
+    username: 'name',
+    full_name: 'name',
+    subtext: 'message',
+    subtitle: 'message',
+    message: 'message',
+    user_message: 'message',
+    tagline: 'message',
+    caption: 'message',
+    quote: 'message',
+};
+
+export const getTemplateEditableTextRole = layer => {
+    const candidates = [
+        layer?.id,
+        getTemplateTextPlaceholderKey(layer),
+    ];
+
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        const normalizedKey = toSnakeCase(candidate);
+        const role = TEMPLATE_TEXT_ROLE_MAP[normalizedKey];
+        if (role) {
+            return role;
+        }
+    }
+
+    return null;
+};
+
+export const normalizeTemplateMediaType = template => {
+    const rawType = String(template?.mediaType ?? template?.type ?? '').toUpperCase();
+    if (rawType === 'IMAGE' || rawType === 'VIDEO') {
+        return rawType;
+    }
+
+    const sourceCandidate = pickFirstValue(
+        template?.source,
+        template?.template_url,
+        template?.templateUrl,
+        template?.video,
+        template?.video_url,
+        template?.videoUrl,
+        template?.Video,
+        template?.image,
+        template?.image_url,
+        template?.imageUrl,
+        template?.Image,
+    );
+
+    if (typeof sourceCandidate === 'string' && VIDEO_SOURCE_PATTERN.test(sourceCandidate)) {
+        return 'VIDEO';
+    }
+
+    return 'IMAGE';
+};
+
+export const getTemplateCanvasSize = template => {
+    const width = getNumericValue(
+        template?.config?.width ?? template?.width ?? template?.canvasWidth,
+        POSTER_SIZE.width,
+    );
+    const height = getNumericValue(
+        template?.config?.height ?? template?.height ?? template?.canvasHeight,
+        POSTER_SIZE.height,
+    );
+
+    return {
+        width: width > 0 ? width : POSTER_SIZE.width,
+        height: height > 0 ? height : POSTER_SIZE.height,
+    };
+};
+
+export const getTemplateLayers = template =>
+    Array.isArray(template?.config?.layers) ? template.config.layers.filter(Boolean) : [];
+
+export const isConfigDrivenTemplate = template => getTemplateLayers(template).length > 0;
+
+export const getTemplateVariableDefaults = template => {
+    if (!Array.isArray(template?.config?.variables)) {
+        return {};
+    }
+
+    return template.config.variables.reduce((accumulator, variable) => {
+        if (!variable?.key) return accumulator;
+        accumulator[variable.key] = variable.default ?? '';
+        return accumulator;
+    }, {});
+};
+
+export const resolveTemplateValue = (value, template, context = {}) => {
+    if (typeof value !== 'string') {
+        return value;
+    }
+
+    const placeholderKey = getTemplatePlaceholderKey(value);
+    if (!placeholderKey) {
+        return value;
+    }
+
+    const variableDefaults = getTemplateVariableDefaults(template);
+
+    return pickFirstValue(
+        getValueByKey(context, placeholderKey),
+        getValueByKey(template, placeholderKey),
+        getValueByKey(variableDefaults, placeholderKey),
+    ) ?? '';
+};
+
+const normalizePhotoFrame = frame => {
+    if (!frame) return null;
+
+    const normalized = {
+        x: getNumericValue(frame.x, 0),
+        y: getNumericValue(frame.y, 0),
+        width: getNumericValue(frame.width, 0),
+        height: getNumericValue(frame.height, 0),
+        borderRadius: getNumericValue(frame.borderRadius ?? frame.border_radius, 0),
+        borderWidth: getNumericValue(frame.borderWidth ?? frame.border_width, 0),
+        borderColor: frame.borderColor ?? frame.border_color ?? '#FFFFFF',
+    };
+
+    if (!normalized.width || !normalized.height) {
+        return null;
+    }
+
+    return normalized;
+};
+
+export const getTemplatePhotoFrame = template => {
+    const explicitPhotoFrame = normalizePhotoFrame(template?.photoFrame ?? template?.photo_frame);
+    if (explicitPhotoFrame) {
+        return explicitPhotoFrame;
+    }
+
+    const photoLayer = getTemplateLayers(template).find(isUserPhotoLayer);
+    if (!photoLayer) {
+        return null;
+    }
+
+    return normalizePhotoFrame({
+        x: photoLayer.x,
+        y: photoLayer.y,
+        width: photoLayer.width,
+        height: photoLayer.height,
+        borderRadius: photoLayer.borderRadius,
+        borderWidth: photoLayer.borderWidth,
+        borderColor: photoLayer.borderColor,
+    });
+};
+
+export const buildTemplateRenderContext = ({
+    template,
+    userPhoto,
+    userName,
+    userMessage,
+    framePng,
+    backgroundImage,
+    logoUrl,
+    headline,
+    subtext,
+    premiumProfile,
+} = {}) => {
+    const mediaType = normalizeTemplateMediaType(template);
+    const businessLogo = premiumProfile?.business?.businessLogo;
+    const personalLogo = premiumProfile?.personal?.organizationLogo;
+    const backgroundFallback = mediaType === 'IMAGE'
+        ? pickFirstValue(template?.source, template?.thumbnail)
+        : pickFirstValue(template?.thumbnail, getValueByKey(template, 'background_image'));
+
+    return {
+        user_photo: userPhoto,
+        user_name: userName,
+        username: userName,
+        name: userName,
+        user_message: userMessage,
+        message: userMessage,
+        tagline: userMessage,
+        caption: userMessage,
+        frame_png: pickFirstValue(framePng, getValueByKey(template, 'frame_png')),
+        background_image: pickFirstValue(
+            backgroundImage,
+            getValueByKey(template, 'background_image'),
+            backgroundFallback,
+        ),
+        logo_url: pickFirstValue(
+            logoUrl,
+            businessLogo,
+            personalLogo,
+            getValueByKey(template, 'logo_url'),
+        ),
+        headline: pickFirstValue(headline, userName),
+        subtext: pickFirstValue(subtext, userMessage),
+    };
+};
+
+export const normalizeTemplateApiItem = item => {
+    const config = item?.config_json ?? item?.config ?? null;
+    const mediaType = normalizeTemplateMediaType(item);
+
+    const source = pickFirstValue(
+        item?.source,
+        item?.template_url,
+        item?.templateUrl,
+        item?.url,
+        mediaType === 'VIDEO'
+            ? pickFirstValue(item?.video, item?.video_url, item?.videoUrl, item?.Video)
+            : pickFirstValue(item?.image, item?.image_url, item?.imageUrl, item?.Image),
+        pickFirstValue(item?.video, item?.video_url, item?.videoUrl, item?.Video),
+        pickFirstValue(item?.image, item?.image_url, item?.imageUrl, item?.Image),
+    );
+
+    const thumbnail = pickFirstValue(
+        item?.thumbnail,
+        item?.thumbnail_url,
+        item?.thumbnailUrl,
+        item?.poster,
+        item?.poster_url,
+        item?.posterUrl,
+        item?.image,
+        item?.image_url,
+        item?.imageUrl,
+        item?.Image,
+        mediaType === 'IMAGE' ? source : undefined,
+    );
+
+    const categoryValue = typeof item?.category === 'string'
+        ? item.category
+        : item?.category?.name ?? item?.category?.title ?? item?.category?.slug;
+
+    const normalizedTemplate = {
+        ...item,
+        id: String(item?.id ?? item?._id ?? source ?? Date.now()),
+        name: item?.name ?? item?.title ?? item?.category?.name ?? 'Untitled',
+        category: categoryValue ? String(categoryValue).toLowerCase() : 'general',
+        mediaType,
+        source,
+        thumbnail,
+        config,
+        photoFrame: getTemplatePhotoFrame({
+            ...item,
+            config,
+        }),
+        accentColor: item?.accentColor ?? item?.accent_color ?? '#CCCCCC',
+        backgroundColor: config?.background ?? item?.backgroundColor ?? item?.background_color ?? '#000000',
+        Image: mediaType === 'IMAGE' ? source : thumbnail,
+        Video: mediaType === 'VIDEO' ? source : pickFirstValue(
+            item?.video,
+            item?.video_url,
+            item?.videoUrl,
+            item?.Video,
+        ),
+    };
+
+    return normalizedTemplate;
+};
+
+export const dedupeTemplates = templates => {
+    const seen = new Map();
+
+    for (const template of templates) {
+        if (!template) continue;
+
+        const key = [
+            template.id,
+            template.mediaType,
+            template.source,
+            template.thumbnail,
+        ].filter(Boolean).join('::');
+
+        if (!seen.has(key)) {
+            seen.set(key, template);
+        }
+    }
+
+    return Array.from(seen.values());
+};

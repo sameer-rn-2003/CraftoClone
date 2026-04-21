@@ -1,10 +1,10 @@
 // src/navigation/AppNavigator.js
-// Root navigator with a single Stack flow.
 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useSelector, useDispatch } from 'react-redux';
 
 import HomeScreen from '../screens/HomeScreen';
 import TemplateScreen from '../screens/TemplateScreen';
@@ -14,35 +14,90 @@ import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 import UserSetupScreen from '../screens/UserSetupScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OtpVerificationScreen from '../screens/OtpVerificationScreen';
+
 import { COLORS } from '../utils/constants';
 import i18n from '../i18n';
 import { getStoredLanguage } from '../i18n/storage';
 import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 
+import { getUserProfile } from '../utils/userStorage';
+import { setIsLoggedIn } from '../store/posterSlice';
+
 const Stack = createStackNavigator();
 
+
+// 🔐 AUTH FLOW
+const AuthStack = () => (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+        <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
+        <Stack.Screen name="UserSetup" component={UserSetupScreen} />
+    </Stack.Navigator>
+);
+
+
+// 🚀 APP FLOW
+const AppStack = () => (
+    <Stack.Navigator
+        screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: COLORS.background },
+        }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="TemplateScreen" component={TemplateScreen} />
+        <Stack.Screen name="EditorScreen" component={EditorScreen} />
+        <Stack.Screen name="PreviewScreen" component={PreviewScreen} />
+    </Stack.Navigator>
+);
+
+
 const AppNavigator = () => {
+    const dispatch = useDispatch();
+    const isLoggedIn = useSelector(state => state.poster.isLoggedIn);
+
     const [isReady, setIsReady] = useState(false);
-    const [initialRoute, setInitialRoute] = useState('Login');
 
     useEffect(() => {
         let mounted = true;
-        (async () => {
-            const stored = await getStoredLanguage();
-            const isSupported = stored && SUPPORTED_LANGUAGES.some(l => l.code === stored);
 
-            if (isSupported) {
-                await i18n.changeLanguage(stored);
-            } else {
-                // Default to English when language isn't selected or is invalid.
-                await i18n.changeLanguage('en');
+        const initApp = async () => {
+            try {
+                // 🌐 Language setup
+                const storedLang = await getStoredLanguage();
+                const isSupported =
+                    storedLang &&
+                    SUPPORTED_LANGUAGES.some(l => l.code === storedLang);
+
+                if (isSupported) {
+                    await i18n.changeLanguage(storedLang);
+                } else {
+                    await i18n.changeLanguage('en');
+                }
+
+                // 🔐 Restore login state from storage
+                const user = await getUserProfile();
+
+                if (user?.isLoggedIn) {
+                    dispatch(setIsLoggedIn(true));
+                }
+
+            } catch (e) {
+                console.log('App init error:', e);
+            } finally {
+                if (mounted) setIsReady(true);
             }
-            if (mounted) setInitialRoute('Login');
-            if (mounted) setIsReady(true);
-        })();
-        return () => { mounted = false; };
-    }, []);
+        };
 
+        initApp();
+
+        return () => {
+            mounted = false;
+        };
+    }, [dispatch]);
+
+
+    // ⏳ Splash
     if (!isReady) {
         return (
             <View style={styles.splash}>
@@ -51,39 +106,14 @@ const AppNavigator = () => {
         );
     }
 
+    // 🔁 Navigation based on state
     return (
         <NavigationContainer>
-            <Stack.Navigator
-                initialRouteName={initialRoute}
-                screenOptions={{
-                    headerShown: false,
-                    cardStyle: { backgroundColor: COLORS.background },
-                    gestureEnabled: true,
-                }}>
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
-                <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
-                <Stack.Screen name="UserSetup" component={UserSetupScreen} />
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen
-                    name="TemplateScreen"
-                    component={TemplateScreen}
-                    options={{ gestureEnabled: true }}
-                />
-                <Stack.Screen
-                    name="EditorScreen"
-                    component={EditorScreen}
-                    options={{ gestureEnabled: true }}
-                />
-                <Stack.Screen
-                    name="PreviewScreen"
-                    component={PreviewScreen}
-                    options={{ gestureEnabled: false }}
-                />
-            </Stack.Navigator>
+            {isLoggedIn ? <AppStack /> : <AuthStack />}
         </NavigationContainer>
     );
 };
+
 
 const styles = StyleSheet.create({
     splash: {

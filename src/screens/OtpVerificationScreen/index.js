@@ -96,7 +96,6 @@ const OtpVerificationScreen = ({ navigation, route }) => {
       phone_number: `+91${phone}`,
       otp: finalOtp,
     });
-console.log('OTP verification response:', res.data);
     const { access_token, refresh_token } = res.data.data;
 
     await AsyncStorage.setItem('access_token', access_token);

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback,useEffect, useState } from 'react';
 import {
     SafeAreaView,
     StyleSheet,
@@ -13,14 +13,33 @@ import { SUPPORTED_LANGUAGES } from '../../i18n/languages';
 import { setStoredLanguage } from '../../i18n/storage';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../utils/constants';
 
+import { getSupportedLanguages } from '../../apiService/langApi'; 
+import { formatLanguages } from '../../utils/formatLanguages'; // adjust path
+
 const LanguageSelectionScreen = ({ navigation }) => {
     const { t } = useTranslation();
+    const [languages, setLanguages] = useState([]);
 
     const handleSelect = useCallback(async (code) => {
         await setStoredLanguage(code);
         await i18n.changeLanguage(code);
         navigation.reset({ index: 0, routes: [{ name: 'UserSetup' }] });
     }, [navigation]);
+
+
+    useEffect(() => {
+        fetchLanguages();
+    }, []);
+
+    const fetchLanguages = async () => {
+        try {
+            const res = await getSupportedLanguages();
+            const formatted = formatLanguages(res?.data?.data || []);
+            setLanguages(formatted);
+        } catch (error) {
+            console.log('Language fetch error', error);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -32,7 +51,7 @@ const LanguageSelectionScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.list}>
-                {SUPPORTED_LANGUAGES.map(lang => (
+                {languages?.map(lang => (
                     <Pressable
                         key={lang.code}
                         style={styles.card}

@@ -18,9 +18,15 @@ import {
     setUserPhoto,
     setPremiumStatus,
     hydratePremiumProfile,
+    setIsLoggedIn,
 } from '../../store/posterSlice';
 import { getUserProfile, saveUserProfile } from '../../utils/userStorage';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
+import { updateUserProfileApi } from '../../apiService/profileApi';
+import { getPresignedUrl } from '../../apiService/uploadImage';
+import { uploadToS3 } from '../../utils/helpers';
+import i18n from '../../i18n';
+import { CommonActions } from '@react-navigation/native';
 
 const COLORS = {
     pageBackground: '#F4F5FB',
@@ -67,28 +73,89 @@ const UserSetupScreen = ({ navigation }) => {
         }
     };
 
-    const handleSave = async () => {
-        if (!imageUri) {
-            showToast(t('userSetup.errors.selectImage'), 'error');
-            return;
-        }
-        if (!name.trim()) {
-            showToast(t('userSetup.errors.enterName'), 'error');
-            return;
-        }
+ const handleSave = async () => {
+    if (!imageUri) {
+        showToast(t('userSetup.errors.selectImage'), 'error');
+        return;
+    }
+    if (!name.trim()) {
+        showToast(t('userSetup.errors.enterName'), 'error');
+        return;
+    }
+
+    try {
+        // 1. Get presigned URL
+        const fileName = `profile_${Date.now()}.jpg`;
+
+        const presignRes = await getPresignedUrl({
+            "fileName": fileName,
+            "category": 'user_profile',
+            "contentType": 'image/jpeg',
+        });
+        console.log('Presigned URL response:', presignRes.data);
+
+        const { cdnUrl, fileKey } = presignRes.data.data;
+console.log('Upload URL:', cdnUrl, 'File Key:', fileKey);
+
+        // 2. Upload to S3
+        // await uploadToS3(cdnUrl, imageUri, 'image/jpeg');
+
+        // 3. Update profile API
+       let updateRes = await updateUserProfileApi({
+            name: name.trim(),
+            profile_photo_key: fileKey,
+            language: i18n.language, // optional but good
+        });
+
+console.log('Profile update response:', updateRes.data);
+
+        // 4. Save locally (keep your logic)
         const existing = await getUserProfile();
+        console.log('Existing profile:', existing);
         const profile = {
             ...existing,
             name: name.trim(),
-            imageUri,
+            imageUri, // keep local for UI
         };
+
         await saveUserProfile(profile);
+
         dispatch(setUserName(profile.name));
         dispatch(setUserPhoto(profile.imageUri));
         dispatch(setPremiumStatus(!!profile.isPremium));
         dispatch(hydratePremiumProfile(profile.premiumProfile));
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-    };
+
+        // navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+ dispatch(setIsLoggedIn(true));
+
+    } catch (error) {
+        console.log('Profile save error', error);
+        showToast('Something went wrong', 'error');
+    }
+};
+
+    // const handleSave = async () => {
+    //     if (!imageUri) {
+    //         showToast(t('userSetup.errors.selectImage'), 'error');
+    //         return;
+    //     }
+    //     if (!name.trim()) {
+    //         showToast(t('userSetup.errors.enterName'), 'error');
+    //         return;
+    //     }
+    //     const existing = await getUserProfile();
+    //     const profile = {
+    //         ...existing,
+    //         name: name.trim(),
+    //         imageUri,
+    //     };
+    //     await saveUserProfile(profile);
+    //     dispatch(setUserName(profile.name));
+    //     dispatch(setUserPhoto(profile.imageUri));
+    //     dispatch(setPremiumStatus(!!profile.isPremium));
+    //     dispatch(hydratePremiumProfile(profile.premiumProfile));
+    //     navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    // };
 
     return (
         <SafeAreaView style={styles.safeArea}>

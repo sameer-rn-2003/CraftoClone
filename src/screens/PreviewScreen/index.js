@@ -1,7 +1,7 @@
 // src/screens/PreviewScreen/index.js
 // Premium full-screen poster preview with Save and Share actions
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     Pressable,
     SafeAreaView,
@@ -19,27 +19,31 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 import AppButton from '../../components/AppButton';
-import { hasTemplateVideo } from '../../utils/templateMedia';
+import { getTemplateCanvasSize } from '../../utils/templateConfig';
 import {
     COLORS,
     FONTS,
     SPACING,
     BORDER_RADIUS,
     SHADOW,
-    POSTER_SIZE,
 } from '../../utils/constants';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const SCALE = (SCREEN_W - SPACING.base * 2) / POSTER_SIZE.width;
-const PREVIEW_W = POSTER_SIZE.width * SCALE;
-const PREVIEW_H = POSTER_SIZE.height * SCALE;
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const PreviewScreen = ({ navigation, route }) => {
     const { selectedTemplate, userName, isPremium } = useSelector(s => s.poster);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePoster, sharePosterToWhatsApp, isSaving, isSharing } =
         usePosterGenerator();
-    const hasBackgroundVideo = hasTemplateVideo(selectedTemplate);
+    const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const previewScale = useMemo(() => {
+        const maxWidth = SCREEN_W - SPACING.base * 2;
+        const maxHeight = SCREEN_H * 0.68;
+
+        return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
+    }, [canvasSize]);
+    const previewWidth = canvasSize.width * previewScale;
+    const previewHeight = canvasSize.height * previewScale;
 
     const handleSave = useCallback(async () => {
         await savePoster();
@@ -94,16 +98,38 @@ const PreviewScreen = ({ navigation, route }) => {
 
                 {/* ── Poster ────────────────────────── */}
                 <View style={styles.posterContainer}>
-                    <View style={[styles.glowOuter, { backgroundColor: accentColor + '12' }]} />
-                    <View style={[styles.glowInner, { backgroundColor: accentColor + '1E' }]} />
-                    <View style={[styles.posterWrapper, { borderColor: accentColor + '30' }]} pointerEvents="none">
-                        <View style={styles.posterScaler}>
-                            <PosterPreview interactive />
+                    <View style={[styles.glowOuter, {
+                        backgroundColor: accentColor + '12',
+                        width: previewWidth + 40,
+                        height: previewHeight + 40,
+                    }]} />
+                    <View style={[styles.glowInner, {
+                        backgroundColor: accentColor + '1E',
+                        width: Math.max(previewWidth - 20, 0),
+                        height: Math.max(previewHeight - 40, 0),
+                    }]} />
+                    <View style={[styles.posterWrapper, {
+                        borderColor: accentColor + '30',
+                        width: previewWidth,
+                        height: previewHeight,
+                    }]} pointerEvents="none">
+                        <View style={[styles.posterScaler, {
+                            width: canvasSize.width,
+                            height: canvasSize.height,
+                            transform: [{ scale: previewScale }],
+                            marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
+                            marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
+                        }]}>
+                            <PosterPreview interactive interactionScale={previewScale} />
                         </View>
                     </View>
                 </View>
 
-                <View style={styles.hiddenCaptureStage} pointerEvents="none">
+                <View style={[styles.hiddenCaptureStage, {
+                    width: canvasSize.width,
+                    height: canvasSize.height,
+                    left: -canvasSize.width * 3,
+                }]} pointerEvents="none">
                     <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
                 </View>
 
@@ -122,68 +148,45 @@ const PreviewScreen = ({ navigation, route }) => {
 
                 {/* ── Action buttons ───────────────── */}
                 <View style={styles.actions}>
-                    {hasBackgroundVideo ? (
-                        <Pressable
-                            style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
-                            // onPress={handleSave}
-                            disabled={isSaving || isSharing}>
-                            {isSaving ? (
-                                <ActivityIndicator color={COLORS.white} size="small" />
-                            ) : (
-                                <>
-                                    <MaterialCommunityIcons name="download-outline" style={styles.actionIcon} />
-                                    <View>
-                                        <Text style={styles.actionLabel}>{t('preview.actions.download')}</Text>
-                                        <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
-                                    </View>
-                                </>
-                            )}
-                        </Pressable>
-                    ) : (
-                        <>
-                            {/* Save */}
-                            <Pressable
-                                style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
-                                onPress={handleSave}
-                                disabled={isSaving || isSharing}>
-                                {isSaving ? (
-                                    <ActivityIndicator color={COLORS.white} size="small" />
-                                ) : (
-                                    <>
-                                        <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
-                                        <View>
-                                            <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
-                                            <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
-                                        </View>
-                                    </>
-                                )}
-                            </Pressable>
+                    <Pressable
+                        style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
+                        onPress={handleSave}
+                        disabled={isSaving || isSharing}>
+                        {isSaving ? (
+                            <ActivityIndicator color={COLORS.white} size="small" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
+                                <View>
+                                    <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
+                                    <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
+                                </View>
+                            </>
+                        )}
+                    </Pressable>
 
-                            {/* Share */}
-                            <Pressable
-                                style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
-                                onPress={handleShare}
-                                disabled={isSaving || isSharing}>
-                                {isSharing ? (
-                                    <ActivityIndicator color={COLORS.white} size="small" />
-                                ) : (
-                                    <>
-                                        <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
-                                        <View>
-                                            <Text style={styles.actionLabel}>
-                                                {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
-                                            </Text>
-                                            <Text style={styles.actionSub}>
-                                                {isPremium
-                                                    ? t('preview.actions.shareSub')
-                                                    : t('preview.actions.shareWhatsAppSub')}
-                                            </Text>
-                                        </View>
-                                    </>
-                                )}
-                            </Pressable>
-                        </>
-                    )}
+                    <Pressable
+                        style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
+                        onPress={handleShare}
+                        disabled={isSaving || isSharing}>
+                        {isSharing ? (
+                            <ActivityIndicator color={COLORS.white} size="small" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
+                                <View>
+                                    <Text style={styles.actionLabel}>
+                                        {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
+                                    </Text>
+                                    <Text style={styles.actionSub}>
+                                        {isPremium
+                                            ? t('preview.actions.shareSub')
+                                            : t('preview.actions.shareWhatsAppSub')}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
+                    </Pressable>
                 </View>
 
                 {/* ── Secondary row ────────────────── */}
@@ -252,39 +255,25 @@ const styles = StyleSheet.create({
     },
     glowOuter: {
         position: 'absolute',
-        width: PREVIEW_W + 40,
-        height: PREVIEW_H + 40,
         borderRadius: 40,
         transform: [{ scaleX: 0.9 }, { translateY: 15 }],
     },
     glowInner: {
         position: 'absolute',
-        width: PREVIEW_W - 20,
-        height: PREVIEW_H - 40,
         borderRadius: 30,
         transform: [{ scaleX: 0.92 }, { translateY: 25 }],
     },
     posterWrapper: {
         borderRadius: 18,
         overflow: 'hidden',
-        width: PREVIEW_W,
-        height: PREVIEW_H,
         borderWidth: 1,
         ...SHADOW.large,
     },
     posterScaler: {
-        width: POSTER_SIZE.width,
-        height: POSTER_SIZE.height,
-        transform: [{ scale: SCALE }],
-        marginLeft: -(POSTER_SIZE.width * (1 - SCALE)) / 2,
-        marginTop: -(POSTER_SIZE.height * (1 - SCALE)) / 2,
     },
     hiddenCaptureStage: {
         position: 'absolute',
-        width: POSTER_SIZE.width,
-        height: POSTER_SIZE.height,
         opacity: 0,
-        left: -POSTER_SIZE.width * 3,
         top: 0,
     },
 

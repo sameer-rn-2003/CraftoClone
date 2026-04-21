@@ -13,7 +13,7 @@ export const resolvePhotoFrameRadius = (photoShape, templateRadius) => {
     }
 };
 
-export const getPosterFitLayout = (containerWidth, containerHeight) => {
+export const getPosterFitLayout = (containerWidth, containerHeight, posterSize = POSTER_SIZE) => {
     if (!containerWidth || !containerHeight) {
         return {
             width: 0,
@@ -25,7 +25,7 @@ export const getPosterFitLayout = (containerWidth, containerHeight) => {
         };
     }
 
-    const posterRatio = POSTER_SIZE.width / POSTER_SIZE.height;
+    const posterRatio = posterSize.width / posterSize.height;
 
     let width = containerWidth;
     let height = containerWidth / posterRatio;
@@ -40,8 +40,8 @@ export const getPosterFitLayout = (containerWidth, containerHeight) => {
         height,
         offsetX: (containerWidth - width) / 2,
         offsetY: (containerHeight - height) / 2,
-        scaleX: width / POSTER_SIZE.width,
-        scaleY: height / POSTER_SIZE.height,
+        scaleX: width / posterSize.width,
+        scaleY: height / posterSize.height,
     };
 };
 

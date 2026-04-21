@@ -5,7 +5,7 @@
 //   Style  — photo frame shape, accent colour, background overlay
 //   Stickers — tap to add sticker, drag to reposition, tap to delete
 
-import React, { useCallback, useState, memo } from 'react';
+import React, { useCallback, useMemo, useState, memo } from 'react';
 import {
     Alert,
     Dimensions,
@@ -38,15 +38,13 @@ import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
 import SubscriptionModal from '../../components/SubscriptionModal';
 import { mergeUserProfile } from '../../utils/userStorage';
+import { getTemplateCanvasSize } from '../../utils/templateConfig';
 import {
-    FONTS, SPACING, BORDER_RADIUS, SHADOW, POSTER_SIZE,
+    FONTS, SPACING, BORDER_RADIUS, SHADOW,
     COLORS,
 } from '../../utils/constants';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const SCALE = (SCREEN_W - SPACING.base * 2) / POSTER_SIZE.width;
-const PREVIEW_W = POSTER_SIZE.width * SCALE;
-const PREVIEW_H = POSTER_SIZE.height * SCALE;
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 // ─── Constants ────────────────────────────────────────────────────
 const EDITOR_COLORS = {
@@ -824,6 +822,15 @@ const EditorScreen = ({ navigation }) => {
     const { pickImage, loading: pickingImage } = useImagePicker();
     const [activeTab, setActiveTab] = useState('photo');
     const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
+    const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
+    const previewScale = useMemo(() => {
+        const maxWidth = SCREEN_W - SPACING.base * 2;
+        const maxHeight = SCREEN_H * 0.58;
+
+        return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
+    }, [canvasSize]);
+    const previewWidth = canvasSize.width * previewScale;
+    const previewHeight = canvasSize.height * previewScale;
 
     const openSubscriptionModal = useCallback(() => {
         setSubscriptionVisible(true);
@@ -921,7 +928,8 @@ const EditorScreen = ({ navigation }) => {
         handlePremiumDetailsSave,
     ]);
 
-    const shouldCollapsePoster = activeTab === 'text';
+    // Keep the poster visible while editing text so users can drag and place it directly.
+    const shouldCollapsePoster = false;
     const isTextTabActive = activeTab === 'text';
 
     return (
@@ -947,10 +955,26 @@ const EditorScreen = ({ navigation }) => {
 
             {/* ── Poster preview ─────────────────────── */}
             <View style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
-                <View style={[s.posterShadowRing, shouldCollapsePoster && s.posterShadowRingCollapsed]} />
-                <View style={[s.posterClip, shouldCollapsePoster && s.posterClipCollapsed]}>
-                    <View style={s.posterScaler}>
-                        <PosterPreview interactive allowPinchScale={p.isPremium} />
+                <View style={[s.posterShadowRing, {
+                    width: previewWidth + 20,
+                    height: previewHeight + 20,
+                }, shouldCollapsePoster && s.posterShadowRingCollapsed]} />
+                <View style={[s.posterClip, {
+                    width: previewWidth,
+                    height: previewHeight,
+                }, shouldCollapsePoster && s.posterClipCollapsed]}>
+                    <View style={[s.posterScaler, {
+                        width: canvasSize.width,
+                        height: canvasSize.height,
+                        transform: [{ scale: previewScale }],
+                        marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
+                        marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
+                    }]}>
+                        <PosterPreview
+                            interactive
+                            allowPinchScale={p.isPremium}
+                            interactionScale={previewScale}
+                        />
                     </View>
                 </View>
             </View>
@@ -1065,8 +1089,6 @@ const s = StyleSheet.create({
     },
     posterShadowRing: {
         position: 'absolute',
-        width: PREVIEW_W + 20,
-        height: PREVIEW_H + 20,
         borderRadius: 18,
         backgroundColor: EDITOR_COLORS.primary + '0A',
         top: SPACING.sm - 10,
@@ -1075,7 +1097,6 @@ const s = StyleSheet.create({
         opacity: 0,
     },
     posterClip: {
-        width: PREVIEW_W, height: PREVIEW_H,
         borderRadius: 16, overflow: 'hidden',
         ...SHADOW.large,
         borderWidth: 1,
@@ -1087,10 +1108,6 @@ const s = StyleSheet.create({
         opacity: 0,
     },
     posterScaler: {
-        width: POSTER_SIZE.width, height: POSTER_SIZE.height,
-        transform: [{ scale: SCALE }],
-        marginLeft: -(POSTER_SIZE.width * (1 - SCALE)) / 2,
-        marginTop: -(POSTER_SIZE.height * (1 - SCALE)) / 2,
     },
 
     // Tab bar

@@ -56,3 +56,20 @@ export const hexToRgba = (hex, alpha = 1) => {
     const b = parseInt(result[3], 16);
     return `rgba(${r},${g},${b},${alpha})`;
 };
+
+export const uploadToS3 = async (uploadUrl, fileUri, contentType) => {
+  const response = await fetch(fileUri);
+  const blob = await response.blob();
+
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': contentType,
+    },
+    body: blob,
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error('S3 upload failed');
+  }
+};

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
     Animated,
     Image,
@@ -26,6 +26,13 @@ import {
 } from '../../utils/photoFrameLayout';
 import TemplateMedia from '../TemplateMedia';
 import { getTemplateImageSource, hasTemplateVideo } from '../../utils/templateMedia';
+import ConfiguredTemplateLayers from '../ConfiguredTemplateLayers';
+import {
+    buildTemplateRenderContext,
+    getTemplateEditableTextRole,
+    getTemplateCanvasSize,
+    isConfigDrivenTemplate,
+} from '../../utils/templateConfig';
 
 const getTouchDistance = touches => {
     const dx = touches[0].pageX - touches[1].pageX;
@@ -33,15 +40,27 @@ const getTouchDistance = touches => {
     return Math.sqrt(dx * dx + dy * dy);
 };
 
+const normalizeInteractionScale = interactionScale =>
+    interactionScale && interactionScale > 0 ? interactionScale : 1;
+
+const getScaledGestureDelta = (gesture, interactionScale = 1) => {
+    const scale = normalizeInteractionScale(interactionScale);
+
+    return {
+        x: gesture.dx / scale,
+        y: gesture.dy / scale,
+    };
+};
+
 const MIN_TEXT_SCALE = 0.25;
 const MAX_TEXT_SCALE = 3.0;
 
-const DiagonalPattern = ({ color }) => (
+const DiagonalPattern = ({ color, canvasSize }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {[...Array(12)].map((_, i) => (
             <View key={i} style={{
                 position: 'absolute', height: 28,
-                width: POSTER_SIZE.width * 2, top: -40 + i * 55, left: -60,
+                width: canvasSize.width * 2, top: -40 + i * 55, left: -60,
                 backgroundColor: color + '20', transform: [{ rotate: '-35deg' }]
             }} />
         ))}
@@ -75,12 +94,12 @@ const DotsPattern = ({ color }) => (
     </View>
 );
 
-const WavesPattern = ({ color }) => (
+const WavesPattern = ({ color, canvasSize }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {[...Array(6)].map((_, i) => (
             <View key={i} style={{
                 position: 'absolute', height: 60,
-                width: POSTER_SIZE.width + 60, left: -30, top: i * 100 - 20,
+                width: canvasSize.width + 60, left: -30, top: i * 100 - 20,
                 borderRadius: 30, borderWidth: 2, borderColor: color + '25',
                 transform: [{ rotate: '-8deg' }]
             }} />
@@ -88,17 +107,25 @@ const WavesPattern = ({ color }) => (
     </View>
 );
 
-const PatternLayer = ({ pattern, accentColor }) => {
+const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
     switch (pattern) {
-        case 'diagonal': return <DiagonalPattern color={accentColor} />;
+        case 'diagonal': return <DiagonalPattern color={accentColor} canvasSize={canvasSize} />;
         case 'circles': return <CirclesPattern color={accentColor} />;
         case 'dots': return <DotsPattern color={accentColor} />;
-        case 'waves': return <WavesPattern color={accentColor} />;
+        case 'waves': return <WavesPattern color={accentColor} canvasSize={canvasSize} />;
         default: return null;
     }
 };
 
-const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoScale, allowPinchScale = true }) => {
+const DraggablePhoto = ({
+    photoFrame,
+    photoUri,
+    accentColor,
+    photoShape,
+    photoScale,
+    allowPinchScale = true,
+    interactionScale = 1,
+}) => {
     const dispatch = useDispatch();
     const { photoPosition } = useSelector(s => s.poster);
     const { t } = useTranslation();
@@ -179,10 +206,8 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
                     }
                 } else if (!isPinching.current) {
                     // ── Single-finger drag ─────────────────────────────────
-                    Animated.event(
-                        [null, { dx: pan.x, dy: pan.y }],
-                        { useNativeDriver: false },
-                    )(evt, gesture);
+                    const delta = getScaledGestureDelta(gesture, interactionScale);
+                    pan.setValue(delta);
                 }
             },
 
@@ -195,9 +220,10 @@ const DraggablePhoto = ({ photoFrame, photoUri, accentColor, photoShape, photoSc
                     initPinchDist.current = null;
                 } else {
                     pan.flattenOffset();
+                    const delta = getScaledGestureDelta(gesture, interactionScale);
                     const next = {
-                        x: committed.current.x + gesture.dx,
-                        y: committed.current.y + gesture.dy,
+                        x: committed.current.x + delta.x,
+                        y: committed.current.y + delta.y,
                     };
                     committed.current = next;
                     dispatch(setPhotoPosition(next));
@@ -271,7 +297,7 @@ const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoSca
     );
 };
 
-const DraggableSticker = ({ sticker, interactive }) => {
+const DraggableSticker = ({ sticker, interactive, interactionScale = 1 }) => {
     const dispatch = useDispatch();
     const pan = useRef(new Animated.ValueXY({ x: sticker.x, y: sticker.y })).current;
     const committed = useRef({ x: sticker.x, y: sticker.y });
@@ -284,10 +310,14 @@ const DraggableSticker = ({ sticker, interactive }) => {
                 pan.setOffset(committed.current);
                 pan.setValue({ x: 0, y: 0 });
             },
-            onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
+            onPanResponderMove: (_, gesture) => {
+                const delta = getScaledGestureDelta(gesture, interactionScale);
+                pan.setValue(delta);
+            },
             onPanResponderRelease: (_, g) => {
                 pan.flattenOffset();
-                const next = { x: committed.current.x + g.dx, y: committed.current.y + g.dy };
+                const delta = getScaledGestureDelta(g, interactionScale);
+                const next = { x: committed.current.x + delta.x, y: committed.current.y + delta.y };
                 committed.current = next;
                 dispatch(updateStickerPosition({ id: sticker.id, ...next }));
             },
@@ -325,6 +355,13 @@ const resolveTextBounds = field => ({
             : 16,
 });
 
+const getConfigTextField = layer => ({
+    y: Number(layer?.y) || 0,
+    x: Number.isFinite(Number(layer?.x)) ? Number(layer.x) : undefined,
+    fieldWidth: Number.isFinite(Number(layer?.width)) ? Number(layer.width) : undefined,
+    align: layer?.align ?? 'left',
+});
+
 const DraggableText = ({
     text,
     numberOfLines,
@@ -335,6 +372,7 @@ const DraggableText = ({
     setPositionAction,
     setScaleAction,
     allowPinchScale = true,
+    interactionScale = 1,
 }) => {
     const dispatch = useDispatch();
 
@@ -404,10 +442,8 @@ const DraggableText = ({
                         scaleAnim.setValue(newScale);
                     }
                 } else if (!isPinching.current) {
-                    Animated.event(
-                        [null, { dx: pan.x, dy: pan.y }],
-                        { useNativeDriver: false },
-                    )(evt, gesture);
+                    const delta = getScaledGestureDelta(gesture, interactionScale);
+                    pan.setValue(delta);
                 }
             },
 
@@ -419,9 +455,10 @@ const DraggableText = ({
                     initPinchDist.current = null;
                 } else {
                     pan.flattenOffset();
+                    const delta = getScaledGestureDelta(gesture, interactionScale);
                     const next = {
-                        x: committed.current.x + gesture.dx,
-                        y: committed.current.y + gesture.dy,
+                        x: committed.current.x + delta.x,
+                        y: committed.current.y + delta.y,
                     };
                     committed.current = next;
                     dispatch(setPositionAction(next));
@@ -488,13 +525,23 @@ const PosterPreview = ({
     allowPinchScale = interactive,
     playVideo = true,
     preferStillImageForVideo = false,
+    interactionScale = 1,
 }) => {
     const p = useSelector(s => s.poster);
     const { t } = useTranslation();
-
-    if (!p.selectedTemplate) return null;
-
     const selectedTemplate = p.selectedTemplate;
+    const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const isConfigDriven = useMemo(() => isConfigDrivenTemplate(selectedTemplate), [selectedTemplate]);
+    const renderContext = useMemo(() => buildTemplateRenderContext({
+        template: selectedTemplate,
+        userPhoto: p.userPhoto,
+        userName: p.userName,
+        userMessage: p.userMessage,
+        premiumProfile: p.premiumProfile,
+    }), [p.premiumProfile, p.userMessage, p.userName, p.userPhoto, selectedTemplate]);
+
+    if (!selectedTemplate) return null;
+
     const {
         backgroundColor, accentColor: templateAccent, headerColor,
         footerColor, pattern, photoFrame, textFields,
@@ -505,7 +552,7 @@ const PosterPreview = ({
     const hasTemplateMedia = !!templateImage || templateHasVideo;
 
 
-    const accentColor = p.accentColorOverride || templateAccent;
+    const accentColor = p.accentColorOverride || templateAccent || COLORS.primary;
     const nameField = textFields?.find(f => f.key === 'name');
     const messageField = textFields?.find(f => f.key === 'message');
 
@@ -530,11 +577,127 @@ const PosterPreview = ({
         textAlign: messageField.x !== undefined ? (messageField.align || 'left') : p.textAlign,
         ...shadowStyle,
     } : null;
+    const renderConfigTextLayer = ({ layer, resolvedText }) => {
+        const editableRole = getTemplateEditableTextRole(layer);
+
+        if (!editableRole) {
+            return undefined;
+        }
+
+        if (editableRole === 'name' && !p.showName) {
+            return null;
+        }
+
+        if (editableRole === 'message' && !p.showMessage) {
+            return null;
+        }
+
+        const field = getConfigTextField(layer);
+        const text = editableRole === 'name'
+            ? (p.userName || resolvedText || '')
+            : (p.userMessage || resolvedText || '');
+        const layerFontSize = Number.isFinite(Number(layer?.fontSize))
+            ? Number(layer.fontSize)
+            : 18;
+        const textStyle = {
+            fontSize: editableRole === 'name'
+                ? (p.nameFontSize ?? layerFontSize)
+                : (p.messageFontSize ?? layerFontSize),
+            fontWeight: editableRole === 'name'
+                ? nameFontWeight
+                : msgFontWeight,
+            fontStyle: editableRole === 'name'
+                ? nameFontStyle
+                : msgFontStyle,
+            color: editableRole === 'name'
+                ? (p.nameColor ?? layer?.color ?? '#FFFFFF')
+                : (p.messageColor ?? layer?.color ?? '#FFFFFF'),
+            textAlign: field.x !== undefined
+                ? (layer?.align || 'left')
+                : p.textAlign,
+            fontFamily: layer?.fontFamily,
+            letterSpacing: Number.isFinite(Number(layer?.letterSpacing))
+                ? Number(layer.letterSpacing)
+                : undefined,
+            lineHeight: Number.isFinite(Number(layer?.lineHeight))
+                ? Number(layer.lineHeight)
+                : undefined,
+            opacity: Number.isFinite(Number(layer?.opacity))
+                ? Number(layer.opacity)
+                : 1,
+            ...shadowStyle,
+        };
+
+        if (!text) {
+            return null;
+        }
+
+        if (editableRole === 'name') {
+            return interactive
+                ? <DraggableNameText
+                    field={field}
+                    text={text}
+                    textStyle={textStyle}
+                    textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                    textScale={p.nameScale ?? 1}
+                    setPositionAction={setNamePosition}
+                    setScaleAction={setNameScale}
+                    allowPinchScale={allowPinchScale}
+                    interactionScale={interactionScale} />
+                : <StaticNameText
+                    field={field}
+                    text={text}
+                    textStyle={textStyle}
+                    textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                    textScale={p.nameScale ?? 1} />;
+        }
+
+        return interactive
+            ? <DraggableMessageText
+                field={field}
+                text={text}
+                textStyle={textStyle}
+                textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                textScale={p.messageScale ?? 1}
+                setPositionAction={setMessagePosition}
+                setScaleAction={setMessageScale}
+                allowPinchScale={allowPinchScale}
+                interactionScale={interactionScale} />
+            : <StaticMessageText
+                field={field}
+                text={text}
+                textStyle={textStyle}
+                textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                textScale={p.messageScale ?? 1} />;
+    };
+    const photoLayerNode = photoFrame
+        ? (
+            interactive
+                ? <DraggablePhoto
+                    photoFrame={photoFrame}
+                    photoUri={p.userPhoto}
+                    accentColor={accentColor}
+                    photoShape={p.photoShape ?? 'template'}
+                    photoScale={p.photoScale ?? 1}
+                    allowPinchScale={allowPinchScale}
+                    interactionScale={interactionScale} />
+                : <StaticPhoto
+                    photoFrame={photoFrame}
+                    photoUri={p.userPhoto}
+                    photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
+                    photoShape={p.photoShape ?? 'template'}
+                    photoScale={p.photoScale ?? 1} />
+        )
+        : null;
 
     return (
         <View
             ref={posterRef}
-            style={[styles.poster, { backgroundColor }]}
+            style={[styles.poster, {
+                backgroundColor,
+                width: canvasSize.width,
+                height: canvasSize.height,
+            }]}
             collapsable={false}>
 
             {/* ── 0. Template Image (optional) ─────────── */}
@@ -548,18 +711,29 @@ const PosterPreview = ({
                 />
             ) : null}
 
-            {!hasTemplateMedia ? (
+            {!hasTemplateMedia && !isConfigDriven ? (
                 layout === 'left' ? (
-                    // Vertical coloured bar on the left ~40% of width
-                    <View style={[styles.leftBar, { backgroundColor: headerColor }]}>
-                        <PatternLayer pattern={pattern} accentColor={accentColor} />
-                        <View style={[styles.leftBarAccent, { backgroundColor: accentColor }]} />
+                    <View style={[styles.leftBar, {
+                        backgroundColor: headerColor,
+                        width: canvasSize.width * 0.42,
+                        height: canvasSize.height,
+                    }]}>
+                        <PatternLayer pattern={pattern} accentColor={accentColor} canvasSize={canvasSize} />
+                        <View style={[styles.leftBarAccent, {
+                            backgroundColor: accentColor,
+                            width: Math.max(4, canvasSize.width * 0.01),
+                        }]} />
                     </View>
                 ) : (
-                    // Default top header band
-                    <View style={[styles.header, { backgroundColor: headerColor }]}>
-                        <PatternLayer pattern={pattern} accentColor={accentColor} />
-                        <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+                    <View style={[styles.header, {
+                        backgroundColor: headerColor,
+                        height: canvasSize.height * 0.48,
+                    }]}>
+                        <PatternLayer pattern={pattern} accentColor={accentColor} canvasSize={canvasSize} />
+                        <View style={[styles.accentBar, {
+                            backgroundColor: accentColor,
+                            height: Math.max(5, canvasSize.height * 0.009),
+                        }]} />
                     </View>
                 )
             ) : null}
@@ -575,23 +749,18 @@ const PosterPreview = ({
                 />
             )}
 
-            {interactive
-                ? <DraggablePhoto
-                    photoFrame={photoFrame}
-                    photoUri={p.userPhoto}
-                    accentColor={accentColor}
-                    photoShape={p.photoShape ?? 'template'}
-                    photoScale={p.photoScale ?? 1}
-                    allowPinchScale={allowPinchScale} />
-                : <StaticPhoto
-                    photoFrame={photoFrame}
-                    photoUri={p.userPhoto}
-                    photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
-                    photoShape={p.photoShape ?? 'template'}
-                    photoScale={p.photoScale ?? 1} />}
+            {isConfigDriven ? (
+                <ConfiguredTemplateLayers
+                    template={selectedTemplate}
+                    context={renderContext}
+                    skipBackgroundLayers={hasTemplateMedia}
+                    renderUserPhotoLayer={() => photoLayerNode}
+                    renderTextLayer={renderConfigTextLayer}
+                />
+            ) : photoLayerNode}
 
 
-            {p.showName && nameField && (
+            {!isConfigDriven && p.showName && nameField && (
                 interactive
                     ? <DraggableNameText
                         field={nameField}
@@ -601,7 +770,8 @@ const PosterPreview = ({
                         textScale={p.nameScale ?? 1}
                         setPositionAction={setNamePosition}
                         setScaleAction={setNameScale}
-                        allowPinchScale={allowPinchScale} />
+                        allowPinchScale={allowPinchScale}
+                        interactionScale={interactionScale} />
                     : <StaticNameText
                         field={nameField}
                         text={p.userName || nameField.label}
@@ -611,7 +781,7 @@ const PosterPreview = ({
             )}
 
             {/* ── 4. Message (hidden if showMessage=false) ── */}
-            {p.showMessage && messageField && (
+            {!isConfigDriven && p.showMessage && messageField && (
                 interactive
                     ? <DraggableMessageText
                         field={messageField}
@@ -621,7 +791,8 @@ const PosterPreview = ({
                         textScale={p.messageScale ?? 1}
                         setPositionAction={setMessagePosition}
                         setScaleAction={setMessageScale}
-                        allowPinchScale={allowPinchScale} />
+                        allowPinchScale={allowPinchScale}
+                        interactionScale={interactionScale} />
                     : <StaticMessageText
                         field={messageField}
                         text={p.userMessage || messageField.label}
@@ -632,13 +803,27 @@ const PosterPreview = ({
 
             {/* ── 5. Stickers ──────────────────────────── */}
             {(p.stickers ?? []).map(sticker => (
-                <DraggableSticker key={sticker.id} sticker={sticker} interactive={interactive} />
+                <DraggableSticker
+                    key={sticker.id}
+                    sticker={sticker}
+                    interactive={interactive}
+                    interactionScale={interactionScale}
+                />
             ))}
 
             {/* ── 6. Footer ─────────────────────────────── */}
-            <View style={[styles.footer, { backgroundColor: footerColor }]}>
-                <Text style={styles.watermark}>{t('poster.watermark')}</Text>
-            </View>
+            {!isConfigDriven ? (
+                <View style={[styles.footer, {
+                    backgroundColor: footerColor,
+                    height: Math.max(36, canvasSize.height * 0.064),
+                }]}>
+                    <Text style={[styles.watermark, {
+                        fontSize: Math.max(10, canvasSize.width * 0.025),
+                    }]}>
+                        {t('poster.watermark')}
+                    </Text>
+                </View>
+            ) : null}
         </View>
     );
 };

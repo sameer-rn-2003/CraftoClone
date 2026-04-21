@@ -58,7 +58,6 @@ const LoginScreen = ({ navigation }) => {
         }
         try {
     let res = await requestOtp(digits);
-    console.log('OTP request response:', res.data);
     showToast('OTP sent successfully', 'success');
     navigation.navigate('OtpVerification', { phone: digits });
   } catch (error) {

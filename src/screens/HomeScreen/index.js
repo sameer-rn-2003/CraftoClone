@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     FlatList,
@@ -12,6 +13,7 @@ import {
     StatusBar,
     StyleSheet,
     Text,
+    TextInput,
     View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -25,18 +27,29 @@ import {
     setSelectedTemplate,
     setUserName,
     setUserPhoto,
+    setIsLoggedIn,
 } from '../../store/posterSlice';
-import { TEMPLATES } from '../../services/templateService';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { getUserProfile } from '../../utils/userStorage';
 import {
     getPosterFitLayout,
     getScaledPhotoFrameStyle,
 } from '../../utils/photoFrameLayout';
+import {
+    buildTemplateRenderContext,
+    dedupeTemplates,
+    getTemplateCanvasSize,
+    isConfigDrivenTemplate,
+    normalizeTemplateApiItem,
+} from '../../utils/templateConfig';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 import TemplateMedia from '../../components/TemplateMedia';
-
+import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers';
+import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/templateMedia';
+import { getCategories } from '../../apiService/categoriesApi';
+import { getTemplatesApi } from '../../apiService/templateApi';
+import i18n from '../../i18n';
 const getTemplateListKey = (item, index) => `${item.id}_${index}`;
 
 const COLORS = {
@@ -52,6 +65,24 @@ const COLORS = {
     chipText: '#111827',
     actionPanel: '#EFEFF0',
 };
+const mapCategoryIcon = (name) => {
+    switch (name.toLowerCase()) {
+        case 'birthday':
+            return 'cake-variant-outline';
+        case 'festival':
+            return 'party-popper';
+        case 'business':
+            return 'briefcase-outline';
+        case 'motivation':
+            return 'lightbulb-on-outline';
+        case 'political':
+            return 'bank-outline';
+        case 'social':
+            return 'atom';
+        default:
+            return null;
+    }
+};
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const ITEM_SPACING = heightPixel(14);
@@ -62,30 +93,48 @@ const CHIP_HEIGHT = heightPixel(34);
 const CHIP_GAP = widthPixel(8);
 const MAX_CATEGORY_LINES = 2;
 const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(40);
+const TEMPLATE_PAGE_SIZE = 30;
 
-const HEADER_CHIPS = [
-    { id: 'all', icon: null, labelKey: 'categories.all' },
-    { id: 'birthday', icon: 'cake-variant-outline', labelKey: 'categories.birthday' },
-    { id: 'festival', icon: 'party-popper', labelKey: 'categories.festival' },
-    { id: 'political', icon: 'bank-outline', labelKey: 'categories.political' },
-    { id: 'motivational', icon: 'lightbulb-on-outline', labelKey: 'categories.motivational' },
-    { id: 'business', icon: 'briefcase-outline', labelKey: 'categories.business' },
-];
+// const HEADER_CHIPS = [
+//     { id: 'all', icon: null, labelKey: 'categories.all' },
+//     { id: 'birthday', icon: 'cake-variant-outline', labelKey: 'categories.birthday' },
+//     { id: 'festival', icon: 'party-popper', labelKey: 'categories.festival' },
+//     { id: 'political', icon: 'bank-outline', labelKey: 'categories.political' },
+//     { id: 'motivational', icon: 'lightbulb-on-outline', labelKey: 'categories.motivational' },
+//     { id: 'business', icon: 'briefcase-outline', labelKey: 'categories.business' },
+// ];
 
-const CATEGORY_TARGET = {
-    all: 'all',
-    birthday: 'birthday',
-    festival: 'festival',
-    political: 'political',
-    motivational: 'all',
-    business: 'business',
-};
 
-const TemplatePosterPreview = ({ template, userPhoto, shouldPlay }) => {
+
+// const CATEGORY_TARGET = {
+//     all: 'all',
+//     birthday: 'birthday',
+//     festival: 'festival',
+//     political: 'political',
+//     motivational: 'all',
+//     business: 'business',
+// };
+
+const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const canvasSize = useMemo(() => getTemplateCanvasSize(template), [template]);
     const posterLayout = useMemo(
-        () => getPosterFitLayout(containerSize.width, containerSize.height),
-        [containerSize.height, containerSize.width],
+        () => getPosterFitLayout(containerSize.width, containerSize.height, canvasSize),
+        [canvasSize, containerSize.height, containerSize.width],
+    );
+    const hasConfigLayers = useMemo(() => isConfigDrivenTemplate(template), [template]);
+    const hasTemplateBackgroundMedia = useMemo(
+        () => !!(getTemplateImageSource(template) || getTemplateVideoSource(template)),
+        [template],
+    );
+    const renderContext = useMemo(
+        () => buildTemplateRenderContext({
+            template,
+            userPhoto,
+            userName,
+            userMessage,
+        }),
+        [template, userMessage, userName, userPhoto],
     );
 
     const photoFrameStyle = useMemo(
@@ -98,6 +147,25 @@ const TemplatePosterPreview = ({ template, userPhoto, shouldPlay }) => {
         }),
         [posterLayout, template?.photoFrame],
     );
+    const fallbackBadgeStyle = useMemo(() => {
+        if (!posterLayout?.width || !posterLayout?.height) {
+            return null;
+        }
+
+        const size = Math.max(widthPixel(52), posterLayout.width * 0.18);
+        const insetX = Math.max(widthPixel(12), posterLayout.width * 0.04);
+        const insetY = Math.max(heightPixel(12), posterLayout.height * 0.04);
+
+        return {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            right: posterLayout.offsetX + insetX,
+            bottom: posterLayout.offsetY + insetY,
+            borderWidth: Math.max(2, size * 0.06),
+        };
+    }, [posterLayout]);
+    const shouldRenderFallbackBadge = userPhoto && !photoFrameStyle;
 
     return (
         <View
@@ -110,7 +178,12 @@ const TemplatePosterPreview = ({ template, userPhoto, shouldPlay }) => {
             }}>
             <TemplateMedia
                 template={template}
-                style={styles.reelImage}
+                style={[styles.reelImage, {
+                    width: posterLayout.width,
+                    height: posterLayout.height,
+                    left: posterLayout.offsetX,
+                    top: posterLayout.offsetY,
+                }]}
                 resizeMode="cover"
                 shouldPlay={shouldPlay}
                 fallback={
@@ -129,8 +202,28 @@ const TemplatePosterPreview = ({ template, userPhoto, shouldPlay }) => {
                 }
             />
 
-            {userPhoto && photoFrameStyle ? (
+            {hasConfigLayers ? (
+                <ConfiguredTemplateLayers
+                    template={template}
+                    context={renderContext}
+                    canvasLayout={posterLayout}
+                    skipBackgroundLayers={hasTemplateBackgroundMedia}
+                    renderUserPhotoLayer={({ layerStyle }) => (
+                        userPhoto ? (
+                            <View style={[styles.userPhotoFrame, layerStyle]} pointerEvents="none">
+                                <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                            </View>
+                        ) : null
+                    )}
+                />
+            ) : userPhoto && photoFrameStyle ? (
                 <View style={[styles.userPhotoFrame, photoFrameStyle]} pointerEvents="none">
+                    <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                </View>
+            ) : null}
+
+            {shouldRenderFallbackBadge && fallbackBadgeStyle ? (
+                <View style={[styles.userPhotoBadge, fallbackBadgeStyle]} pointerEvents="none">
                     <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
                 </View>
             ) : null}
@@ -146,11 +239,24 @@ const HomeScreen = ({ navigation }) => {
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
     const [activeCategory, setActiveCategoryUi] = useState('all');
+    const [categoryIdSelected, setCategoryIdSelected] = useState(null);
     const flatListRef = useRef(null);
     const [activeMediaKey, setActiveMediaKey] = useState(null);
+    const [categories, setCategories] = useState([]);
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
     const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
     const isActionInProgress = isSaving || isSharing;
+
+    const [templates, setTemplates] = useState([]);
+    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [hasMore, setHasMore] = useState(true);
+    const [isInitialLoading, setIsInitialLoading] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    const requestIdRef = useRef(0);
+
     const viewabilityConfig = useRef({
         itemVisiblePercentThreshold: 70,
     }).current;
@@ -159,6 +265,158 @@ const HomeScreen = ({ navigation }) => {
         if (!firstVisible?.item) return;
         setActiveMediaKey(getTemplateListKey(firstVisible.item, firstVisible.index ?? 0));
     }).current;
+
+    //     const CATEGORY_TARGET = useMemo(() => {
+    //     const map = { all: 'all' };
+
+    //     categories.forEach(cat => {
+    //         const key = cat.id;
+
+    //         // normalize mismatch
+    //         if (key === 'motivation') {
+    //             map[key] = 'all'; // or 'motivational' if your templates support it
+    //         } else {
+    //             map[key] = key;
+    //         }
+    //     });
+
+    //     return map;
+    // }, [categories]);
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            const res = await getCategories();
+            const apiData = res?.data?.data || [];
+
+            const formatted = apiData.map(item => ({
+                id: item.name.toLowerCase(), // IMPORTANT (used in your logic)
+                label: item.name,
+                icon: mapCategoryIcon(item.name),
+                categoryId: item.id, // Keep original ID if needed for API calls
+            }));
+
+            // Add "All" manually (API doesn't give it)
+            setCategories([
+                { id: 'all', label: t('categories.all'), icon: null, categoryId: 'all' },
+                ...formatted,
+            ]);
+
+        } catch (e) {
+            console.log('Category fetch error', e);
+        }
+    }, [t]);
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
+
+
+
+
+
+    const handleLogout = async () => {
+        try {
+
+            dispatch(setIsLoggedIn(false));
+        } catch (e) {
+            console.log('Logout error:', e);
+        }
+    };
+
+    const fetchTemplates = useCallback(async ({ pageNumber = 1, searchText = '', categoryId = null } = {}) => {
+        const requestId = ++requestIdRef.current;
+        const isFirstPage = pageNumber === 1;
+
+        try {
+            if (isFirstPage) {
+                setIsInitialLoading(true);
+            } else {
+                setIsLoadingMore(true);
+            }
+
+            const res = await getTemplatesApi({
+                category_id: categoryId,
+                language: i18n.language || 'en',
+                search: searchText,
+                page: pageNumber,
+                limit: TEMPLATE_PAGE_SIZE,
+            });
+
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
+
+            const apiData = res?.data?.data?.data || [];
+            const parsedTotal = Number(res?.data?.data?.total);
+            const hasKnownTotal = Number.isFinite(parsedTotal);
+            const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
+
+
+
+
+        // ✅ FIX HERE
+            setTemplates(prev => (
+                isFirstPage
+                    ? formatted
+                    : dedupeTemplates([...prev, ...formatted])
+            ));
+
+            // 🔥 important fix
+            setPage(pageNumber);
+            setHasMore(hasKnownTotal
+                ? parsedTotal > pageNumber * TEMPLATE_PAGE_SIZE
+                : apiData.length === TEMPLATE_PAGE_SIZE);
+            setHasLoadedOnce(true);
+
+        } catch (e) {
+            console.log('Template fetch error', e);
+
+            if (requestId === requestIdRef.current && isFirstPage) {
+                setTemplates([]);
+                setHasMore(false);
+                setHasLoadedOnce(true);
+            }
+        } finally {
+            if (requestId === requestIdRef.current) {
+                setIsInitialLoading(false);
+                setIsLoadingMore(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+        }, 400);
+
+        return () => clearTimeout(timeoutId);
+    }, [search]);
+
+    useEffect(() => {
+        flatListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+        fetchTemplates({
+            pageNumber: 1,
+            searchText: debouncedSearch,
+            categoryId: categoryIdSelected,
+        });
+    }, [categoryIdSelected, debouncedSearch, fetchTemplates]);
+
+    const handleSearch = useCallback(text => {
+        setSearch(text);
+    }, []);
+
+    const loadMore = useCallback(() => {
+        if (!hasMore || isInitialLoading || isLoadingMore) return;
+
+        fetchTemplates({
+            pageNumber: page + 1,
+            searchText: debouncedSearch,
+            categoryId: categoryIdSelected,
+        });
+    }, [categoryIdSelected, debouncedSearch, fetchTemplates, hasMore, isInitialLoading, isLoadingMore, page]);
+
+
+
 
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
@@ -169,22 +427,27 @@ const HomeScreen = ({ navigation }) => {
         return '';
     }, [userMessage, userName]);
 
-    const chips = useMemo(
-        () =>
-            HEADER_CHIPS.map(item => ({
-                id: item.id,
-                icon: item.icon,
-                label: item.label || t(item.labelKey),
-            })),
-        [t],
-    );
+    // const chips = useMemo(
+    //     () =>
+    //         HEADER_CHIPS.map(item => ({
+    //             id: item.id,
+    //             icon: item.icon,
+    //             label: item.label || t(item.labelKey),
+    //         })),
+    //     [t],
+    // );
 
-    const reelsData = useMemo(() => {
-        const categoryId = CATEGORY_TARGET[activeCategory] || 'all';
-        if (categoryId === 'all') return TEMPLATES;
-        const filtered = TEMPLATES.filter(item => item.category === categoryId);
-        return filtered.length ? filtered : TEMPLATES;
-    }, [activeCategory]);
+    const chips = useMemo(() => categories, [categories]);
+
+    // const reelsData = useMemo(() => {
+    //     const categoryId = CATEGORY_TARGET[activeCategory] || 'all';
+    //     if (categoryId === 'all') return TEMPLATES;
+    //     const filtered = TEMPLATES.filter(item => item.category.toLowerCase() === categoryId);
+    //     return filtered.length ? filtered : TEMPLATES;
+    // }, [activeCategory]);
+
+    const reelsData = templates;
+    const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
 
     useEffect(() => {
         const firstItem = reelsData[0];
@@ -206,19 +469,28 @@ const HomeScreen = ({ navigation }) => {
     const handleSeeAllPress = useCallback(() => {
         setCategoryModalVisible(false);
         setActiveCategoryUi('all');
+        setCategoryIdSelected(null);
         dispatch(setActiveCategory('all'));
         navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
     }, [dispatch, navigation]);
 
-    const handleCategoryPress = useCallback(
-        id => {
-            const targetId = CATEGORY_TARGET[id] || 'all';
-            setActiveCategoryUi(id);
-            dispatch(setActiveCategory(targetId));
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        },
-        [dispatch],
-    );
+    // const handleCategoryPress = useCallback(
+    //     id => {
+    //         const targetId = CATEGORY_TARGET[id] || 'all';
+    //         console.log('Selected category:', id, 'Mapped to:', targetId);
+    //         setActiveCategoryUi(id);
+    //         dispatch(setActiveCategory(targetId));
+    //         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    //     },
+    //     [dispatch],
+    // );
+    const handleCategoryPress = useCallback((item) => {
+        setActiveCategoryUi(item?.id);
+        const categoryId = item?.categoryId === 'all' ? null : item?.categoryId;
+        setCategoryIdSelected(categoryId);
+        dispatch(setActiveCategory(item?.id ?? 'all'));
+        setPage(1);
+    }, [dispatch]);
 
     const openEditor = useCallback(
         item => {
@@ -285,9 +557,28 @@ const HomeScreen = ({ navigation }) => {
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.staticHeader}>
-                <View style={styles.searchBar}>
-                    <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
-                    <Text style={styles.searchText}>{t('home.searchPlaceholder')}</Text>
+                <View style={styles.headerRow}>
+                    <View style={styles.searchBar}>
+                        <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
+                        <TextInput
+                            placeholder={t('home.searchPlaceholder')}
+                            style={styles.searchText}
+                            value={search}
+                            onChangeText={handleSearch}
+                        />
+                        {/* <Text style={styles.searchText}>{t('home.searchPlaceholder')}</Text> */}
+                    </View>
+
+                    <Pressable style={styles.logoutBtn} onPress={() => Alert.alert(
+                        'Logout',
+                        'Are you sure you want to logout?',
+                        [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Logout', onPress: handleLogout },
+                        ]
+                    )}>
+                        <MaterialCommunityIcons name="logout" style={styles.logoutIcon} />
+                    </Pressable>
                 </View>
 
                 <ScrollView
@@ -298,13 +589,13 @@ const HomeScreen = ({ navigation }) => {
                         setHasOverflowCategories(contentHeight > CATEGORY_PREVIEW_HEIGHT + 2);
                     }}
                     showsVerticalScrollIndicator={false}>
-                    {chips.map(item => {
+                    {chips?.map(item => {
                         const isActive = activeCategory === item.id;
                         return (
                             <Pressable
                                 key={item.id}
                                 style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-                                onPress={() => handleCategoryPress(item.id)}>
+                                onPress={() => handleCategoryPress(item)}>
                                 {item.icon ? (
                                     <MaterialCommunityIcons
                                         name={item.icon}
@@ -329,6 +620,40 @@ const HomeScreen = ({ navigation }) => {
             <FlatList
                 ref={flatListRef}
                 data={reelsData}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                    isLoadingMore ? (
+                        <View style={styles.listStateWrap}>
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                            <Text style={styles.listStateText}>
+                                {t('home.loadingMore', { defaultValue: 'Loading more...' })}
+                            </Text>
+                        </View>
+                    ) : hasReachedEnd ? (
+                        <View style={styles.listStateWrap}>
+                            <Text style={styles.listStateText}>
+                                {t('home.endReached', { defaultValue: "You've reached the end." })}
+                            </Text>
+                        </View>
+                    ) : null
+                }
+                ListEmptyComponent={
+                    isInitialLoading ? (
+                        <View style={styles.listStateWrap}>
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                            <Text style={styles.listStateText}>
+                                {t('home.loadingTemplates', { defaultValue: 'Loading templates...' })}
+                            </Text>
+                        </View>
+                    ) : hasLoadedOnce ? (
+                        <View style={styles.listStateWrap}>
+                            <Text style={styles.listStateText}>
+                                {t('home.noTemplates', { defaultValue: 'No templates found.' })}
+                            </Text>
+                        </View>
+                    ) : null
+                }
                 keyExtractor={getTemplateListKey}
                 showsVerticalScrollIndicator={false}
                 snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
@@ -345,6 +670,8 @@ const HomeScreen = ({ navigation }) => {
                                 <TemplatePosterPreview
                                     template={item}
                                     userPhoto={userPhoto}
+                                    userName={userName}
+                                    userMessage={userMessage}
                                     shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
                                 />
                             </Pressable>
@@ -454,7 +781,7 @@ const HomeScreen = ({ navigation }) => {
                                             key={`modal_${item.id}`}
                                             style={[styles.categoryChip, isActive && styles.categoryChipActive]}
                                             onPress={() => {
-                                                handleCategoryPress(item.id);
+                                                handleCategoryPress(item);
                                                 setCategoryModalVisible(false);
                                             }}>
                                             {item.icon ? (
@@ -484,6 +811,28 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+
+    logoutBtn: {
+        marginLeft: widthPixel(10),
+        width: heightPixel(44),
+        height: heightPixel(44),
+        borderRadius: widthPixel(22),
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: widthPixel(1),
+        borderColor: '#A7C0D3',
+    },
+
+    logoutIcon: {
+        fontSize: widthPixel(20),
+        color: '#E53935', // red feel
+    },
     staticHeader: {
         paddingHorizontal: widthPixel(14),
         paddingTop: heightPixel(12),
@@ -599,8 +948,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#DDE5EC',
     },
     reelImage: {
-        width: '100%',
-        height: '100%',
+        position: 'absolute',
     },
     reelFallback: {
         position: 'absolute',
@@ -610,9 +958,32 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         backgroundColor: '#FFFFFF',
     },
+    userPhotoBadge: {
+        position: 'absolute',
+        overflow: 'hidden',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#FFFFFF',
+        shadowColor: '#000000',
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+    },
     userPhoto: {
         width: '100%',
         height: '100%',
+    },
+    listStateWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: heightPixel(18),
+        gap: heightPixel(8),
+    },
+    listStateText: {
+        textAlign: 'center',
+        color: COLORS.textSecondary,
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
     },
     reelMeta: {
         width: '100%',
