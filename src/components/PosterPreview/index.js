@@ -528,6 +528,7 @@ const PosterPreview = ({
     interactionScale = 1,
 }) => {
     const p = useSelector(s => s.poster);
+    console.log('PosterPreview - selectedTemplate:', p);
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
@@ -754,7 +755,13 @@ const PosterPreview = ({
                     template={selectedTemplate}
                     context={renderContext}
                     skipBackgroundLayers={hasTemplateMedia}
-                    renderUserPhotoLayer={() => photoLayerNode}
+                  renderUserPhotoLayer={({ layerStyle }) =>
+  p.userPhoto ? (
+    <View style={[styles.photoWrapper, layerStyle]}>
+      <Image source={{ uri: p.userPhoto }} style={styles.photo} />
+    </View>
+  ) : null
+}
                     renderTextLayer={renderConfigTextLayer}
                 />
             ) : photoLayerNode}

@@ -5,7 +5,7 @@
 //   Style  — photo frame shape, accent colour, background overlay
 //   Stickers — tap to add sticker, drag to reposition, tap to delete
 
-import React, { useCallback, useMemo, useState, memo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react';
 import {
     Alert,
     Dimensions,
@@ -31,13 +31,14 @@ import {
     setPhotoShape,
     addSticker, removeSticker,
     setPhotoScale, setPremiumStatus, setPremiumProfileField,
+    setUserPhoto,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
 import PosterPreview from '../../components/PosterPreview';
 import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
 import SubscriptionModal from '../../components/SubscriptionModal';
-import { mergeUserProfile } from '../../utils/userStorage';
+import { mergeUserProfile, getUserProfile } from '../../utils/userStorage';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
 import {
     FONTS, SPACING, BORDER_RADIUS, SHADOW,
@@ -200,7 +201,7 @@ const PhotoTab = ({
                             />
                         </View>
                         <View style={{ flex: 1 }}>
-                            <Text style={[s.uploadLabel, userPhoto && { color: EDITOR_COLORS.primaryLight }]}> 
+                            <Text style={[s.uploadLabel, userPhoto && { color: EDITOR_COLORS.primaryLight }]}>
                                 {pickingImage
                                     ? t('editor.photo.upload.selecting')
                                     : userPhoto
@@ -306,7 +307,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
     const nameActive = idx => (p.nameFontSize ?? 26) === SIZE_PRESETS[idx];
     const msgActive = idx => (p.messageFontSize ?? 14) === SIZE_PRESETS[idx];
     const locked = !p.isPremium;
-    const showName =  p.showName;
+    const showName = p.showName;
     const showMessage = locked ? true : p.showMessage;
 
     const handlePremiumAction = action => {
@@ -325,23 +326,20 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
             <View style={{ paddingBottom: SPACING.xxl }}>
 
                 {/* ── SHOW / HIDE NAME ────────────────── */}
-                {/* <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}> */}
-                    <View style={s.visibilityRow}>
-                        <View style={s.visibilityLeft}>
-                            <Text style={s.visibilityLabel}>{t('editor.visibility.showName')}</Text>
-                            <Text style={s.visibilityHint}>
-                                {showName ? t('editor.visibility.visible') : t('editor.visibility.hidden')}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={showName}
-                            // disabled={locked}
-                            onValueChange={v => dispatch(setShowName(v))}
-                            trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
-                            thumbColor={EDITOR_COLORS.white}
-                        />
+                <View style={s.visibilityRow}>
+                    <View style={s.visibilityLeft}>
+                        <Text style={s.visibilityLabel}>{t('editor.visibility.showName')}</Text>
+                        <Text style={s.visibilityHint}>
+                            {showName ? t('editor.visibility.visible') : t('editor.visibility.hidden')}
+                        </Text>
                     </View>
-                {/* </LockedInputWrapper> */}
+                    <Switch
+                        value={showName}
+                        onValueChange={v => dispatch(setShowName(v))}
+                        trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
+                        thumbColor={EDITOR_COLORS.white}
+                    />
+                </View>
 
                 {showName && (
                     <>
@@ -456,30 +454,30 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
                 {/* ── TEXT ALIGNMENT + SHADOW ── */}
                 <RowLabel>{t('editor.text.alignment')}</RowLabel>
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                <View style={[s.toggleRow, locked && s.lockedSection]}>
-                    <AlignBtn icon="⬛◻◻" label={t('editor.text.align.left')} value="left" current={p.textAlign}
-                        onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
-                    <AlignBtn icon="◻⬛◻" label={t('editor.text.align.center')} value="center" current={p.textAlign}
-                        onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
-                    <AlignBtn icon="◻◻⬛" label={t('editor.text.align.right')} value="right" current={p.textAlign}
-                        onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
-                </View>
+                    <View style={[s.toggleRow, locked && s.lockedSection]}>
+                        <AlignBtn icon="⬛◻◻" label={t('editor.text.align.left')} value="left" current={p.textAlign}
+                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
+                        <AlignBtn icon="◻⬛◻" label={t('editor.text.align.center')} value="center" current={p.textAlign}
+                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
+                        <AlignBtn icon="◻◻⬛" label={t('editor.text.align.right')} value="right" current={p.textAlign}
+                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
+                    </View>
                 </LockedInputWrapper>
 
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                <View style={s.switchRow}>
-                    <View>
-                        <Text style={s.switchLabel}>{t('editor.text.shadow.label')}</Text>
-                        <Text style={s.switchSub}>{t('editor.text.shadow.subtitle')}</Text>
+                    <View style={s.switchRow}>
+                        <View>
+                            <Text style={s.switchLabel}>{t('editor.text.shadow.label')}</Text>
+                            <Text style={s.switchSub}>{t('editor.text.shadow.subtitle')}</Text>
+                        </View>
+                        <Switch
+                            value={p.textShadow}
+                            disabled={locked}
+                            onValueChange={v => dispatch(setTextShadow(v))}
+                            trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
+                            thumbColor={EDITOR_COLORS.white}
+                        />
                     </View>
-                    <Switch
-                        value={p.textShadow}
-                        disabled={locked}
-                        onValueChange={v => dispatch(setTextShadow(v))}
-                        trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
-                        thumbColor={EDITOR_COLORS.white}
-                    />
-                </View>
                 </LockedInputWrapper>
 
                 {locked && (
@@ -523,6 +521,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
         p1.textShadow === p2.textShadow
     );
 });
+
 const StyleTab = ({ p, dispatch, isPremium, onUnlockPremium }) => {
     const { t } = useTranslation();
     const locked = !isPremium;
@@ -557,6 +556,7 @@ const StyleTab = ({ p, dispatch, isPremium, onUnlockPremium }) => {
         </ScrollView>
     );
 };
+
 const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave }) => {
     const { t } = useTranslation();
     const [activeSection, setActiveSection] = useState('personal');
@@ -608,142 +608,142 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
             {activeSection === 'personal' ? (
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
-                    <SectionLabel>{t('editor.premium.personalDetails')}</SectionLabel>
-                    <AppTextInput
-                        label={t('editor.premium.mobileNumber')}
-                        value={personal.mobileNumber}
-                        onChangeText={v => updateField('personal', 'mobileNumber', v)}
-                        placeholder={t('editor.premium.mobilePlaceholder')}
-                        keyboardType="phone-pad"
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <AppTextInput
-                        label={t('editor.premium.address')}
-                        value={personal.address}
-                        onChangeText={v => updateField('personal', 'address', v)}
-                        placeholder={t('editor.premium.addressPlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <AppTextInput
-                        label={t('editor.premium.socialHandle')}
-                        value={personal.socialHandle}
-                        onChangeText={v => updateField('personal', 'socialHandle', v)}
-                        placeholder={t('editor.premium.socialPlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
+                        <SectionLabel>{t('editor.premium.personalDetails')}</SectionLabel>
+                        <AppTextInput
+                            label={t('editor.premium.mobileNumber')}
+                            value={personal.mobileNumber}
+                            onChangeText={v => updateField('personal', 'mobileNumber', v)}
+                            placeholder={t('editor.premium.mobilePlaceholder')}
+                            keyboardType="phone-pad"
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.address')}
+                            value={personal.address}
+                            onChangeText={v => updateField('personal', 'address', v)}
+                            placeholder={t('editor.premium.addressPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.socialHandle')}
+                            value={personal.socialHandle}
+                            onChangeText={v => updateField('personal', 'socialHandle', v)}
+                            placeholder={t('editor.premium.socialPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
 
-                    <SectionLabel>{t('editor.premium.organizationDetails')}</SectionLabel>
-                    <AppTextInput
-                        label={t('editor.premium.organizationName')}
-                        value={personal.organizationName}
-                        onChangeText={v => updateField('personal', 'organizationName', v)}
-                        placeholder={t('editor.premium.organizationPlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <Pressable
-                        style={s.logoPickerBtn}
-                        onPress={() => {
-                            if (locked) {
-                                onUnlockPremium();
-                                return;
-                            }
-                            handlePickLogo('personal', 'organizationLogo');
-                        }}>
-                        <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
-                        <Text style={s.logoPickerText}>
-                            {personal.organizationLogo
-                                ? t('editor.premium.changeOrganizationLogo')
-                                : t('editor.premium.uploadOrganizationLogo')}
-                        </Text>
-                    </Pressable>
-                    {personal.organizationLogo ? (
-                        <Image source={{ uri: personal.organizationLogo }} style={s.logoPreview} />
-                    ) : null}
+                        <SectionLabel>{t('editor.premium.organizationDetails')}</SectionLabel>
+                        <AppTextInput
+                            label={t('editor.premium.organizationName')}
+                            value={personal.organizationName}
+                            onChangeText={v => updateField('personal', 'organizationName', v)}
+                            placeholder={t('editor.premium.organizationPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <Pressable
+                            style={s.logoPickerBtn}
+                            onPress={() => {
+                                if (locked) {
+                                    onUnlockPremium();
+                                    return;
+                                }
+                                handlePickLogo('personal', 'organizationLogo');
+                            }}>
+                            <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
+                            <Text style={s.logoPickerText}>
+                                {personal.organizationLogo
+                                    ? t('editor.premium.changeOrganizationLogo')
+                                    : t('editor.premium.uploadOrganizationLogo')}
+                            </Text>
+                        </Pressable>
+                        {personal.organizationLogo ? (
+                            <Image source={{ uri: personal.organizationLogo }} style={s.logoPreview} />
+                        ) : null}
                     </View>
                 </LockedInputWrapper>
             ) : (
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
-                    <SectionLabel>{t('editor.premium.businessInfo')}</SectionLabel>
-                    <AppTextInput
-                        label={t('editor.premium.businessName')}
-                        value={business.businessName}
-                        onChangeText={v => updateField('business', 'businessName', v)}
-                        placeholder={t('editor.premium.businessNamePlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <AppTextInput
-                        label={t('editor.premium.businessDescription')}
-                        value={business.businessDescription}
-                        onChangeText={v => updateField('business', 'businessDescription', v)}
-                        placeholder={t('editor.premium.businessDescriptionPlaceholder')}
-                        multiline
-                        maxLength={200}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
+                        <SectionLabel>{t('editor.premium.businessInfo')}</SectionLabel>
+                        <AppTextInput
+                            label={t('editor.premium.businessName')}
+                            value={business.businessName}
+                            onChangeText={v => updateField('business', 'businessName', v)}
+                            placeholder={t('editor.premium.businessNamePlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.businessDescription')}
+                            value={business.businessDescription}
+                            onChangeText={v => updateField('business', 'businessDescription', v)}
+                            placeholder={t('editor.premium.businessDescriptionPlaceholder')}
+                            multiline
+                            maxLength={200}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
 
-                    <SectionLabel>{t('editor.premium.businessLogo')}</SectionLabel>
-                    <Pressable
-                        style={s.logoPickerBtn}
-                        onPress={() => {
-                            if (locked) {
-                                onUnlockPremium();
-                                return;
-                            }
-                            handlePickLogo('business', 'businessLogo');
-                        }}>
-                        <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
-                        <Text style={s.logoPickerText}>
-                            {business.businessLogo
-                                ? t('editor.premium.changeBusinessLogo')
-                                : t('editor.premium.uploadBusinessLogo')}
-                        </Text>
-                    </Pressable>
-                    {business.businessLogo ? (
-                        <Image source={{ uri: business.businessLogo }} style={s.logoPreview} />
-                    ) : null}
+                        <SectionLabel>{t('editor.premium.businessLogo')}</SectionLabel>
+                        <Pressable
+                            style={s.logoPickerBtn}
+                            onPress={() => {
+                                if (locked) {
+                                    onUnlockPremium();
+                                    return;
+                                }
+                                handlePickLogo('business', 'businessLogo');
+                            }}>
+                            <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
+                            <Text style={s.logoPickerText}>
+                                {business.businessLogo
+                                    ? t('editor.premium.changeBusinessLogo')
+                                    : t('editor.premium.uploadBusinessLogo')}
+                            </Text>
+                        </Pressable>
+                        {business.businessLogo ? (
+                            <Image source={{ uri: business.businessLogo }} style={s.logoPreview} />
+                        ) : null}
 
-                    <SectionLabel>{t('editor.premium.contactDetails')}</SectionLabel>
-                    <AppTextInput
-                        label={t('editor.premium.mobileNumber')}
-                        value={business.contactMobileNumber}
-                        onChangeText={v => updateField('business', 'contactMobileNumber', v)}
-                        placeholder={t('editor.premium.mobilePlaceholder')}
-                        keyboardType="phone-pad"
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <AppTextInput
-                        label={t('editor.premium.address')}
-                        value={business.contactAddress}
-                        onChangeText={v => updateField('business', 'contactAddress', v)}
-                        placeholder={t('editor.premium.addressPlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
-                    <AppTextInput
-                        label={t('editor.premium.socialHandle')}
-                        value={business.contactSocialHandle}
-                        onChangeText={v => updateField('business', 'contactSocialHandle', v)}
-                        placeholder={t('editor.premium.socialPlaceholder')}
-                        editable={!locked}
-                        locked={locked}
-                        onLockedPress={onUnlockPremium}
-                    />
+                        <SectionLabel>{t('editor.premium.contactDetails')}</SectionLabel>
+                        <AppTextInput
+                            label={t('editor.premium.mobileNumber')}
+                            value={business.contactMobileNumber}
+                            onChangeText={v => updateField('business', 'contactMobileNumber', v)}
+                            placeholder={t('editor.premium.mobilePlaceholder')}
+                            keyboardType="phone-pad"
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.address')}
+                            value={business.contactAddress}
+                            onChangeText={v => updateField('business', 'contactAddress', v)}
+                            placeholder={t('editor.premium.addressPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.socialHandle')}
+                            value={business.contactSocialHandle}
+                            onChangeText={v => updateField('business', 'contactSocialHandle', v)}
+                            placeholder={t('editor.premium.socialPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
                     </View>
                 </LockedInputWrapper>
             )}
@@ -767,55 +767,55 @@ const StickersTab = ({ stickers, dispatch }) => {
 
     return (
         <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={s.stickerHintCard}>
-            <MaterialCommunityIcons name="lightbulb-on-outline" style={s.stickerHintIcon} />
-            <Text style={s.stickerHint}>{t('editor.stickers.hint')}</Text>
-        </View>
-        {STICKER_ROWS.map((row, ri) => (
-            <View key={ri} style={s.stickerRow}>
-                {row.map(iconName => {
-                    const inPoster = stickers.find(x => x.emoji === iconName);
-                    return (
-                        <Pressable key={iconName}
-                            style={[s.stickerCell, inPoster && s.stickerCellActive]}
-                            onPress={() => {
-                                if (inPoster) {
-                                    dispatch(removeSticker(inPoster.id));
-                                } else {
-                                    dispatch(addSticker({ emoji: iconName }));
-                                }
-                            }}>
-                            <MaterialCommunityIcons name={iconName} style={s.stickerCellIcon} />
-                            {inPoster && <View style={s.stickerCheckDot} />}
-                        </Pressable>
-                    );
-                })}
+            <View style={s.stickerHintCard}>
+                <MaterialCommunityIcons name="lightbulb-on-outline" style={s.stickerHintIcon} />
+                <Text style={s.stickerHint}>{t('editor.stickers.hint')}</Text>
             </View>
-        ))}
-
-        {stickers.length > 0 && (
-            <View style={{ marginTop: SPACING.md }}>
-                <RowLabel>{t('editor.stickers.added')}</RowLabel>
-                <View style={s.activeStickers}>
-                    {stickers.map(stk => (
-                        <Pressable key={stk.id} style={s.activeStickerPill}
-                            onPress={() => dispatch(removeSticker(stk.id))}>
-                            <MaterialCommunityIcons name={stk.emoji} style={s.activeStickerIcon} />
-                            <MaterialCommunityIcons name="close" style={s.removeStickerX} />
-                        </Pressable>
-                    ))}
+            {STICKER_ROWS.map((row, ri) => (
+                <View key={ri} style={s.stickerRow}>
+                    {row.map(iconName => {
+                        const inPoster = stickers.find(x => x.emoji === iconName);
+                        return (
+                            <Pressable key={iconName}
+                                style={[s.stickerCell, inPoster && s.stickerCellActive]}
+                                onPress={() => {
+                                    if (inPoster) {
+                                        dispatch(removeSticker(inPoster.id));
+                                    } else {
+                                        dispatch(addSticker({ emoji: iconName }));
+                                    }
+                                }}>
+                                <MaterialCommunityIcons name={iconName} style={s.stickerCellIcon} />
+                                {inPoster && <View style={s.stickerCheckDot} />}
+                            </Pressable>
+                        );
+                    })}
                 </View>
-            </View>
-        )}
+            ))}
 
-        <View style={{ height: SPACING.xxl }} />
-    </ScrollView>
+            {stickers.length > 0 && (
+                <View style={{ marginTop: SPACING.md }}>
+                    <RowLabel>{t('editor.stickers.added')}</RowLabel>
+                    <View style={s.activeStickers}>
+                        {stickers.map(stk => (
+                            <Pressable key={stk.id} style={s.activeStickerPill}
+                                onPress={() => dispatch(removeSticker(stk.id))}>
+                                <MaterialCommunityIcons name={stk.emoji} style={s.activeStickerIcon} />
+                                <MaterialCommunityIcons name="close" style={s.removeStickerX} />
+                            </Pressable>
+                        ))}
+                    </View>
+                </View>
+            )}
+
+            <View style={{ height: SPACING.xxl }} />
+        </ScrollView>
     );
 };
 
 // ─── EditorScreen ─────────────────────────────────────────────────
 
-const EditorScreen = ({ navigation }) => {
+const EditorScreen = ({ navigation, route }) => {
     const dispatch = useDispatch();
     const p = useSelector(state => state.poster);
     const { t } = useTranslation();
@@ -826,11 +826,29 @@ const EditorScreen = ({ navigation }) => {
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
         const maxHeight = SCREEN_H * 0.58;
-
         return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
     }, [canvasSize]);
     const previewWidth = canvasSize.width * previewScale;
     const previewHeight = canvasSize.height * previewScale;
+
+    // FIX 1: When navigating from a non-first reel, ensure the userPhoto from
+    // route params is synced back to Redux so PosterPreview always has it.
+    // Also falls back to stored profile if Redux photo is somehow missing.
+    useEffect(() => {
+        const routeUserPhoto = route?.params?.userPhoto;
+        if (routeUserPhoto && routeUserPhoto !== p.userPhoto) {
+            dispatch(setUserPhoto(routeUserPhoto));
+        } else if (!p.userPhoto) {
+            // Safety net: reload from persistent storage
+            (async () => {
+                const stored = await getUserProfile();
+                if (stored?.imageUri) {
+                    dispatch(setUserPhoto(stored.imageUri));
+                }
+            })();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const openSubscriptionModal = useCallback(() => {
         setSubscriptionVisible(true);
@@ -928,7 +946,6 @@ const EditorScreen = ({ navigation }) => {
         handlePremiumDetailsSave,
     ]);
 
-    // Keep the poster visible while editing text so users can drag and place it directly.
     const shouldCollapsePoster = false;
     const isTextTabActive = activeTab === 'text';
 
@@ -1020,8 +1037,7 @@ const EditorScreen = ({ navigation }) => {
                 }}
                 onSubscribe={handleSubscribe}
             />
-
-            </>
+        </>
     );
 };
 
@@ -1168,7 +1184,7 @@ const s = StyleSheet.create({
     tabScroll: { flex: 1 },
     tabScrollContent: { paddingBottom: SPACING.xxxl },
 
-    // — Photo source cards (Device / Backend sections) —
+    // — Photo source cards —
     photoSourceCard: {
         backgroundColor: EDITOR_COLORS.surface,
         borderRadius: BORDER_RADIUS.xl,
@@ -1662,4 +1678,3 @@ const s = StyleSheet.create({
 });
 
 export default EditorScreen;
-

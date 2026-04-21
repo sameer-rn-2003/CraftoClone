@@ -52,6 +52,334 @@ import { getTemplatesApi } from '../../apiService/templateApi';
 import i18n from '../../i18n';
 const getTemplateListKey = (item, index) => `${item.id}_${index}`;
 
+const resData = {
+  "status": true,
+  "message": "Templates retrieved successfully",
+  "data": {
+    "data": [
+      {
+        "id": "4eed2def-3656-41a2-bf38-e3e9e3d90794",
+        "name": "Diwali",
+        "type": "VIDEO",
+        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "thumbnail_key": "templates/demon.jpeg",
+        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
+        "template_key": "templates/video.mp4",
+        "config_json": {
+          "width": 1080,
+          "height": 1920,
+          "layers": [
+            {
+              "x": 140,
+              "y": 200,
+              "id": "user_photo",
+              "src": "{{user_photo}}",
+              "type": "image",
+              "width": 800,
+              "height": 800
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "id": "frame_overlay",
+              "src": "{{frame_png}}",
+              "note": "Upload a PNG with transparent centre so the video shows through",
+              "type": "image",
+              "width": 1080,
+              "height": 1920
+            },
+            {
+              "x": 60,
+              "y": 1100,
+              "id": "headline",
+              "text": "{{headline}}",
+              "type": "text",
+              "align": "center",
+              "color": "#ffffff",
+              "width": 960,
+              "fontSize": 64,
+              "fontFamily": "Poppins",
+              "fontWeight": "bold"
+            },
+            {
+              "x": 60,
+              "y": 1200,
+              "id": "subtext",
+              "text": "{{subtext}}",
+              "type": "text",
+              "align": "center",
+              "color": "#eeeeee",
+              "width": 960,
+              "fontSize": 36,
+              "fontFamily": "Inter"
+            }
+          ],
+          "version": "1.0",
+          "variables": [
+            {
+              "key": "user_photo",
+              "type": "image",
+              "label": "Your Photo (placed in the frame slot)",
+              "default": ""
+            },
+            {
+              "key": "frame_png",
+              "type": "image",
+              "label": "Frame/Border PNG (transparent centre)",
+              "default": ""
+            },
+            {
+              "key": "headline",
+              "type": "text",
+              "label": "Headline Text",
+              "default": "Happy Diwali!"
+            },
+            {
+              "key": "subtext",
+              "type": "text",
+              "label": "Sub Text",
+              "default": "Wishing you joy & prosperity"
+            }
+          ]
+        },
+        "is_premium": false,
+        "language": "en",
+        "is_active": true,
+        "usage_count": 1,
+        "createdAt": "2026-04-20T20:31:54.411Z",
+        "updatedAt": "2026-04-20T20:32:13.937Z",
+        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+        "category": {
+          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+          "name": "Festival"
+        }
+      },
+      {
+        "id": "c910f1a6-3116-48c2-8f91-44943cdfe364",
+        "name": "test video",
+        "type": "VIDEO",
+        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "thumbnail_key": "templates/demon.jpeg",
+        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
+        "template_key": "templates/video.mp4",
+        "config_json": {
+          "width": 1080,
+          "height": 1920,
+          "layers": [
+            {
+              "x": 140,
+              "y": 200,
+              "id": "user_photo",
+              "src": "{{user_photo}}",
+              "type": "image",
+              "width": 800,
+              "height": 800
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "id": "frame_overlay",
+              "src": "{{frame_png}}",
+              "note": "Upload a PNG with transparent centre so the video shows through",
+              "type": "image",
+              "width": 1080,
+              "height": 1920
+            },
+            {
+              "x": 60,
+              "y": 1100,
+              "id": "headline",
+              "text": "{{headline}}",
+              "type": "text",
+              "align": "center",
+              "color": "#ffffff",
+              "width": 960,
+              "fontSize": 64,
+              "fontFamily": "Poppins",
+              "fontWeight": "bold"
+            },
+            {
+              "x": 60,
+              "y": 1200,
+              "id": "subtext",
+              "text": "{{subtext}}",
+              "type": "text",
+              "align": "center",
+              "color": "#eeeeee",
+              "width": 960,
+              "fontSize": 36,
+              "fontFamily": "Inter"
+            }
+          ],
+          "version": "1.0",
+          "variables": [
+            {
+              "key": "headline",
+              "type": "text",
+              "label": "Headline Text",
+              "default": "Happy Diwali!"
+            },
+            {
+              "key": "subtext",
+              "type": "text",
+              "label": "Sub Text",
+              "default": "Wishing you joy & prosperity"
+            },
+            {
+              "key": "background_image",
+              "type": "image",
+              "label": "Background Image",
+              "default": ""
+            },
+            {
+              "key": "logo_url",
+              "type": "image",
+              "label": "Your Logo",
+              "default": ""
+            }
+          ],
+          "background": "#ffffff"
+        },
+        "is_premium": false,
+        "language": "en",
+        "is_active": true,
+        "usage_count": 2,
+        "createdAt": "2026-04-20T20:05:54.310Z",
+        "updatedAt": "2026-04-20T20:06:19.257Z",
+        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+        "category": {
+          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+          "name": "Festival"
+        }
+      },
+      {
+        "id": "22b307ad-52a8-4d0e-acf8-04675c9b7983",
+        "name": "Diwali",
+        "type": "IMAGE",
+        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "thumbnail_key": "templates/demon.jpeg",
+        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "template_key": "templates/demon.jpeg",
+        "config_json": {
+          "width": 1080,
+          "height": 1920,
+          "layers": [
+            {
+              "x": 0,
+              "y": 0,
+              "id": "bg",
+              "src": "{{background_image}}",
+              "type": "image",
+              "width": 1080,
+              "height": 1920,
+              "opacity": 1
+            },
+            {
+              "x": 60,
+              "y": 200,
+              "id": "headline",
+              "text": "{{headline}}",
+              "type": "text",
+              "align": "center",
+              "color": "#111111",
+              "width": 960,
+              "fontSize": 72,
+              "fontFamily": "Poppins",
+              "fontWeight": "bold"
+            },
+            {
+              "x": 60,
+              "y": 320,
+              "id": "subtext",
+              "text": "{{subtext}}",
+              "type": "text",
+              "align": "center",
+              "color": "#555555",
+              "width": 960,
+              "fontSize": 36,
+              "fontFamily": "Inter"
+            },
+            {
+              "x": 440,
+              "y": 1700,
+              "id": "logo",
+              "src": "{{logo_url}}",
+              "type": "image",
+              "width": 200,
+              "height": 100,
+              "opacity": 0.9
+            }
+          ],
+          "version": "1.0",
+          "variables": [
+            {
+              "key": "headline",
+              "type": "text",
+              "label": "Headline Text",
+              "default": "Happy Diwali!"
+            },
+            {
+              "key": "subtext",
+              "type": "text",
+              "label": "Sub Text",
+              "default": "Wishing you joy & prosperity"
+            },
+            {
+              "key": "background_image",
+              "type": "image",
+              "label": "Background Image",
+              "default": ""
+            },
+            {
+              "key": "logo_url",
+              "type": "image",
+              "label": "Your Logo",
+              "default": ""
+            }
+          ],
+          "background": "#ffffff"
+        },
+        "is_premium": false,
+        "language": "en",
+        "is_active": true,
+        "usage_count": 7,
+        "createdAt": "2026-04-20T19:05:38.184Z",
+        "updatedAt": "2026-04-20T19:47:02.913Z",
+        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+        "category": {
+          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+          "name": "Festival"
+        }
+      },
+      {
+        "id": "734b7507-4f00-4561-912b-a5136abd53b3",
+        "name": "Diwali",
+        "type": "IMAGE",
+        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "thumbnail_key": "templates/demon.jpeg",
+        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+        "template_key": "templates/demon.jpeg",
+        "config_json": null,
+        "is_premium": false,
+        "language": "en",
+        "is_active": true,
+        "usage_count": 2,
+        "createdAt": "2026-04-20T19:01:36.882Z",
+        "updatedAt": "2026-04-20T19:06:03.122Z",
+        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+        "category": {
+          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+          "name": "Festival"
+        }
+      }
+    ],
+    "total": 4,
+    "page": 1,
+    "limit": 20
+  }
+}
+
+
 const COLORS = {
     pageBackground: '#F1F1F1',
     headerBackground: '#C9E6F7',
@@ -94,26 +422,6 @@ const CHIP_GAP = widthPixel(8);
 const MAX_CATEGORY_LINES = 2;
 const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(40);
 const TEMPLATE_PAGE_SIZE = 30;
-
-// const HEADER_CHIPS = [
-//     { id: 'all', icon: null, labelKey: 'categories.all' },
-//     { id: 'birthday', icon: 'cake-variant-outline', labelKey: 'categories.birthday' },
-//     { id: 'festival', icon: 'party-popper', labelKey: 'categories.festival' },
-//     { id: 'political', icon: 'bank-outline', labelKey: 'categories.political' },
-//     { id: 'motivational', icon: 'lightbulb-on-outline', labelKey: 'categories.motivational' },
-//     { id: 'business', icon: 'briefcase-outline', labelKey: 'categories.business' },
-// ];
-
-
-
-// const CATEGORY_TARGET = {
-//     all: 'all',
-//     birthday: 'birthday',
-//     festival: 'festival',
-//     political: 'political',
-//     motivational: 'all',
-//     business: 'business',
-// };
 
 const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -266,36 +574,18 @@ const HomeScreen = ({ navigation }) => {
         setActiveMediaKey(getTemplateListKey(firstVisible.item, firstVisible.index ?? 0));
     }).current;
 
-    //     const CATEGORY_TARGET = useMemo(() => {
-    //     const map = { all: 'all' };
-
-    //     categories.forEach(cat => {
-    //         const key = cat.id;
-
-    //         // normalize mismatch
-    //         if (key === 'motivation') {
-    //             map[key] = 'all'; // or 'motivational' if your templates support it
-    //         } else {
-    //             map[key] = key;
-    //         }
-    //     });
-
-    //     return map;
-    // }, [categories]);
-
     const fetchCategories = useCallback(async () => {
         try {
             const res = await getCategories();
             const apiData = res?.data?.data || [];
 
             const formatted = apiData.map(item => ({
-                id: item.name.toLowerCase(), // IMPORTANT (used in your logic)
+                id: item.name.toLowerCase(),
                 label: item.name,
                 icon: mapCategoryIcon(item.name),
-                categoryId: item.id, // Keep original ID if needed for API calls
+                categoryId: item.id,
             }));
 
-            // Add "All" manually (API doesn't give it)
             setCategories([
                 { id: 'all', label: t('categories.all'), icon: null, categoryId: 'all' },
                 ...formatted,
@@ -310,13 +600,8 @@ const HomeScreen = ({ navigation }) => {
         fetchCategories();
     }, [fetchCategories]);
 
-
-
-
-
     const handleLogout = async () => {
         try {
-
             dispatch(setIsLoggedIn(false));
         } catch (e) {
             console.log('Logout error:', e);
@@ -346,22 +631,19 @@ const HomeScreen = ({ navigation }) => {
                 return;
             }
 
-            const apiData = res?.data?.data?.data || [];
-            const parsedTotal = Number(res?.data?.data?.total);
+            // const apiData = resData?.data?.data || [];
+            // const parsedTotal = Number(resData?.data?.total);
+             const apiData = res.data?.data?.data || [];
+            const parsedTotal = Number(res.data?.data?.total);
             const hasKnownTotal = Number.isFinite(parsedTotal);
             const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
 
-
-
-
-        // ✅ FIX HERE
             setTemplates(prev => (
                 isFirstPage
                     ? formatted
                     : dedupeTemplates([...prev, ...formatted])
             ));
 
-            // 🔥 important fix
             setPage(pageNumber);
             setHasMore(hasKnownTotal
                 ? parsedTotal > pageNumber * TEMPLATE_PAGE_SIZE
@@ -415,9 +697,6 @@ const HomeScreen = ({ navigation }) => {
         });
     }, [categoryIdSelected, debouncedSearch, fetchTemplates, hasMore, isInitialLoading, isLoadingMore, page]);
 
-
-
-
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
         const name = (userName || '').trim();
@@ -427,24 +706,7 @@ const HomeScreen = ({ navigation }) => {
         return '';
     }, [userMessage, userName]);
 
-    // const chips = useMemo(
-    //     () =>
-    //         HEADER_CHIPS.map(item => ({
-    //             id: item.id,
-    //             icon: item.icon,
-    //             label: item.label || t(item.labelKey),
-    //         })),
-    //     [t],
-    // );
-
     const chips = useMemo(() => categories, [categories]);
-
-    // const reelsData = useMemo(() => {
-    //     const categoryId = CATEGORY_TARGET[activeCategory] || 'all';
-    //     if (categoryId === 'all') return TEMPLATES;
-    //     const filtered = TEMPLATES.filter(item => item.category.toLowerCase() === categoryId);
-    //     return filtered.length ? filtered : TEMPLATES;
-    // }, [activeCategory]);
 
     const reelsData = templates;
     const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
@@ -474,16 +736,6 @@ const HomeScreen = ({ navigation }) => {
         navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
     }, [dispatch, navigation]);
 
-    // const handleCategoryPress = useCallback(
-    //     id => {
-    //         const targetId = CATEGORY_TARGET[id] || 'all';
-    //         console.log('Selected category:', id, 'Mapped to:', targetId);
-    //         setActiveCategoryUi(id);
-    //         dispatch(setActiveCategory(targetId));
-    //         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-    //     },
-    //     [dispatch],
-    // );
     const handleCategoryPress = useCallback((item) => {
         setActiveCategoryUi(item?.id);
         const categoryId = item?.categoryId === 'all' ? null : item?.categoryId;
@@ -492,12 +744,20 @@ const HomeScreen = ({ navigation }) => {
         setPage(1);
     }, [dispatch]);
 
-    const openEditor = useCallback(
+    // FIX 1: Unified edit handler — always passes full context so user photo is
+    // never lost in EditorScreen regardless of which reel is tapped.
+    const handleEdit = useCallback(
         item => {
             dispatch(setSelectedTemplate(item));
-            navigation?.navigate?.('EditorScreen', { templateId: item.id });
+            navigation?.navigate?.('EditorScreen', {
+                templateId: item.id,
+                template: item,
+                userName,
+                userMessage,
+                userPhoto,
+            });
         },
-        [dispatch, navigation],
+        [dispatch, navigation, userMessage, userName, userPhoto],
     );
 
     const prepareTemplateForMediaAction = useCallback(
@@ -526,20 +786,6 @@ const HomeScreen = ({ navigation }) => {
         [isActionInProgress, prepareTemplateForMediaAction, savePoster],
     );
 
-    const handleEdit = useCallback(
-        item => {
-            dispatch(setSelectedTemplate(item));
-            navigation?.navigate?.('EditorScreen', {
-                templateId: item.id,
-                template: item,
-                userName,
-                userMessage,
-                userPhoto,
-            });
-        },
-        [dispatch, navigation, userMessage, userName, userPhoto],
-    );
-
     const stopCardPress = useCallback(event => {
         event?.stopPropagation?.();
     }, []);
@@ -557,26 +803,34 @@ const HomeScreen = ({ navigation }) => {
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.staticHeader}>
+
+                {/* FIX 3: headerRow with flex searchBar so logout icon has room */}
                 <View style={styles.headerRow}>
                     <View style={styles.searchBar}>
                         <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
+                        {/* FIX 3: flex:1 on TextInput + placeholderTextColor so placeholder is visible */}
                         <TextInput
                             placeholder={t('home.searchPlaceholder')}
-                            style={styles.searchText}
+                            style={styles.searchInput}
                             value={search}
                             onChangeText={handleSearch}
+                            placeholderTextColor="#9EB3C6"
                         />
-                        {/* <Text style={styles.searchText}>{t('home.searchPlaceholder')}</Text> */}
                     </View>
 
-                    <Pressable style={styles.logoutBtn} onPress={() => Alert.alert(
-                        'Logout',
-                        'Are you sure you want to logout?',
-                        [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Logout', onPress: handleLogout },
-                        ]
-                    )}>
+                    {/* Logout button — tap shows confirmation alert */}
+                    <Pressable
+                        style={styles.logoutBtn}
+                        onPress={() =>
+                            Alert.alert(
+                                'Logout',
+                                'Are you sure you want to logout?',
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { text: 'Logout', style: 'destructive', onPress: handleLogout },
+                                ],
+                            )
+                        }>
                         <MaterialCommunityIcons name="logout" style={styles.logoutIcon} />
                     </Pressable>
                 </View>
@@ -666,7 +920,9 @@ const HomeScreen = ({ navigation }) => {
                 renderItem={({ item, index }) => (
                     <View style={styles.feedItemWrap}>
                         <View style={styles.reelCard}>
-                            <Pressable style={styles.mediaTapArea} onPress={() => openEditor(item)}>
+                            {/* FIX 1: media tap now uses handleEdit (same as bottom bar) so
+                                selectedTemplate + full context is always dispatched together */}
+                            <Pressable style={styles.mediaTapArea} onPress={() => handleEdit(item)}>
                                 <TemplatePosterPreview
                                     template={item}
                                     userPhoto={userPhoto}
@@ -811,14 +1067,16 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+    // FIX 3: headerRow — flex row; searchBar gets flex:1 so logout icon isn't squeezed out
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: widthPixel(10),
     },
 
     logoutBtn: {
-        marginLeft: widthPixel(10),
+        flexShrink: 0,
         width: heightPixel(44),
         height: heightPixel(44),
         borderRadius: widthPixel(22),
@@ -831,17 +1089,19 @@ const styles = StyleSheet.create({
 
     logoutIcon: {
         fontSize: widthPixel(20),
-        color: '#E53935', // red feel
+        color: '#E53935',
     },
+
     staticHeader: {
         paddingHorizontal: widthPixel(14),
         paddingTop: heightPixel(12),
         paddingBottom: heightPixel(14),
         backgroundColor: COLORS.headerBackground,
-        // minHeight: heightPixel(120),
     },
+
+    // FIX 3: flex:1 instead of width:'100%' so logout icon is always visible
     searchBar: {
-        width: '100%',
+        flex: 1,
         height: heightPixel(44),
         borderRadius: widthPixel(22),
         backgroundColor: '#FFFFFF',
@@ -856,10 +1116,13 @@ const styles = StyleSheet.create({
         color: '#5E7690',
         marginRight: widthPixel(8),
     },
-    searchText: {
+    // FIX 3: separate style for the TextInput so flex:1 fills remaining bar width
+    searchInput: {
+        flex: 1,
         fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
-        color: '#6B839C',
+        color: '#101417',
+        paddingVertical: 0,
     },
     chipRow: {
         marginTop: heightPixel(12),

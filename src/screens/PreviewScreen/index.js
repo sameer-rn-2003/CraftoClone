@@ -39,11 +39,14 @@ const PreviewScreen = ({ navigation, route }) => {
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
         const maxHeight = SCREEN_H * 0.68;
-
         return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
     }, [canvasSize]);
     const previewWidth = canvasSize.width * previewScale;
     const previewHeight = canvasSize.height * previewScale;
+
+    // FIX 2: Determine if the selected template is a video so we can show the
+    // correct action buttons (Download-only for VIDEO, Save+Share for IMAGE).
+    const isVideoTemplate = selectedTemplate?.mediaType === 'VIDEO';
 
     const handleSave = useCallback(async () => {
         await savePoster();
@@ -133,60 +136,78 @@ const PreviewScreen = ({ navigation, route }) => {
                     <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
                 </View>
 
-                {/* ── Template badge ───────────────── */}
-                {/* {selectedTemplate && (
-                    <View style={styles.templateBadge}>
-                        <View style={[styles.colorDot, { backgroundColor: accentColor }]} />
-                        <Text style={styles.templateName}>{selectedTemplate.name}</Text>
-                        <View style={[styles.categoryChip, { borderColor: accentColor + '50' }]}>
-                            <Text style={[styles.templateCategory, { color: accentColor }]}>
-                                {t(`categories.${selectedTemplate.category}`, { defaultValue: selectedTemplate.category })}
-                            </Text>
-                        </View>
-                    </View>
-                )} */}
-
-                {/* ── Action buttons ───────────────── */}
+                {/* ── Action buttons ─────────────────────────────────────────
+                    FIX 2:
+                    • VIDEO template → single full-width Download button
+                    • IMAGE template → Save + Share side by side (original layout)
+                ─────────────────────────────────────────────────────────── */}
                 <View style={styles.actions}>
-                    <Pressable
-                        style={[styles.actionBtn, { backgroundColor: "#5B6CFF" }, isSaving && styles.btnDisabled]}
-                        onPress={handleSave}
-                        disabled={isSaving || isSharing}>
-                        {isSaving ? (
-                            <ActivityIndicator color={COLORS.white} size="small" />
-                        ) : (
-                            <>
-                                <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
-                                <View>
-                                    <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
-                                    <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
-                                </View>
-                            </>
-                        )}
-                    </Pressable>
+                    {isVideoTemplate ? (
+                        /* ── VIDEO: Download only ── */
+                        <Pressable
+                            style={[styles.actionBtn, styles.downloadBtn, isSaving && styles.btnDisabled]}
+                            onPress={handleSave}
+                            disabled={isSaving || isSharing}>
+                            {isSaving ? (
+                                <ActivityIndicator color={COLORS.white} size="small" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="download" style={styles.actionIcon} />
+                                    <View>
+                                        <Text style={styles.actionLabel}>
+                                            {t('preview.actions.download', { defaultValue: 'Download' })}
+                                        </Text>
+                                        <Text style={styles.actionSub}>
+                                            {t('preview.actions.downloadSub', { defaultValue: 'Save video to gallery' })}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                        </Pressable>
+                    ) : (
+                        /* ── IMAGE: Save + Share ── */
+                        <>
+                            <Pressable
+                                style={[styles.actionBtn, { backgroundColor: '#5B6CFF' }, isSaving && styles.btnDisabled]}
+                                onPress={handleSave}
+                                disabled={isSaving || isSharing}>
+                                {isSaving ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="content-save-outline" style={styles.actionIcon} />
+                                        <View>
+                                            <Text style={styles.actionLabel}>{t('preview.actions.save')}</Text>
+                                            <Text style={styles.actionSub}>{t('preview.actions.saveSub')}</Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable>
 
-                    <Pressable
-                        style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
-                        onPress={handleShare}
-                        disabled={isSaving || isSharing}>
-                        {isSharing ? (
-                            <ActivityIndicator color={COLORS.white} size="small" />
-                        ) : (
-                            <>
-                                <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
-                                <View>
-                                    <Text style={styles.actionLabel}>
-                                        {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
-                                    </Text>
-                                    <Text style={styles.actionSub}>
-                                        {isPremium
-                                            ? t('preview.actions.shareSub')
-                                            : t('preview.actions.shareWhatsAppSub')}
-                                    </Text>
-                                </View>
-                            </>
-                        )}
-                    </Pressable>
+                            <Pressable
+                                style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
+                                onPress={handleShare}
+                                disabled={isSaving || isSharing}>
+                                {isSharing ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
+                                        <View>
+                                            <Text style={styles.actionLabel}>
+                                                {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
+                                            </Text>
+                                            <Text style={styles.actionSub}>
+                                                {isPremium
+                                                    ? t('preview.actions.shareSub')
+                                                    : t('preview.actions.shareWhatsAppSub')}
+                                            </Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable>
+                        </>
+                    )}
                 </View>
 
                 {/* ── Secondary row ────────────────── */}
@@ -277,43 +298,6 @@ const styles = StyleSheet.create({
         top: 0,
     },
 
-    // Template badge
-    templateBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: SPACING.lg,
-        gap: SPACING.sm,
-        paddingHorizontal: SPACING.base,
-        backgroundColor: COLORS.surface,
-        marginHorizontal: SPACING.base,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.lg,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        width: '100%',
-    },
-    colorDot: {
-        width: 10, height: 10, borderRadius: 5,
-    },
-    templateName: {
-        fontSize: FONTS.sizes.base,
-        fontWeight: FONTS.weights.semiBold,
-        color: COLORS.text,
-        flex: 1,
-    },
-    categoryChip: {
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 3,
-        borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        backgroundColor: COLORS.card,
-    },
-    templateCategory: {
-        fontSize: FONTS.sizes.xs,
-        textTransform: 'capitalize',
-        fontWeight: FONTS.weights.semiBold,
-    },
-
     // Action buttons
     actions: {
         flexDirection: 'row',
@@ -332,7 +316,12 @@ const styles = StyleSheet.create({
         borderRadius: BORDER_RADIUS.xl,
         ...SHADOW.medium,
     },
-    shareBtn: { backgroundColor: "#5B6CFF" },
+    // FIX 2: Download button takes full width when video template
+    downloadBtn: {
+        backgroundColor: '#5B6CFF',
+        flex: 1,
+    },
+    shareBtn: { backgroundColor: '#5B6CFF' },
     btnDisabled: { opacity: 0.55 },
     actionIcon: { fontSize: 24, color: COLORS.white },
     actionLabel: {
