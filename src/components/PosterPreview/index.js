@@ -22,7 +22,7 @@ import {
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
 import {
     getPhotoFrameBaseStyle,
-    getScaledPhotoFrameStyle,
+    resolvePhotoFrameRadius,
 } from '../../utils/photoFrameLayout';
 import TemplateMedia from '../TemplateMedia';
 import { getTemplateImageSource, hasTemplateVideo } from '../../utils/templateMedia';
@@ -119,12 +119,14 @@ const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
 
 const DraggablePhoto = ({
     photoFrame,
+    frameStyle,
     photoUri,
     accentColor,
     photoShape,
     photoScale,
     allowPinchScale = true,
     interactionScale = 1,
+    resizeMode = 'cover',
 }) => {
     const dispatch = useDispatch();
     const { photoPosition } = useSelector(s => s.poster);
@@ -239,7 +241,10 @@ const DraggablePhoto = ({
     ).current;
 
 
-    const frameBaseStyle = getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    if (!frameBaseStyle) {
+        return null;
+    }
 
     return (
         <Animated.View
@@ -258,7 +263,7 @@ const DraggablePhoto = ({
             {...panResponder.panHandlers}>
 
             {photoUri
-                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                     <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
@@ -272,24 +277,36 @@ const DraggablePhoto = ({
     );
 };
 
-const StaticPhoto = ({ photoFrame, photoUri, photoPosition, photoShape, photoScale }) => {
-    const frameStyle = getScaledPhotoFrameStyle({
-        photoFrame,
-        posterLayout: {
-            scaleX: 1,
-            scaleY: 1,
-            offsetX: 0,
-            offsetY: 0,
-        },
-        photoPosition,
-        photoScale,
-        photoShape,
-    });
+const StaticPhoto = ({
+    photoFrame,
+    frameStyle,
+    photoUri,
+    photoPosition,
+    photoShape,
+    photoScale,
+    resizeMode = 'cover',
+}) => {
+    const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    if (!frameBaseStyle) {
+        return null;
+    }
 
     return (
-        <View style={[styles.photoWrapper, frameStyle]}>
+        <View
+            style={[
+                styles.photoWrapper,
+                frameBaseStyle,
+                {
+                    transform: [
+                        { scale: photoScale ?? 1 },
+                        { translateX: photoPosition?.x ?? 0 },
+                        { translateY: photoPosition?.y ?? 0 },
+                    ],
+                },
+            ]}
+            pointerEvents="none">
             {photoUri
-                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
+                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                 </View>}
@@ -361,6 +378,26 @@ const getConfigTextField = layer => ({
     fieldWidth: Number.isFinite(Number(layer?.width)) ? Number(layer.width) : undefined,
     align: layer?.align ?? 'left',
 });
+
+const getConfigPhotoFrameStyle = ({ layer, layerStyle, photoShape = 'template' }) => {
+    const templateRadius = Number.isFinite(Number(layer?.borderRadius))
+        ? Number(layer.borderRadius)
+        : Number.isFinite(Number(layer?.border_radius))
+            ? Number(layer.border_radius)
+            : 0;
+    const templateBorderWidth = Number.isFinite(Number(layer?.borderWidth))
+        ? Number(layer.borderWidth)
+        : Number.isFinite(Number(layer?.border_width))
+            ? Number(layer.border_width)
+            : 0;
+
+    return {
+        ...layerStyle,
+        borderRadius: resolvePhotoFrameRadius(photoShape, templateRadius),
+        borderColor: layer?.borderColor ?? layer?.border_color ?? 'transparent',
+        borderWidth: templateBorderWidth,
+    };
+};
 
 const DraggableText = ({
     text,
@@ -528,7 +565,7 @@ const PosterPreview = ({
     interactionScale = 1,
 }) => {
     const p = useSelector(s => s.poster);
-    console.log('PosterPreview - selectedTemplate:', p);
+    // console.log('PosterPreview - selectedTemplate:', p);
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
@@ -690,6 +727,32 @@ const PosterPreview = ({
                     photoScale={p.photoScale ?? 1} />
         )
         : null;
+    const renderConfigUserPhotoLayer = ({ layer, layerStyle }) => {
+        const configPhotoFrameStyle = getConfigPhotoFrameStyle({
+            layer,
+            layerStyle,
+            photoShape: p.photoShape ?? 'template',
+        });
+        const resizeMode = layer?.resizeMode ?? 'cover';
+
+        return interactive
+            ? <DraggablePhoto
+                frameStyle={configPhotoFrameStyle}
+                photoUri={p.userPhoto}
+                accentColor={accentColor}
+                photoShape={p.photoShape ?? 'template'}
+                photoScale={p.photoScale ?? 1}
+                allowPinchScale={allowPinchScale}
+                interactionScale={interactionScale}
+                resizeMode={resizeMode} />
+            : <StaticPhoto
+                frameStyle={configPhotoFrameStyle}
+                photoUri={p.userPhoto}
+                photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
+                photoShape={p.photoShape ?? 'template'}
+                photoScale={p.photoScale ?? 1}
+                resizeMode={resizeMode} />;
+    };
 
     return (
         <View
@@ -755,13 +818,7 @@ const PosterPreview = ({
                     template={selectedTemplate}
                     context={renderContext}
                     skipBackgroundLayers={hasTemplateMedia}
-                  renderUserPhotoLayer={({ layerStyle }) =>
-  p.userPhoto ? (
-    <View style={[styles.photoWrapper, layerStyle]}>
-      <Image source={{ uri: p.userPhoto }} style={styles.photo} />
-    </View>
-  ) : null
-}
+                    renderUserPhotoLayer={renderConfigUserPhotoLayer}
                     renderTextLayer={renderConfigTextLayer}
                 />
             ) : photoLayerNode}

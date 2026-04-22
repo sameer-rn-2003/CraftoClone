@@ -4,6 +4,7 @@ const USER_PROFILE_KEY = 'user_profile';
 const DEFAULT_PROFILE = {
     name: '',
     imageUri: '',
+    isLoggedIn: false,
     isPremium: false,
     premiumProfile: {
         personal: {

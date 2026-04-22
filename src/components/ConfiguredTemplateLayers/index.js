@@ -115,6 +115,7 @@ const ConfiguredTemplateLayers = ({
                     return (
                         <Image
                             key={layerKey}
+                            pointerEvents="none"
                             source={resolvedSource}
                             style={[
                                 styles.imageLayer,
@@ -181,6 +182,7 @@ const ConfiguredTemplateLayers = ({
                         <Text
                             key={layerKey}
                             allowFontScaling={false}
+                            pointerEvents="none"
                             style={[styles.textLayer, textLayerStyle]}>
                             {resolvedText}
                         </Text>

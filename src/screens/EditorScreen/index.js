@@ -30,7 +30,7 @@ import {
     setTextAlign, setTextShadow, setShowName, setShowMessage,
     setPhotoShape,
     addSticker, removeSticker,
-    setPhotoScale, setPremiumStatus, setPremiumProfileField,
+    setPhotoScale, setPremiumProfileField,
     setUserPhoto,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
@@ -40,6 +40,11 @@ import AppTextInput from '../../components/AppTextInput';
 import SubscriptionModal from '../../components/SubscriptionModal';
 import { mergeUserProfile, getUserProfile } from '../../utils/userStorage';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
+import { getSubscriptionPlansApi } from '../../apiService/subscriptionApi';
+import {
+    startRazorpayTestCheckout,
+    verifySubscriptionPurchaseAndSync,
+} from '../../services/subscriptionService';
 import {
     FONTS, SPACING, BORDER_RADIUS, SHADOW,
     COLORS,
@@ -822,6 +827,9 @@ const EditorScreen = ({ navigation, route }) => {
     const { pickImage, loading: pickingImage } = useImagePicker();
     const [activeTab, setActiveTab] = useState('photo');
     const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
+    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+    const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
+    const [submittingPlanId, setSubmittingPlanId] = useState(null);
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
@@ -850,14 +858,59 @@ const EditorScreen = ({ navigation, route }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const openSubscriptionModal = useCallback(() => {
-        setSubscriptionVisible(true);
+    const loadSubscriptionPlans = useCallback(async () => {
+        try {
+            setSubscriptionPlansLoading(true);
+            const response = await getSubscriptionPlansApi();
+            const nextPlans = Array.isArray(response?.data?.data)
+                ? response.data.data.filter(plan => plan?.is_active !== false)
+                : [];
+            setSubscriptionPlans(nextPlans);
+            if (nextPlans.length && nextPlans.every(plan => !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(plan?.id ?? '').trim()))) {
+                Alert.alert(
+                    'Subscription',
+                    'Plans loaded, but their ids are placeholders. The backend must return real UUID plan ids before verification can work.',
+                );
+            }
+        } catch (error) {
+            console.log('Subscription plans error', error);
+            Alert.alert('Subscription', 'Unable to load subscription plans right now.');
+        } finally {
+            setSubscriptionPlansLoading(false);
+        }
     }, []);
 
-    const handleSubscribe = useCallback(async () => {
-        dispatch(setPremiumStatus(true));
-        setSubscriptionVisible(false);
-        await mergeUserProfile({ isPremium: true });
+    const openSubscriptionModal = useCallback(() => {
+        setSubscriptionVisible(true);
+        loadSubscriptionPlans();
+    }, [loadSubscriptionPlans]);
+
+    const handleSubscribe = useCallback(async plan => {
+        try {
+            setSubmittingPlanId(plan?.id ?? 'pending');
+            const profile = await getUserProfile();
+            const checkoutResponse = await startRazorpayTestCheckout({ plan, profile });
+            await verifySubscriptionPurchaseAndSync({
+                checkoutResponse,
+                planId: plan?.id,
+                dispatch,
+            });
+            setSubscriptionVisible(false);
+            Alert.alert('Subscription', 'Premium subscription activated successfully.');
+        } catch (error) {
+            const code = error?.code;
+            if (code === 0 || code === 'PAYMENT_CANCELLED') {
+                return;
+            }
+
+            console.log('Subscription checkout error', error);
+            Alert.alert(
+                'Subscription',
+                error?.message || 'Unable to complete subscription right now.',
+            );
+        } finally {
+            setSubmittingPlanId(null);
+        }
     }, [dispatch]);
 
     const pickLogoImage = useCallback(async () => {
@@ -1035,6 +1088,9 @@ const EditorScreen = ({ navigation, route }) => {
                 onClose={() => {
                     setSubscriptionVisible(false);
                 }}
+                plans={subscriptionPlans}
+                loading={subscriptionPlansLoading}
+                submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
             />
         </>

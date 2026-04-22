@@ -16,6 +16,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -30,7 +31,7 @@ import {
     setIsLoggedIn,
 } from '../../store/posterSlice';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
-import { getUserProfile } from '../../utils/userStorage';
+import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
 import {
     getPosterFitLayout,
     getScaledPhotoFrameStyle,
@@ -49,6 +50,14 @@ import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers'
 import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/templateMedia';
 import { getCategories } from '../../apiService/categoriesApi';
 import { getTemplatesApi } from '../../apiService/templateApi';
+import {
+    addFavoriteApi,
+    getFavoritesApi,
+    removeFavoriteApi,
+} from '../../apiService/favoriteApi';
+import { syncSubscriptionStatus } from '../../services/subscriptionService';
+import { removeFcmToken } from '../../services/fcmService';
+import { logout } from '../../apiService/authApi';
 import i18n from '../../i18n';
 const getTemplateListKey = (item, index) => `${item.id}_${index}`;
 
@@ -544,6 +553,7 @@ const HomeScreen = ({ navigation }) => {
     const userPhoto = useSelector(state => state.poster.userPhoto);
     const userName = useSelector(state => state.poster.userName);
     const userMessage = useSelector(state => state.poster.userMessage);
+    const isPremium = useSelector(state => state.poster.isPremium);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
     const [activeCategory, setActiveCategoryUi] = useState('all');
@@ -553,6 +563,8 @@ const HomeScreen = ({ navigation }) => {
     const [categories, setCategories] = useState([]);
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
     const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
+    const [favoriteMap, setFavoriteMap] = useState({});
+    const [favoriteLoadingMap, setFavoriteLoadingMap] = useState({});
     const isActionInProgress = isSaving || isSharing;
 
     const [templates, setTemplates] = useState([]);
@@ -600,11 +612,61 @@ const HomeScreen = ({ navigation }) => {
         fetchCategories();
     }, [fetchCategories]);
 
+    const loadFavorites = useCallback(async () => {
+        try {
+            const response = await getFavoritesApi({ page: 1, limit: 100 });
+            const favorites = Array.isArray(response?.data?.data?.data)
+                ? response.data.data.data
+                : [];
+
+            const nextFavoriteMap = favorites.reduce((accumulator, favorite) => {
+                const templateId = String(favorite?.template_id ?? favorite?.template?.id ?? '');
+                if (!templateId) {
+                    return accumulator;
+                }
+
+                accumulator[templateId] = {
+                    favoriteId: favorite?.id,
+                    templateId,
+                };
+                return accumulator;
+            }, {});
+
+            setFavoriteMap(nextFavoriteMap);
+        } catch (error) {
+            console.log('Favorites load error', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadFavorites();
+    }, [loadFavorites]);
+
     const handleLogout = async () => {
         try {
             dispatch(setIsLoggedIn(false));
+            await mergeUserProfile({ isLoggedIn: false });
+        } catch (error) {
+            console.log('Local logout state error:', error);
+            dispatch(setIsLoggedIn(false));
+        }
+
+        try {
+            await removeFcmToken();
+        } catch (error) {
+            console.log('FCM logout cleanup error:', error);
+        }
+
+        try {
+            await logout();
+        } catch (error) {
+            console.log('Logout API error:', error);
+        }
+
+        try {
+            await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
         } catch (e) {
-            console.log('Logout error:', e);
+            console.log('Token cleanup error:', e);
         }
     };
 
@@ -620,7 +682,7 @@ const HomeScreen = ({ navigation }) => {
             }
 
             const res = await getTemplatesApi({
-                category_id: categoryId,
+                category_id: categoryId ,
                 language: i18n.language || 'en',
                 search: searchText,
                 page: pageNumber,
@@ -688,14 +750,14 @@ const HomeScreen = ({ navigation }) => {
     }, []);
 
     const loadMore = useCallback(() => {
-        if (!hasMore || isInitialLoading || isLoadingMore) return;
+        if (!hasLoadedOnce || !templates.length || !hasMore || isInitialLoading || isLoadingMore) return;
 
         fetchTemplates({
             pageNumber: page + 1,
             searchText: debouncedSearch,
             categoryId: categoryIdSelected,
         });
-    }, [categoryIdSelected, debouncedSearch, fetchTemplates, hasMore, isInitialLoading, isLoadingMore, page]);
+    }, [categoryIdSelected, debouncedSearch, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
 
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
@@ -725,8 +787,19 @@ const HomeScreen = ({ navigation }) => {
             if (stored?.premiumProfile) {
                 dispatch(hydratePremiumProfile(stored.premiumProfile));
             }
+            try {
+                await syncSubscriptionStatus(dispatch);
+            } catch (error) {
+                console.log('Subscription status sync error', error);
+            }
         })();
     }, [dispatch]);
+
+    const handleTestSubscriptionToggle = useCallback(async () => {
+        const nextValue = !isPremium;
+        dispatch(setPremiumStatus(nextValue));
+        await mergeUserProfile({ isPremium: nextValue });
+    }, [dispatch, isPremium]);
 
     const handleSeeAllPress = useCallback(() => {
         setCategoryModalVisible(false);
@@ -790,9 +863,48 @@ const HomeScreen = ({ navigation }) => {
         event?.stopPropagation?.();
     }, []);
 
-    const showUnderDevelopmentAlert = () => {
-        Alert.alert(t('home.underDevelopment.title'), t('home.underDevelopment.message'));
-    };
+    const handleFavoriteToggle = useCallback(async item => {
+        const templateId = String(item?.id ?? '');
+        if (!templateId || favoriteLoadingMap[templateId]) {
+            return;
+        }
+
+        setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: true }));
+
+        try {
+            const existingFavorite = favoriteMap[templateId];
+
+            if (existingFavorite?.favoriteId) {
+                await removeFavoriteApi(existingFavorite.favoriteId);
+                setFavoriteMap(prev => {
+                    const next = { ...prev };
+                    delete next[templateId];
+                    return next;
+                });
+                return;
+            }
+
+            const response = await addFavoriteApi(templateId);
+            const favorite = response?.data?.data;
+            const favoriteId = favorite?.id;
+
+            setFavoriteMap(prev => ({
+                ...prev,
+                [templateId]: {
+                    favoriteId,
+                    templateId,
+                },
+            }));
+        } catch (error) {
+            console.log('Favorite toggle error', error);
+            Alert.alert(
+                'Favorites',
+                error?.response?.data?.message || 'Unable to update favorites right now.',
+            );
+        } finally {
+            setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
+        }
+    }, [favoriteLoadingMap, favoriteMap]);
 
     return (
         <>
@@ -834,6 +946,21 @@ const HomeScreen = ({ navigation }) => {
                         <MaterialCommunityIcons name="logout" style={styles.logoutIcon} />
                     </Pressable>
                 </View>
+
+                <Pressable
+                    style={[
+                        styles.subscriptionTestBtn,
+                        isPremium && styles.subscriptionTestBtnActive,
+                    ]}
+                    onPress={handleTestSubscriptionToggle}>
+                    <Text
+                        style={[
+                            styles.subscriptionTestText,
+                            isPremium && styles.subscriptionTestTextActive,
+                        ]}>
+                        {`Subscription Test: ${isPremium ? 'PREMIUM ON' : 'PREMIUM OFF'}`}
+                    </Text>
+                </Pressable>
 
                 <ScrollView
                     style={styles.categoryPreviewScroll}
@@ -987,10 +1114,17 @@ const HomeScreen = ({ navigation }) => {
                                         onPressIn={stopCardPress}
                                         onPress={event => {
                                             event.stopPropagation?.();
-                                            showUnderDevelopmentAlert();
+                                            handleFavoriteToggle(item);
                                         }}
+                                        disabled={!!favoriteLoadingMap[item.id]}
                                         hitSlop={10}>
-                                        <MaterialCommunityIcons name="bookmark-outline" style={styles.bookmarkIcon} />
+                                        <MaterialCommunityIcons
+                                            name={favoriteMap[item.id] ? 'bookmark' : 'bookmark-outline'}
+                                            style={[
+                                                styles.bookmarkIcon,
+                                                favoriteMap[item.id] && styles.bookmarkIconActive,
+                                            ]}
+                                        />
                                     </Pressable>
                                 </View>
 
@@ -1097,6 +1231,29 @@ const styles = StyleSheet.create({
         paddingTop: heightPixel(12),
         paddingBottom: heightPixel(14),
         backgroundColor: COLORS.headerBackground,
+    },
+    subscriptionTestBtn: {
+        marginTop: heightPixel(10),
+        alignSelf: 'flex-start',
+        paddingHorizontal: widthPixel(14),
+        paddingVertical: heightPixel(10),
+        borderRadius: widthPixel(18),
+        borderWidth: widthPixel(1),
+        borderColor: '#A7C0D3',
+        backgroundColor: '#FFFFFF',
+    },
+    subscriptionTestBtnActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    subscriptionTestText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.primary,
+    },
+    subscriptionTestTextActive: {
+        color: '#FFFFFF',
+        fontFamily: fonts.FONT_FAMILY.Bold,
     },
 
     // FIX 3: flex:1 instead of width:'100%' so logout icon is always visible
@@ -1295,6 +1452,9 @@ const styles = StyleSheet.create({
     bookmarkIcon: {
         fontSize: widthPixel(22),
         color: '#222A34',
+    },
+    bookmarkIconActive: {
+        color: COLORS.primary,
     },
     changeImageBtn: {
         height: heightPixel(36),

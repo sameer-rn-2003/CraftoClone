@@ -18,8 +18,8 @@ const TemplateMedia = ({
     const imageSource = getTemplateImageSource(template);
     const videoSource = getTemplateVideoSource(template);
     const shouldRenderImage = !videoSource || (useImageFallbackForVideo && imageSource);
-console.log('TemplateMedia - imageSource:', imageSource, 'videoSource:', videoSource);
-console.log('TemplateMedia - shouldRenderImage:', shouldRenderImage);
+// console.log('TemplateMedia - imageSource:', imageSource, 'videoSource:', videoSource);
+// console.log('TemplateMedia - shouldRenderImage:', shouldRenderImage);
     if (shouldRenderImage && imageSource) {
         return <Image source={imageSource} style={style} resizeMode={resizeMode} />;
     }

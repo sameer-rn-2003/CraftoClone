@@ -24,9 +24,8 @@ import { getUserProfile, saveUserProfile } from '../../utils/userStorage';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { updateUserProfileApi } from '../../apiService/profileApi';
 import { getPresignedUrl } from '../../apiService/uploadImage';
-import { uploadToS3 } from '../../utils/helpers';
+import { syncSubscriptionStatus } from '../../services/subscriptionService';
 import i18n from '../../i18n';
-import { CommonActions } from '@react-navigation/native';
 
 const COLORS = {
     pageBackground: '#F4F5FB',
@@ -116,6 +115,7 @@ console.log('Profile update response:', updateRes.data);
             ...existing,
             name: name.trim(),
             imageUri, // keep local for UI
+            isLoggedIn: true,
         };
 
         await saveUserProfile(profile);
@@ -124,6 +124,7 @@ console.log('Profile update response:', updateRes.data);
         dispatch(setUserPhoto(profile.imageUri));
         dispatch(setPremiumStatus(!!profile.isPremium));
         dispatch(hydratePremiumProfile(profile.premiumProfile));
+        await syncSubscriptionStatus(dispatch);
 
         // navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
  dispatch(setIsLoggedIn(true));

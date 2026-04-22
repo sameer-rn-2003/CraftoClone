@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "605401527893",
+    "project_id": "craftoclone-8e640",
+    "storage_bucket": "craftoclone-8e640.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:605401527893:android:45fc2bc2636ad49e3086dc",
+        "android_client_info": {
+          "package_name": "com.craftoclone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgTdwoFzUvo00Q8I5F4RhucjqD0a7lnwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
