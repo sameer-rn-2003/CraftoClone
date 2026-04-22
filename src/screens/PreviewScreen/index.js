@@ -1,7 +1,7 @@
 // src/screens/PreviewScreen/index.js
 // Premium full-screen poster preview with Save and Share actions
 
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Pressable,
     SafeAreaView,
@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
+import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
 import {
@@ -43,6 +44,8 @@ const PreviewScreen = ({ navigation, route }) => {
     }, [canvasSize]);
     const previewWidth = canvasSize.width * previewScale;
     const previewHeight = canvasSize.height * previewScale;
+    const [isTemplateMuted, setIsTemplateMuted] = useState(true);
+    const [templateHasAudio, setTemplateHasAudio] = useState(true);
 
     // FIX 2: Determine if the selected template is a video so we can show the
     // correct action buttons (Download-only for VIDEO, Save+Share for IMAGE).
@@ -123,9 +126,21 @@ const PreviewScreen = ({ navigation, route }) => {
                             marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
                             marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
                         }]}>
-                            <PosterPreview interactive interactionScale={previewScale} />
+                            <PosterPreview
+                                interactive
+                                interactionScale={previewScale}
+                                mediaMuted={isTemplateMuted}
+                                onMediaAudioStateChange={setTemplateHasAudio}
+                            />
                         </View>
                     </View>
+                    <MediaAudioToggle
+                        visible={isVideoTemplate}
+                        muted={isTemplateMuted}
+                        hasAudio={templateHasAudio}
+                        onPress={() => setIsTemplateMuted(prev => !prev)}
+                        style={styles.mediaAudioToggle}
+                    />
                 </View>
 
                 <View style={[styles.hiddenCaptureStage, {
@@ -291,6 +306,11 @@ const styles = StyleSheet.create({
         ...SHADOW.large,
     },
     posterScaler: {
+    },
+    mediaAudioToggle: {
+        right: 12,
+        bottom: 12,
+        zIndex: 20,
     },
     hiddenCaptureStage: {
         position: 'absolute',

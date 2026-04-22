@@ -47,6 +47,7 @@ import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview from '../../components/PosterPreview';
 import TemplateMedia from '../../components/TemplateMedia';
 import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers';
+import MediaAudioToggle from '../../components/MediaAudioToggle';
 import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/templateMedia';
 import { getCategories } from '../../apiService/categoriesApi';
 import { getTemplatesApi } from '../../apiService/templateApi';
@@ -72,7 +73,7 @@ const resData = {
         "type": "VIDEO",
         "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
         "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
+        "template_url": "https://www.w3schools.com/tags/mov_bbb.mp4",
         "template_key": "templates/video.mp4",
         "config_json": {
           "width": 1080,
@@ -440,6 +441,8 @@ const FAVORITES_CHIP = {
 
 const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [isMuted, setIsMuted] = useState(true);
+    const [hasAudio, setHasAudio] = useState(true);
     const canvasSize = useMemo(() => getTemplateCanvasSize(template), [template]);
     const posterLayout = useMemo(
         () => getPosterFitLayout(containerSize.width, containerSize.height, canvasSize),
@@ -489,6 +492,7 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
         };
     }, [posterLayout]);
     const shouldRenderFallbackBadge = userPhoto && !photoFrameStyle;
+    const isVideoTemplate = useMemo(() => !!getTemplateVideoSource(template), [template]);
 
     return (
         <View
@@ -509,6 +513,8 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                 }]}
                 resizeMode="cover"
                 shouldPlay={shouldPlay}
+                muted={isMuted}
+                onAudioAvailabilityChange={setHasAudio}
                 fallback={
                     <View
                         style={[
@@ -523,6 +529,13 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                         ]}
                     />
                 }
+            />
+            <MediaAudioToggle
+                visible={isVideoTemplate}
+                muted={isMuted}
+                hasAudio={hasAudio}
+                onPress={() => setIsMuted(prev => !prev)}
+                style={styles.reelAudioToggle}
             />
 
             {hasConfigLayers ? (
@@ -699,10 +712,10 @@ const HomeScreen = ({ navigation }) => {
                 return;
             }
 
-            // const apiData = resData?.data?.data || [];
-            // const parsedTotal = Number(resData?.data?.total);
-             const apiData = res.data?.data?.data || [];
-            const parsedTotal = Number(res.data?.data?.total);
+            const apiData = resData?.data?.data || [];
+            const parsedTotal = Number(resData?.data?.total);
+            //  const apiData = res.data?.data?.data || [];
+            // const parsedTotal = Number(res.data?.data?.total);
             const hasKnownTotal = Number.isFinite(parsedTotal);
             const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
 
@@ -1473,6 +1486,11 @@ const styles = StyleSheet.create({
     },
     reelFallback: {
         position: 'absolute',
+    },
+    reelAudioToggle: {
+        right: widthPixel(14),
+        bottom: heightPixel(14),
+        zIndex: 5,
     },
     userPhotoFrame: {
         position: 'absolute',

@@ -35,6 +35,7 @@ import {
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
 import PosterPreview from '../../components/PosterPreview';
+import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
 import SubscriptionModal from '../../components/SubscriptionModal';
@@ -830,6 +831,8 @@ const EditorScreen = ({ navigation, route }) => {
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
+    const [isTemplateMuted, setIsTemplateMuted] = useState(true);
+    const [templateHasAudio, setTemplateHasAudio] = useState(true);
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
@@ -1044,8 +1047,17 @@ const EditorScreen = ({ navigation, route }) => {
                             interactive
                             allowPinchScale={p.isPremium}
                             interactionScale={previewScale}
+                            mediaMuted={isTemplateMuted}
+                            onMediaAudioStateChange={setTemplateHasAudio}
                         />
                     </View>
+                    <MediaAudioToggle
+                        visible={p.selectedTemplate?.mediaType === 'VIDEO'}
+                        muted={isTemplateMuted}
+                        hasAudio={templateHasAudio}
+                        onPress={() => setIsTemplateMuted(prev => !prev)}
+                        style={s.mediaAudioToggle}
+                    />
                 </View>
             </View>
 
@@ -1180,6 +1192,11 @@ const s = StyleSheet.create({
         opacity: 0,
     },
     posterScaler: {
+    },
+    mediaAudioToggle: {
+        right: 10,
+        bottom: 10,
+        zIndex: 20,
     },
 
     // Tab bar

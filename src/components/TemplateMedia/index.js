@@ -14,6 +14,7 @@ const TemplateMedia = ({
     muted = true,
     useImageFallbackForVideo = false,
     fallback,
+    onAudioAvailabilityChange,
 }) => {
     const imageSource = getTemplateImageSource(template);
     const videoSource = getTemplateVideoSource(template);
@@ -31,6 +32,12 @@ const TemplateMedia = ({
                 style={style}
                 paused={!shouldPlay}
                 muted={muted}
+                onLoad={data => {
+                    const hasAudio = Array.isArray(data?.audioTracks)
+                        ? data.audioTracks.length > 0
+                        : true;
+                    onAudioAvailabilityChange?.(hasAudio);
+                }}
                 repeat
                 resizeMode={resizeMode}
                 playInBackground={false}

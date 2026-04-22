@@ -561,6 +561,8 @@ const PosterPreview = ({
     interactive = false,
     allowPinchScale = interactive,
     playVideo = true,
+    mediaMuted = true,
+    onMediaAudioStateChange,
     preferStillImageForVideo = false,
     interactionScale = 1,
 }) => {
@@ -771,6 +773,8 @@ const PosterPreview = ({
                     style={StyleSheet.absoluteFill}
                     resizeMode="cover"
                     shouldPlay={playVideo}
+                    muted={mediaMuted}
+                    onAudioAvailabilityChange={onMediaAudioStateChange}
                     useImageFallbackForVideo={preferStillImageForVideo}
                 />
             ) : null}
