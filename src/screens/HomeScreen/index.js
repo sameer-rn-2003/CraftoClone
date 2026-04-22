@@ -431,6 +431,12 @@ const CHIP_GAP = widthPixel(8);
 const MAX_CATEGORY_LINES = 2;
 const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(40);
 const TEMPLATE_PAGE_SIZE = 30;
+const FAVORITES_CHIP = {
+    id: 'favorites',
+    label: 'Favorites',
+    icon: 'bookmark',
+    categoryId: 'favorites',
+};
 
 const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -728,6 +734,81 @@ const HomeScreen = ({ navigation }) => {
         }
     }, []);
 
+    const fetchFavoriteTemplates = useCallback(async ({ pageNumber = 1 } = {}) => {
+        const requestId = ++requestIdRef.current;
+        const isFirstPage = pageNumber === 1;
+
+        try {
+            if (isFirstPage) {
+                setIsInitialLoading(true);
+            } else {
+                setIsLoadingMore(true);
+            }
+
+            const response = await getFavoritesApi({
+                page: pageNumber,
+                limit: TEMPLATE_PAGE_SIZE,
+            });
+
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
+
+            const favoriteRows = Array.isArray(response?.data?.data?.data)
+                ? response.data.data.data
+                : [];
+            const parsedTotal = Number(response?.data?.data?.total);
+            const hasKnownTotal = Number.isFinite(parsedTotal);
+            const formatted = dedupeTemplates(
+                favoriteRows
+                    .map(row => row?.template)
+                    .filter(Boolean)
+                    .map(normalizeTemplateApiItem),
+            );
+
+            const nextFavoriteMap = favoriteRows.reduce((accumulator, favorite) => {
+                const templateId = String(favorite?.template_id ?? favorite?.template?.id ?? '');
+                if (!templateId) {
+                    return accumulator;
+                }
+
+                accumulator[templateId] = {
+                    favoriteId: favorite?.id,
+                    templateId,
+                };
+                return accumulator;
+            }, {});
+
+            setFavoriteMap(prev => ({
+                ...prev,
+                ...nextFavoriteMap,
+            }));
+            setTemplates(prev => (
+                isFirstPage
+                    ? formatted
+                    : dedupeTemplates([...prev, ...formatted])
+            ));
+            setPage(pageNumber);
+            setHasMore(hasKnownTotal
+                ? parsedTotal > pageNumber * TEMPLATE_PAGE_SIZE
+                : favoriteRows.length === TEMPLATE_PAGE_SIZE);
+            setHasLoadedOnce(true);
+        } catch (error) {
+            console.log('Favorite templates error', error);
+
+            if (requestId === requestIdRef.current && isFirstPage) {
+                setTemplates([]);
+                setHasMore(false);
+                setHasLoadedOnce(true);
+            }
+        } finally {
+            if (requestId === requestIdRef.current) {
+                setIsInitialLoading(false);
+                setIsLoadingMore(false);
+            }
+        }
+    }, []);
+
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             setDebouncedSearch(search.trim());
@@ -738,12 +819,17 @@ const HomeScreen = ({ navigation }) => {
 
     useEffect(() => {
         flatListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+        if (activeCategory === FAVORITES_CHIP.id) {
+            fetchFavoriteTemplates({ pageNumber: 1 });
+            return;
+        }
+
         fetchTemplates({
             pageNumber: 1,
             searchText: debouncedSearch,
             categoryId: categoryIdSelected,
         });
-    }, [categoryIdSelected, debouncedSearch, fetchTemplates]);
+    }, [activeCategory, categoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates]);
 
     const handleSearch = useCallback(text => {
         setSearch(text);
@@ -752,12 +838,19 @@ const HomeScreen = ({ navigation }) => {
     const loadMore = useCallback(() => {
         if (!hasLoadedOnce || !templates.length || !hasMore || isInitialLoading || isLoadingMore) return;
 
+        if (activeCategory === FAVORITES_CHIP.id) {
+            fetchFavoriteTemplates({
+                pageNumber: page + 1,
+            });
+            return;
+        }
+
         fetchTemplates({
             pageNumber: page + 1,
             searchText: debouncedSearch,
             categoryId: categoryIdSelected,
         });
-    }, [categoryIdSelected, debouncedSearch, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
+    }, [activeCategory, categoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
 
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
@@ -768,7 +861,10 @@ const HomeScreen = ({ navigation }) => {
         return '';
     }, [userMessage, userName]);
 
-    const chips = useMemo(() => categories, [categories]);
+    const chips = useMemo(() => {
+        const hasFavoritesChip = categories.some(item => item.id === FAVORITES_CHIP.id);
+        return hasFavoritesChip ? categories : [...categories, FAVORITES_CHIP];
+    }, [categories]);
 
     const reelsData = templates;
     const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
@@ -811,7 +907,9 @@ const HomeScreen = ({ navigation }) => {
 
     const handleCategoryPress = useCallback((item) => {
         setActiveCategoryUi(item?.id);
-        const categoryId = item?.categoryId === 'all' ? null : item?.categoryId;
+        const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
+            ? null
+            : item?.categoryId;
         setCategoryIdSelected(categoryId);
         dispatch(setActiveCategory(item?.id ?? 'all'));
         setPage(1);
@@ -881,6 +979,9 @@ const HomeScreen = ({ navigation }) => {
                     delete next[templateId];
                     return next;
                 });
+                if (activeCategory === FAVORITES_CHIP.id) {
+                    setTemplates(prev => prev.filter(template => template?.id !== templateId));
+                }
                 return;
             }
 
@@ -904,7 +1005,7 @@ const HomeScreen = ({ navigation }) => {
         } finally {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
-    }, [favoriteLoadingMap, favoriteMap]);
+    }, [activeCategory, favoriteLoadingMap, favoriteMap]);
 
     return (
         <>
