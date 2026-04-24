@@ -148,7 +148,12 @@ const PreviewScreen = ({ navigation, route }) => {
                     height: canvasSize.height,
                     left: -canvasSize.width * 3,
                 }]} pointerEvents="none">
-                    <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
+                    <PosterPreview
+                        posterRef={posterRef}
+                        playVideo={false}
+                        preferStillImageForVideo
+                        enablePhotoAnimation={false}
+                    />
                 </View>
 
                 {/* ── Action buttons ─────────────────────────────────────────

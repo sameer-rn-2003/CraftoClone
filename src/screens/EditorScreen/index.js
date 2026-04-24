@@ -31,6 +31,7 @@ import {
     setPhotoShape,
     addSticker, removeSticker,
     setPhotoScale, setPremiumProfileField,
+    setUserPhotoAnimation,
     setUserPhoto,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
@@ -39,6 +40,7 @@ import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
 import SubscriptionModal from '../../components/SubscriptionModal';
+import { PHOTO_ANIMATION_OPTIONS } from '../../utils/photoAnimationOptions';
 import { mergeUserProfile, getUserProfile } from '../../utils/userStorage';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
 import { getSubscriptionPlansApi } from '../../apiService/subscriptionApi';
@@ -132,6 +134,12 @@ const SizeBtn = ({ size, active, onPress }) => (
     </Pressable>
 );
 
+const OptionChip = ({ label, active, onPress }) => (
+    <Pressable onPress={onPress} style={[s.optionChip, active && s.optionChipActive]}>
+        <Text style={[s.optionChipText, active && s.optionChipTextActive]}>{label}</Text>
+    </Pressable>
+);
+
 const StyleToggle = ({ label, active, onPress }) => (
     <Pressable onPress={onPress}
         style={[s.styleToggle, active && s.styleToggleActive]}>
@@ -171,7 +179,9 @@ const PhotoTab = ({
     pickingImage,
     userPhoto,
     photoScale,
+    userPhotoAnimation,
     onScaleChange,
+    onAnimationChange,
     photoFrame,
     isPremium,
     onUnlockPremium,
@@ -301,6 +311,26 @@ const PhotoTab = ({
                             <Text style={s.lockedHintText}>Photo resize is premium. Tap to unlock.</Text>
                         </Pressable>
                     )}
+                </View>
+
+                <View style={s.resizeSection}>
+                    <SectionLabel>Photo animation</SectionLabel>
+                    <Text style={s.frameSizeHint}>
+                        Preview only for now. Selected animation is logged locally and not sent to backend.
+                    </Text>
+                    <View style={s.optionChipRow}>
+                        {PHOTO_ANIMATION_OPTIONS.map(option => {
+                            const active = userPhotoAnimation === option.id;
+                            return (
+                                <OptionChip
+                                    key={option.id}
+                                    label={option.label}
+                                    active={active}
+                                    onPress={() => onAnimationChange(option)}
+                                />
+                            );
+                        })}
+                    </View>
                 </View>
 
             </View>
@@ -936,6 +966,15 @@ const EditorScreen = ({ navigation, route }) => {
         navigation.navigate('PreviewScreen');
     }, [p.userPhoto, navigation, t]);
 
+    const handlePhotoAnimationChange = useCallback((option) => {
+        dispatch(setUserPhotoAnimation(option?.id || 'none'));
+        console.log('Selected user photo animation:', {
+            id: option?.id || 'none',
+            label: option?.label || 'None',
+            backendReady: false,
+        });
+    }, [dispatch]);
+
     const handleBack = useCallback(() => {
         if (navigation?.canGoBack?.()) {
             navigation.goBack();
@@ -964,7 +1003,9 @@ const EditorScreen = ({ navigation, route }) => {
         switch (activeTab) {
             case 'photo': return <PhotoTab onPickImage={handlePickProfileImage} pickingImage={pickingImage}
                 userPhoto={p.userPhoto} photoScale={p.photoScale}
+                userPhotoAnimation={p.userPhotoAnimation}
                 onScaleChange={scale => dispatch(setPhotoScale(scale))}
+                onAnimationChange={handlePhotoAnimationChange}
                 photoFrame={p.selectedTemplate?.photoFrame}
                 isPremium={p.isPremium}
                 onUnlockPremium={openSubscriptionModal} />;
@@ -997,6 +1038,7 @@ const EditorScreen = ({ navigation, route }) => {
         pickingImage,
         dispatch,
         handleTextSave,
+        handlePhotoAnimationChange,
         openSubscriptionModal,
         pickLogoImage,
         handlePremiumDetailsSave,
@@ -1727,6 +1769,28 @@ const s = StyleSheet.create({
         fontWeight: FONTS.weights.medium,
     },
     presetChipTextActive: { color: EDITOR_COLORS.white, fontWeight: FONTS.weights.bold },
+    optionChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+    optionChip: {
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.sm,
+        backgroundColor: EDITOR_COLORS.card,
+        borderRadius: BORDER_RADIUS.full,
+        borderWidth: 1,
+        borderColor: EDITOR_COLORS.border,
+    },
+    optionChipActive: {
+        backgroundColor: EDITOR_COLORS.primary,
+        borderColor: EDITOR_COLORS.primary,
+    },
+    optionChipText: {
+        fontSize: FONTS.sizes.xs,
+        color: EDITOR_COLORS.textSecondary,
+        fontWeight: FONTS.weights.medium,
+    },
+    optionChipTextActive: {
+        color: EDITOR_COLORS.white,
+        fontWeight: FONTS.weights.bold,
+    },
 
     // — Visibility toggles —
     visibilityRow: {

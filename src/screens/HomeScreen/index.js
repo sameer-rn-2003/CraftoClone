@@ -712,10 +712,10 @@ const HomeScreen = ({ navigation }) => {
                 return;
             }
 
-            const apiData = resData?.data?.data || [];
-            const parsedTotal = Number(resData?.data?.total);
-            //  const apiData = res.data?.data?.data || [];
-            // const parsedTotal = Number(res.data?.data?.total);
+            // const apiData = resData?.data?.data || [];
+            // const parsedTotal = Number(resData?.data?.total);
+             const apiData = res.data?.data?.data || [];
+            const parsedTotal = Number(res.data?.data?.total);
             const hasKnownTotal = Number.isFinite(parsedTotal);
             const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
 
@@ -1259,7 +1259,12 @@ const HomeScreen = ({ navigation }) => {
             />
 
             <View style={styles.hiddenCaptureStage} pointerEvents="none">
-                <PosterPreview posterRef={posterRef} playVideo={false} preferStillImageForVideo />
+                <PosterPreview
+                    posterRef={posterRef}
+                    playVideo={false}
+                    preferStillImageForVideo
+                    enablePhotoAnimation={false}
+                />
             </View>
 
             <Modal

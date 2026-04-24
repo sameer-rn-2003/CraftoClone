@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     Image,
@@ -117,13 +117,225 @@ const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
     }
 };
 
+const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMetrics = {}) => {
+    const frameWidth = Number(frameMetrics?.width) || 0;
+    const frameHeight = Number(frameMetrics?.height) || 0;
+    const travelX = Math.max(canvasSize.width * 0.9, frameWidth + canvasSize.width * 0.2);
+    const travelY = Math.max(canvasSize.height * 0.9, frameHeight + canvasSize.height * 0.2);
+    const diagonalX = Math.max(canvasSize.width * 0.7, frameWidth + canvasSize.width * 0.15);
+    const diagonalY = Math.max(canvasSize.height * 0.7, frameHeight + canvasSize.height * 0.15);
+    const shortTravelX = Math.max(canvasSize.width * 0.18, 36);
+    const shortTravelY = Math.max(canvasSize.height * 0.18, 36);
+
+    switch (animationId) {
+        case 'slide_left_center':
+            return { from: { translateX: -travelX }, to: { translateX: 0 } };
+        case 'slide_right_center':
+            return { from: { translateX: travelX }, to: { translateX: 0 } };
+        case 'slide_top_center':
+            return { from: { translateY: -travelY }, to: { translateY: 0 } };
+        case 'slide_bottom_center':
+            return { from: { translateY: travelY }, to: { translateY: 0 } };
+        case 'slide_top_left':
+            return { from: { translateX: -diagonalX, translateY: -diagonalY }, to: { translateX: 0, translateY: 0 } };
+        case 'slide_top_right':
+            return { from: { translateX: diagonalX, translateY: -diagonalY }, to: { translateX: 0, translateY: 0 } };
+        case 'slide_bottom_left':
+            return { from: { translateX: -diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
+        case 'slide_bottom_right':
+            return { from: { translateX: diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
+        case 'bounce_left':
+            return { from: { translateX: -travelX }, to: { translateX: 0 }, easing: 'bounce' };
+        case 'bounce_right':
+            return { from: { translateX: travelX }, to: { translateX: 0 }, easing: 'bounce' };
+        case 'bounce_top':
+            return { from: { translateY: -travelY }, to: { translateY: 0 }, easing: 'bounce' };
+        case 'bounce_bottom':
+            return { from: { translateY: travelY }, to: { translateY: 0 }, easing: 'bounce' };
+        case 'zoom_in_soft':
+            return { from: { scale: 0.72, opacity: 0.35 }, to: { scale: 1, opacity: 1 } };
+        case 'zoom_out_soft':
+            return { from: { scale: 1.18, opacity: 0.45 }, to: { scale: 1, opacity: 1 } };
+        case 'pulse_soft':
+            return { from: { scale: 0.94 }, to: { scale: 1.04 }, loop: 'alternate' };
+        case 'pulse_big':
+            return { from: { scale: 0.88 }, to: { scale: 1.12 }, loop: 'alternate' };
+        case 'fade_in':
+            return { from: { opacity: 0.1 }, to: { opacity: 1 } };
+        case 'fade_up':
+            return { from: { translateY: shortTravelY, opacity: 0.2 }, to: { translateY: 0, opacity: 1 } };
+        case 'fade_down':
+            return { from: { translateY: -shortTravelY, opacity: 0.2 }, to: { translateY: 0, opacity: 1 } };
+        case 'rotate_soft_left':
+            return { from: { rotate: '-12deg', scale: 0.95 }, to: { rotate: '0deg', scale: 1 } };
+        case 'rotate_soft_right':
+            return { from: { rotate: '12deg', scale: 0.95 }, to: { rotate: '0deg', scale: 1 } };
+        case 'flip_x_soft':
+            return { from: { rotateX: '70deg', opacity: 0.4 }, to: { rotateX: '0deg', opacity: 1 } };
+        case 'flip_y_soft':
+            return { from: { rotateY: '70deg', opacity: 0.4 }, to: { rotateY: '0deg', opacity: 1 } };
+        case 'float_left_right':
+            return { from: { translateX: -shortTravelX }, to: { translateX: shortTravelX }, loop: 'alternateSlow' };
+        case 'float_up_down':
+            return { from: { translateY: -shortTravelY }, to: { translateY: shortTravelY }, loop: 'alternateSlow' };
+        case 'wiggle_soft':
+            return { from: { rotate: '-5deg' }, to: { rotate: '5deg' }, loop: 'alternateFast' };
+        case 'pop_in':
+            return { from: { scale: 0.55, opacity: 0.25 }, to: { scale: 1, opacity: 1 }, easing: 'bounce' };
+        case 'drift_top_left':
+            return { from: { translateX: -shortTravelX, translateY: -shortTravelY, scale: 0.96 }, to: { translateX: shortTravelX * 0.45, translateY: shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
+        case 'drift_bottom_right':
+            return { from: { translateX: shortTravelX, translateY: shortTravelY, scale: 0.96 }, to: { translateX: -shortTravelX * 0.45, translateY: -shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
+        case 'none':
+        default:
+            return null;
+    }
+};
+
+const usePhotoAnimationStyle = ({
+    animationId = 'none',
+    canvasSize,
+    frameMetrics,
+    enablePhotoAnimation = true,
+}) => {
+    const progress = useRef(new Animated.Value(1)).current;
+    const canvasWidth = canvasSize?.width ?? POSTER_SIZE.width;
+    const canvasHeight = canvasSize?.height ?? POSTER_SIZE.height;
+    const frameWidth = frameMetrics?.width ?? 0;
+    const frameHeight = frameMetrics?.height ?? 0;
+    const config = useMemo(
+        () => (enablePhotoAnimation
+            ? getPhotoAnimationConfig(
+                animationId,
+                { width: canvasWidth, height: canvasHeight },
+                { width: frameWidth, height: frameHeight },
+            )
+            : null),
+        [animationId, canvasWidth, canvasHeight, enablePhotoAnimation, frameWidth, frameHeight],
+    );
+
+    useEffect(() => {
+        progress.stopAnimation();
+
+        if (!config) {
+            progress.setValue(1);
+            return undefined;
+        }
+
+        progress.setValue(0);
+        const duration = config.loop === 'alternateFast'
+            ? 900
+            : config.loop === 'alternateSlow'
+                ? 2200
+                : 1400;
+        const easing = config.easing === 'bounce'
+            ? Animated.spring(progress, {
+                toValue: 1,
+                speed: 1.8,
+                bounciness: 14,
+                useNativeDriver: true,
+            })
+            : Animated.timing(progress, {
+                toValue: 1,
+                duration,
+                useNativeDriver: true,
+            });
+
+        const animation = config.loop
+            ? Animated.loop(Animated.sequence([
+                Animated.timing(progress, {
+                    toValue: 1,
+                    duration,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(progress, {
+                    toValue: 0,
+                    duration,
+                    useNativeDriver: true,
+                }),
+            ]))
+            : easing;
+
+        animation.start();
+
+        return () => {
+            animation.stop?.();
+            progress.stopAnimation();
+        };
+    }, [config, progress]);
+
+    return config ? {
+        opacity: progress.interpolate({
+            inputRange: [0, 1],
+            outputRange: [config.from?.opacity ?? 1, config.to?.opacity ?? 1],
+        }),
+        transform: [
+            {
+                translateX: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.translateX ?? 0, config.to?.translateX ?? 0],
+                }),
+            },
+            {
+                translateY: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.translateY ?? 0, config.to?.translateY ?? 0],
+                }),
+            },
+            {
+                scale: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.scale ?? 1, config.to?.scale ?? 1],
+                }),
+            },
+            {
+                rotate: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.rotate ?? '0deg', config.to?.rotate ?? '0deg'],
+                }),
+            },
+            {
+                rotateX: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.rotateX ?? '0deg', config.to?.rotateX ?? '0deg'],
+                }),
+            },
+            {
+                rotateY: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [config.from?.rotateY ?? '0deg', config.to?.rotateY ?? '0deg'],
+                }),
+            },
+        ],
+    } : {
+        opacity: 1,
+        transform: [],
+    };
+};
+
+const AnimatedPhotoContent = ({ photoUri, resizeMode = 'cover' }) => {
+
+    if (!photoUri) {
+        return null;
+    }
+
+    return (
+        <View style={styles.animatedPhotoContent}>
+            <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
+        </View>
+    );
+};
+
 const DraggablePhoto = ({
     photoFrame,
     frameStyle,
     photoUri,
+    photoAnimation,
+    canvasSize = POSTER_SIZE,
     accentColor,
     photoShape,
     photoScale,
+    enablePhotoAnimation = true,
     allowPinchScale = true,
     interactionScale = 1,
     resizeMode = 'cover',
@@ -242,6 +454,12 @@ const DraggablePhoto = ({
 
 
     const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    const photoAnimationStyle = usePhotoAnimationStyle({
+        animationId: photoAnimation,
+        canvasSize,
+        frameMetrics: frameBaseStyle,
+        enablePhotoAnimation,
+    });
     if (!frameBaseStyle) {
         return null;
     }
@@ -252,9 +470,12 @@ const DraggablePhoto = ({
                 styles.photoWrapper,
                 {
                     ...frameBaseStyle,
+                    opacity: photoAnimationStyle.opacity,
                     // scale + translate are both in transform — this keeps the
-                    // pinch centered and the drag offset applied together
+                    // pinch centered, the drag offset applied, and the entry
+                    // animation travelling across the poster canvas.
                     transform: [
+                        ...photoAnimationStyle.transform,
                         { scale: scaleAnim },
                         ...pan.getTranslateTransform(),
                     ],
@@ -263,7 +484,10 @@ const DraggablePhoto = ({
             {...panResponder.panHandlers}>
 
             {photoUri
-                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
+                ? <AnimatedPhotoContent
+                    photoUri={photoUri}
+                    resizeMode={resizeMode}
+                />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                     <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
@@ -282,22 +506,33 @@ const StaticPhoto = ({
     frameStyle,
     photoUri,
     photoPosition,
+    photoAnimation,
+    canvasSize = POSTER_SIZE,
     photoShape,
     photoScale,
+    enablePhotoAnimation = true,
     resizeMode = 'cover',
 }) => {
     const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    const photoAnimationStyle = usePhotoAnimationStyle({
+        animationId: photoAnimation,
+        canvasSize,
+        frameMetrics: frameBaseStyle,
+        enablePhotoAnimation,
+    });
     if (!frameBaseStyle) {
         return null;
     }
 
     return (
-        <View
+        <Animated.View
             style={[
                 styles.photoWrapper,
                 frameBaseStyle,
                 {
+                    opacity: photoAnimationStyle.opacity,
                     transform: [
+                        ...photoAnimationStyle.transform,
                         { scale: photoScale ?? 1 },
                         { translateX: photoPosition?.x ?? 0 },
                         { translateY: photoPosition?.y ?? 0 },
@@ -306,11 +541,14 @@ const StaticPhoto = ({
             ]}
             pointerEvents="none">
             {photoUri
-                ? <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
+                ? <AnimatedPhotoContent
+                    photoUri={photoUri}
+                    resizeMode={resizeMode}
+                />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                 </View>}
-        </View>
+        </Animated.View>
     );
 };
 
@@ -561,6 +799,7 @@ const PosterPreview = ({
     interactive = false,
     allowPinchScale = interactive,
     playVideo = true,
+    enablePhotoAnimation = true,
     mediaMuted = true,
     onMediaAudioStateChange,
     preferStillImageForVideo = false,
@@ -716,16 +955,22 @@ const PosterPreview = ({
                 ? <DraggablePhoto
                     photoFrame={photoFrame}
                     photoUri={p.userPhoto}
+                    photoAnimation={p.userPhotoAnimation}
+                    canvasSize={canvasSize}
                     accentColor={accentColor}
                     photoShape={p.photoShape ?? 'template'}
                     photoScale={p.photoScale ?? 1}
+                    enablePhotoAnimation={enablePhotoAnimation}
                     allowPinchScale={allowPinchScale}
                     interactionScale={interactionScale} />
                 : <StaticPhoto
                     photoFrame={photoFrame}
                     photoUri={p.userPhoto}
                     photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
+                    photoAnimation={p.userPhotoAnimation}
+                    canvasSize={canvasSize}
                     photoShape={p.photoShape ?? 'template'}
+                    enablePhotoAnimation={enablePhotoAnimation}
                     photoScale={p.photoScale ?? 1} />
         )
         : null;
@@ -741,9 +986,12 @@ const PosterPreview = ({
             ? <DraggablePhoto
                 frameStyle={configPhotoFrameStyle}
                 photoUri={p.userPhoto}
+                photoAnimation={p.userPhotoAnimation}
+                canvasSize={canvasSize}
                 accentColor={accentColor}
                 photoShape={p.photoShape ?? 'template'}
                 photoScale={p.photoScale ?? 1}
+                enablePhotoAnimation={enablePhotoAnimation}
                 allowPinchScale={allowPinchScale}
                 interactionScale={interactionScale}
                 resizeMode={resizeMode} />
@@ -751,7 +999,10 @@ const PosterPreview = ({
                 frameStyle={configPhotoFrameStyle}
                 photoUri={p.userPhoto}
                 photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
+                photoAnimation={p.userPhotoAnimation}
+                canvasSize={canvasSize}
                 photoShape={p.photoShape ?? 'template'}
+                enablePhotoAnimation={enablePhotoAnimation}
                 photoScale={p.photoScale ?? 1}
                 resizeMode={resizeMode} />;
     };
@@ -931,6 +1182,10 @@ const styles = StyleSheet.create({
         position: 'absolute',
         overflow: 'hidden',
         backgroundColor: COLORS.surface,
+    },
+    animatedPhotoContent: {
+        width: '100%',
+        height: '100%',
     },
     photo: { width: '100%', height: '100%' },
     photoPlaceholder: {
