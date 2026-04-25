@@ -479,15 +479,13 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
         }
 
         const size = Math.max(widthPixel(52), posterLayout.width * 0.18);
-        const insetX = Math.max(widthPixel(12), posterLayout.width * 0.04);
-        const insetY = Math.max(heightPixel(12), posterLayout.height * 0.04);
 
         return {
             width: size,
             height: size,
             borderRadius: size / 2,
-            right: posterLayout.offsetX + insetX,
-            bottom: posterLayout.offsetY + insetY,
+            left: posterLayout.offsetX + (posterLayout.width - size) / 2,
+            top: posterLayout.offsetY + (posterLayout.height - size) / 2,
             borderWidth: Math.max(2, size * 0.06),
         };
     }, [posterLayout]);
@@ -1019,7 +1017,7 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-
+console.log("reelsData", reelsData);
     return (
         <>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />

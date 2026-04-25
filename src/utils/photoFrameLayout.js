@@ -84,10 +84,16 @@ export const getScaledPhotoFrameStyle = ({
 
     const shapeRadius = resolvePhotoFrameRadius(photoShape, photoFrame.borderRadius);
     const radiusScale = Math.min(scaleX, scaleY);
+    const rawLeft = centerX - scaledWidth / 2 + (photoPosition.x * scaleX);
+    const rawTop = centerY - scaledHeight / 2 + (photoPosition.y * scaleY);
+    const minLeft = offsetX;
+    const minTop = offsetY;
+    const maxLeft = offsetX + Math.max((posterLayout.width ?? 0) - scaledWidth, 0);
+    const maxTop = offsetY + Math.max((posterLayout.height ?? 0) - scaledHeight, 0);
 
     return {
-        left: centerX - scaledWidth / 2 + (photoPosition.x * scaleX),
-        top: centerY - scaledHeight / 2 + (photoPosition.y * scaleY),
+        left: Math.min(maxLeft, Math.max(minLeft, rawLeft)),
+        top: Math.min(maxTop, Math.max(minTop, rawTop)),
         width: scaledWidth,
         height: scaledHeight,
         borderRadius: shapeRadius * radiusScale,

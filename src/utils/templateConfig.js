@@ -2,6 +2,7 @@ import { POSTER_SIZE } from './constants';
 
 const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
 const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
+const LEGACY_CIRCLE_SAFE_INSET = 24;
 
 const hasValue = value => value !== undefined && value !== null && value !== '';
 
@@ -181,12 +182,45 @@ export const resolveTemplateValue = (value, template, context = {}) => {
 const normalizePhotoFrame = frame => {
     if (!frame) return null;
 
+    const width = getNumericValue(frame.width, 0);
+    const height = getNumericValue(frame.height, 0);
+    const shape = String(frame.shape ?? '').toLowerCase();
+    const explicitRadius = getNumericValue(frame.radius, 0);
+    const legacyBorderRadius = getNumericValue(frame.borderRadius ?? frame.border_radius, 0);
+    let borderRadius = legacyBorderRadius;
+
+    if (!borderRadius) {
+        if (explicitRadius > 0) {
+            borderRadius = explicitRadius;
+        } else if (shape === 'circle') {
+            borderRadius = Math.min(width, height) / 2;
+        } else if (shape === 'square') {
+            borderRadius = 0;
+        }
+    }
+
+    let x = getNumericValue(frame.x, 0);
+    let y = getNumericValue(frame.y, 0);
+
+    // Older admin circle templates were saved using center coordinates.
+    if (shape === 'circle') {
+        if (x + width > POSTER_SIZE.width) {
+            x -= width / 2;
+        }
+        if (y + height > POSTER_SIZE.height) {
+            y -= height / 2;
+        }
+
+        const maxCircleX = Math.max(0, POSTER_SIZE.width - width - LEGACY_CIRCLE_SAFE_INSET);
+        x = Math.min(x, maxCircleX);
+    }
+
     const normalized = {
-        x: getNumericValue(frame.x, 0),
-        y: getNumericValue(frame.y, 0),
-        width: getNumericValue(frame.width, 0),
-        height: getNumericValue(frame.height, 0),
-        borderRadius: getNumericValue(frame.borderRadius ?? frame.border_radius, 0),
+        x: Math.max(0, x),
+        y: Math.max(0, y),
+        width,
+        height,
+        borderRadius,
         borderWidth: getNumericValue(frame.borderWidth ?? frame.border_width, 0),
         borderColor: frame.borderColor ?? frame.border_color ?? '#FFFFFF',
     };
@@ -199,7 +233,12 @@ const normalizePhotoFrame = frame => {
 };
 
 export const getTemplatePhotoFrame = template => {
-    const explicitPhotoFrame = normalizePhotoFrame(template?.photoFrame ?? template?.photo_frame);
+    const explicitPhotoFrame = normalizePhotoFrame(
+        template?.photoFrame
+        ?? template?.photo_frame
+        ?? template?.config?.photoFrame
+        ?? template?.config?.photo_frame,
+    );
     if (explicitPhotoFrame) {
         return explicitPhotoFrame;
     }

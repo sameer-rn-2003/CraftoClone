@@ -326,6 +326,26 @@ const AnimatedPhotoContent = ({ photoUri, resizeMode = 'cover' }) => {
     );
 };
 
+const getCenteredFallbackPhotoFrameStyle = ({
+    canvasSize = POSTER_SIZE,
+    photoShape = 'template',
+}) => {
+    const size = Math.max(96, Math.min(canvasSize.width, canvasSize.height) * 0.28);
+    const left = (canvasSize.width - size) / 2;
+    const top = (canvasSize.height - size) / 2;
+    const templateRadius = size / 2;
+
+    return {
+        left,
+        top,
+        width: size,
+        height: size,
+        borderRadius: resolvePhotoFrameRadius(photoShape, templateRadius),
+        borderColor: '#FFFFFF',
+        borderWidth: 2,
+    };
+};
+
 const DraggablePhoto = ({
     photoFrame,
     frameStyle,
@@ -453,17 +473,15 @@ const DraggablePhoto = ({
     ).current;
 
 
-    const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    const frameBaseStyle = frameStyle
+        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
+        ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
     const photoAnimationStyle = usePhotoAnimationStyle({
         animationId: photoAnimation,
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
     });
-    if (!frameBaseStyle) {
-        return null;
-    }
-
     return (
         <Animated.View
             style={[
@@ -513,17 +531,15 @@ const StaticPhoto = ({
     enablePhotoAnimation = true,
     resizeMode = 'cover',
 }) => {
-    const frameBaseStyle = frameStyle ?? getPhotoFrameBaseStyle({ photoFrame, photoShape });
+    const frameBaseStyle = frameStyle
+        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
+        ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
     const photoAnimationStyle = usePhotoAnimationStyle({
         animationId: photoAnimation,
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
     });
-    if (!frameBaseStyle) {
-        return null;
-    }
-
     return (
         <Animated.View
             style={[
@@ -949,7 +965,7 @@ const PosterPreview = ({
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                 textScale={p.messageScale ?? 1} />;
     };
-    const photoLayerNode = photoFrame
+    const photoLayerNode = (photoFrame || p.userPhoto)
         ? (
             interactive
                 ? <DraggablePhoto
