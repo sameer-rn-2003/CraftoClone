@@ -5,6 +5,28 @@ import {
     getTemplateImageSource,
     getTemplateVideoSource,
 } from '../../utils/templateMedia';
+import { POSTER_SIZE } from '../../utils/constants';
+import { getTemplateBackgroundCrop } from '../../utils/templateConfig';
+
+const getBackgroundCropStyle = crop => {
+    if (!crop?.mediaWidth || !crop?.mediaHeight) {
+        return null;
+    }
+
+    const baseScale = Math.max(
+        POSTER_SIZE.width / crop.mediaWidth,
+        POSTER_SIZE.height / crop.mediaHeight,
+    );
+    const renderScale = baseScale * (crop.scale ?? 1);
+
+    return {
+        position: 'absolute',
+        left: crop.x ?? 0,
+        top: crop.y ?? 0,
+        width: crop.mediaWidth * renderScale,
+        height: crop.mediaHeight * renderScale,
+    };
+};
 
 const TemplateMedia = ({
     template,
@@ -18,10 +40,19 @@ const TemplateMedia = ({
 }) => {
     const imageSource = getTemplateImageSource(template);
     const videoSource = getTemplateVideoSource(template);
+    const backgroundCrop = getTemplateBackgroundCrop(template);
+    const croppedImageStyle = getBackgroundCropStyle(backgroundCrop);
     const shouldRenderImage = !videoSource || (useImageFallbackForVideo && imageSource);
-// console.log('TemplateMedia - imageSource:', imageSource, 'videoSource:', videoSource);
-// console.log('TemplateMedia - shouldRenderImage:', shouldRenderImage);
+
     if (shouldRenderImage && imageSource) {
+        if (croppedImageStyle) {
+            return (
+                <View style={[style, styles.cropViewport]}>
+                    <Image source={imageSource} style={croppedImageStyle} resizeMode="stretch" />
+                </View>
+            );
+        }
+
         return <Image source={imageSource} style={style} resizeMode={resizeMode} />;
     }
 
@@ -54,5 +85,11 @@ const TemplateMedia = ({
 
     return null;
 };
+
+const styles = StyleSheet.create({
+    cropViewport: {
+        overflow: 'hidden',
+    },
+});
 
 export default React.memo(TemplateMedia);

@@ -232,6 +232,28 @@ const normalizePhotoFrame = frame => {
     return normalized;
 };
 
+const normalizeBackgroundCrop = crop => {
+    if (!crop) return null;
+
+    const mediaWidth = getNumericValue(crop.mediaWidth ?? crop.media_width, 0);
+    const mediaHeight = getNumericValue(crop.mediaHeight ?? crop.media_height, 0);
+    const scale = getNumericValue(crop.scale, 1);
+    const x = getNumericValue(crop.x, 0);
+    const y = getNumericValue(crop.y, 0);
+
+    if (!mediaWidth || !mediaHeight) {
+        return null;
+    }
+
+    return {
+        x,
+        y,
+        scale: scale > 0 ? scale : 1,
+        mediaWidth,
+        mediaHeight,
+    };
+};
+
 export const getTemplatePhotoFrame = template => {
     const explicitPhotoFrame = normalizePhotoFrame(
         template?.photoFrame
@@ -258,6 +280,13 @@ export const getTemplatePhotoFrame = template => {
         borderColor: photoLayer.borderColor,
     });
 };
+
+export const getTemplateBackgroundCrop = template => normalizeBackgroundCrop(
+    template?.backgroundCrop
+    ?? template?.background_crop
+    ?? template?.config?.backgroundCrop
+    ?? template?.config?.background_crop,
+);
 
 export const buildTemplateRenderContext = ({
     template,
@@ -348,6 +377,10 @@ export const normalizeTemplateApiItem = item => {
         thumbnail,
         config,
         photoFrame: getTemplatePhotoFrame({
+            ...item,
+            config,
+        }),
+        backgroundCrop: getTemplateBackgroundCrop({
             ...item,
             config,
         }),

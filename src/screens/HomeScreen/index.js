@@ -56,11 +56,21 @@ import {
     getFavoritesApi,
     removeFavoriteApi,
 } from '../../apiService/favoriteApi';
-import { syncSubscriptionStatus } from '../../services/subscriptionService';
+import { getSubscriptionPlansApi } from '../../apiService/subscriptionApi';
+import SubscriptionModal from '../../components/SubscriptionModal';
+import {
+    startRazorpayTestCheckout,
+    syncSubscriptionStatus,
+    verifySubscriptionPurchaseAndSync,
+} from '../../services/subscriptionService';
 import { removeFcmToken } from '../../services/fcmService';
 import { logout } from '../../apiService/authApi';
 import i18n from '../../i18n';
 const getTemplateListKey = (item, index) => `${item.id}_${index}`;
+const isPremiumTemplate = item => {
+    const premiumValue = item?.is_premium ?? item?.isPremium;
+    return premiumValue === true || premiumValue === 'true' || premiumValue === 1 || premiumValue === '1';
+};
 
 const resData = {
   "status": true,
@@ -592,7 +602,12 @@ const HomeScreen = ({ navigation }) => {
     const [isInitialLoading, setIsInitialLoading] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
+    const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+    const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
+    const [submittingPlanId, setSubmittingPlanId] = useState(null);
     const requestIdRef = useRef(0);
+    const pendingPremiumActionRef = useRef(null);
 
     const viewabilityConfig = useRef({
         itemVisiblePercentThreshold: 70,
@@ -902,6 +917,74 @@ const HomeScreen = ({ navigation }) => {
         })();
     }, [dispatch]);
 
+    const loadSubscriptionPlans = useCallback(async () => {
+        try {
+            setSubscriptionPlansLoading(true);
+            const response = await getSubscriptionPlansApi();
+            const nextPlans = Array.isArray(response?.data?.data)
+                ? response.data.data.filter(plan => plan?.is_active !== false)
+                : [];
+            setSubscriptionPlans(nextPlans);
+        } catch (error) {
+            console.log('Subscription plans error', error);
+            Alert.alert('Subscription', 'Unable to load subscription plans right now.');
+        } finally {
+            setSubscriptionPlansLoading(false);
+        }
+    }, []);
+
+    const openSubscriptionModal = useCallback((onSubscribedAction = null) => {
+        pendingPremiumActionRef.current = typeof onSubscribedAction === 'function' ? onSubscribedAction : null;
+        setSubscriptionVisible(true);
+        loadSubscriptionPlans();
+    }, [loadSubscriptionPlans]);
+
+    const closeSubscriptionModal = useCallback(() => {
+        pendingPremiumActionRef.current = null;
+        setSubscriptionVisible(false);
+    }, []);
+
+    const handleSubscribe = useCallback(async plan => {
+        try {
+            setSubmittingPlanId(plan?.id ?? 'pending');
+            const profile = await getUserProfile();
+            const checkoutResponse = await startRazorpayTestCheckout({ plan, profile });
+            await verifySubscriptionPurchaseAndSync({
+                checkoutResponse,
+                planId: plan?.id,
+                dispatch,
+            });
+
+            setSubscriptionVisible(false);
+            const pendingAction = pendingPremiumActionRef.current;
+            pendingPremiumActionRef.current = null;
+            pendingAction?.();
+            Alert.alert('Subscription', 'Premium subscription activated successfully.');
+        } catch (error) {
+            const code = error?.code;
+            if (code === 0 || code === 'PAYMENT_CANCELLED') {
+                return;
+            }
+
+            console.log('Subscription checkout error', error);
+            Alert.alert(
+                'Subscription',
+                error?.message || 'Unable to complete subscription right now.',
+            );
+        } finally {
+            setSubmittingPlanId(null);
+        }
+    }, [dispatch]);
+
+    const withPremiumAccess = useCallback((item, action) => {
+        if (!isPremiumTemplate(item) || isPremium) {
+            action?.();
+            return;
+        }
+
+        openSubscriptionModal(action);
+    }, [isPremium, openSubscriptionModal]);
+
     const handleTestSubscriptionToggle = useCallback(async () => {
         const nextValue = !isPremium;
         dispatch(setPremiumStatus(nextValue));
@@ -930,16 +1013,18 @@ const HomeScreen = ({ navigation }) => {
     // never lost in EditorScreen regardless of which reel is tapped.
     const handleEdit = useCallback(
         item => {
-            dispatch(setSelectedTemplate(item));
-            navigation?.navigate?.('EditorScreen', {
-                templateId: item.id,
-                template: item,
-                userName,
-                userMessage,
-                userPhoto,
+            withPremiumAccess(item, () => {
+                dispatch(setSelectedTemplate(item));
+                navigation?.navigate?.('EditorScreen', {
+                    templateId: item.id,
+                    template: item,
+                    userName,
+                    userMessage,
+                    userPhoto,
+                });
             });
         },
-        [dispatch, navigation, userMessage, userName, userPhoto],
+        [dispatch, navigation, userMessage, userName, userPhoto, withPremiumAccess],
     );
 
     const prepareTemplateForMediaAction = useCallback(
@@ -953,19 +1038,23 @@ const HomeScreen = ({ navigation }) => {
     const handleShareToWhatsApp = useCallback(
         async item => {
             if (isActionInProgress) return;
-            await prepareTemplateForMediaAction(item);
-            await sharePosterToWhatsApp(whatsappCaption || undefined);
+            withPremiumAccess(item, async () => {
+                await prepareTemplateForMediaAction(item);
+                await sharePosterToWhatsApp(whatsappCaption || undefined);
+            });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption],
+        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption, withPremiumAccess],
     );
 
     const handleDownload = useCallback(
         async item => {
             if (isActionInProgress) return;
-            await prepareTemplateForMediaAction(item);
-            await savePoster();
+            withPremiumAccess(item, async () => {
+                await prepareTemplateForMediaAction(item);
+                await savePoster();
+            });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, savePoster],
+        [isActionInProgress, prepareTemplateForMediaAction, savePoster, withPremiumAccess],
     );
 
     const stopCardPress = useCallback(event => {
@@ -1264,6 +1353,15 @@ console.log("reelsData", reelsData);
                     enablePhotoAnimation={false}
                 />
             </View>
+
+            <SubscriptionModal
+                visible={isSubscriptionVisible}
+                onClose={closeSubscriptionModal}
+                plans={subscriptionPlans}
+                loading={subscriptionPlansLoading}
+                submittingPlanId={submittingPlanId}
+                onSubscribe={handleSubscribe}
+            />
 
             <Modal
                 visible={isCategoryModalVisible}
