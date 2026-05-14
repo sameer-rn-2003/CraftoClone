@@ -46,7 +46,7 @@ const LoginScreen = ({ navigation }) => {
         };
     }, []);
 
-    const handleSendOtp = async() => {
+    const handleSendOtp = async () => {
         const digits = phone.replace(/\D/g, '');
         if (!digits) {
             showToast(t('auth.login.errors.enterMobile'), 'error');
@@ -57,20 +57,21 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         try {
-    let res = await requestOtp(digits);
-    showToast('OTP sent successfully', 'success');
-    navigation.navigate('OtpVerification', { phone: digits });
-  } catch (error) {
-    showToast(
-      error?.response?.data?.message || 'Something went wrong',
-      'error'
-    );
-  }
+            let res = await requestOtp(digits);
+            showToast('OTP sent successfully', 'success');
+            navigation.navigate('OtpVerification', { phone: digits });
+        } catch (error) {
+
+            console.log("error?.response?.data?.message :", error)
+            showToast(
+                error?.response?.data?.message || 'Something went wrong',
+                'error'
+            );
+        }
     };
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.pageBackground} />
-
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Pressable

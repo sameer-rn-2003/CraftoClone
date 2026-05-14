@@ -11,6 +11,8 @@ import {
     Dimensions,
     Image,
     Keyboard,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -863,6 +865,7 @@ const EditorScreen = ({ navigation, route }) => {
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
     const [isTemplateMuted, setIsTemplateMuted] = useState(true);
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
@@ -889,6 +892,18 @@ const EditorScreen = ({ navigation, route }) => {
             })();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const onShow = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+        const onHide = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+        return () => {
+            onShow.remove();
+            onHide.remove();
+        };
     }, []);
 
     const loadSubscriptionPlans = useCallback(async () => {
@@ -1044,11 +1059,15 @@ const EditorScreen = ({ navigation, route }) => {
         handlePremiumDetailsSave,
     ]);
 
-    const shouldCollapsePoster = false;
     const isTextTabActive = activeTab === 'text';
+    const isDetailsTabActive = activeTab === 'details';
+    const shouldCollapsePoster = isKeyboardVisible && (isTextTabActive || isDetailsTabActive);
 
     return (
-        <>
+        <KeyboardAvoidingView
+            style={s.safeArea}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}>
             <View style={s.header}>
                 <Pressable
                     style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
@@ -1104,31 +1123,33 @@ const EditorScreen = ({ navigation, route }) => {
             </View>
 
             {/* ── Premium Tab bar ─────────────────────── */}
-            <View style={s.tabBarWrapper}>
-                <View style={s.tabBar}>
-                    {TABS.map(tab => {
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <Pressable
-                                key={tab.id}
-                                style={[s.tab, isActive && s.tabActive]}
-                                onPress={() => handleTabPress(tab.id)}>
-                                <MaterialCommunityIcons
-                                    name={tab.icon}
-                                    style={[s.tabIcon, isActive && s.tabIconActive]}
-                                />
-                                <Text style={[s.tabLabel, isActive && s.tabLabelActive]}>
-                                    {t(tab.labelKey)}
-                                </Text>
-                                {isActive && <View style={s.tabIndicator} />}
-                                {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
-                                    <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
-                                )}
-                            </Pressable>
-                        );
-                    })}
+            {!isKeyboardVisible && (
+                <View style={s.tabBarWrapper}>
+                    <View style={s.tabBar}>
+                        {TABS.map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <Pressable
+                                    key={tab.id}
+                                    style={[s.tab, isActive && s.tabActive]}
+                                    onPress={() => handleTabPress(tab.id)}>
+                                    <MaterialCommunityIcons
+                                        name={tab.icon}
+                                        style={[s.tabIcon, isActive && s.tabIconActive]}
+                                    />
+                                    <Text style={[s.tabLabel, isActive && s.tabLabelActive]}>
+                                        {t(tab.labelKey)}
+                                    </Text>
+                                    {isActive && <View style={s.tabIndicator} />}
+                                    {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
+                                        <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
+                                    )}
+                                </Pressable>
+                            );
+                        })}
+                    </View>
                 </View>
-            </View>
+            )}
 
             {/* ── Panel ────────────────────────────────── */}
             <View style={s.panel}>
@@ -1147,7 +1168,7 @@ const EditorScreen = ({ navigation, route }) => {
                 submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
             />
-        </>
+        </KeyboardAvoidingView>
     );
 };
 
