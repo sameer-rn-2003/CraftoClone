@@ -861,6 +861,10 @@ const HomeScreen = ({ navigation }) => {
         setSearch(text);
     }, []);
 
+    const handleCreatePress = useCallback(() => {
+        navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
+    }, [navigation]);
+
     const loadMore = useCallback(() => {
         if (!hasLoadedOnce || !templates.length || !hasMore || isInitialLoading || isLoadingMore) return;
 
@@ -1117,11 +1121,10 @@ console.log("reelsData", reelsData);
                 end={{ x: 0.5, y: 1 }}
                 style={styles.staticHeader}>
 
-                {/* FIX 3: headerRow with flex searchBar so logout icon has room */}
+                {/* Header actions: search, create, profile */}
                 <View style={styles.headerRow}>
                     <View style={styles.searchBar}>
                         <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
-                        {/* FIX 3: flex:1 on TextInput + placeholderTextColor so placeholder is visible */}
                         <TextInput
                             placeholder={t('home.searchPlaceholder')}
                             style={styles.searchInput}
@@ -1131,9 +1134,17 @@ console.log("reelsData", reelsData);
                         />
                     </View>
 
-                    {/* Logout button — tap shows confirmation alert */}
                     <Pressable
-                        style={styles.logoutBtn}
+                        style={styles.createBtn}
+                        onPress={handleCreatePress}>
+                        <MaterialCommunityIcons name="plus" style={styles.createIcon} />
+                        <Text style={styles.createText}>
+                            {t('home.heroTitle.create', { defaultValue: 'Create' })}
+                        </Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={styles.profileBtn}
                         onPress={() =>
                             Alert.alert(
                                 'Logout',
@@ -1144,7 +1155,11 @@ console.log("reelsData", reelsData);
                                 ],
                             )
                         }>
-                        <MaterialCommunityIcons name="logout" style={styles.logoutIcon} />
+                        {userPhoto ? (
+                            <Image source={{ uri: userPhoto }} style={styles.profilePhoto} resizeMode="cover" />
+                        ) : (
+                            <MaterialCommunityIcons name="account" style={styles.profileIcon} />
+                        )}
                     </Pressable>
                 </View>
 
@@ -1416,7 +1431,7 @@ console.log("reelsData", reelsData);
 };
 
 const styles = StyleSheet.create({
-    // FIX 3: headerRow — flex row; searchBar gets flex:1 so logout icon isn't squeezed out
+    // Header row: search > create > profile
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1424,21 +1439,54 @@ const styles = StyleSheet.create({
         gap: widthPixel(10),
     },
 
-    logoutBtn: {
+    createBtn: {
+        flexShrink: 0,
+        height: heightPixel(44),
+        borderRadius: widthPixel(22),
+        paddingHorizontal: widthPixel(12),
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: widthPixel(4),
+        borderWidth: widthPixel(1),
+        borderColor: '#A7C0D3',
+    },
+
+    createIcon: {
+        fontSize: widthPixel(17),
+        color: COLORS.primary,
+    },
+
+    createText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.primary,
+        includeFontPadding: false,
+    },
+
+    profileBtn: {
         flexShrink: 0,
         width: heightPixel(44),
         height: heightPixel(44),
-        borderRadius: widthPixel(22),
+        borderRadius: heightPixel(22),
         backgroundColor: '#FFFFFF',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: widthPixel(1),
         borderColor: '#A7C0D3',
+        overflow: 'hidden',
     },
 
-    logoutIcon: {
-        fontSize: widthPixel(20),
-        color: '#E53935',
+    profilePhoto: {
+        width: '100%',
+        height: '100%',
+        borderRadius: heightPixel(22),
+    },
+
+    profileIcon: {
+        fontSize: widthPixel(22),
+        color: '#5E7690',
     },
 
     staticHeader: {

@@ -60,7 +60,8 @@ const AppTextInput = ({
         outputRange: [0, 0.25],
     });
 
-    const isEditable = rest.editable !== false && !locked;
+    // const isEditable = rest.editable !== false && !locked;
+    const isEditable = locked ? false : true;
 
     return (
         <View style={[styles.container, style]}>
@@ -93,21 +94,31 @@ const AppTextInput = ({
                     elevation: isFocused ? 4 : 0,
                 },
             ]}>
-                <TextInput
-                    style={[styles.input, multiline && styles.multiline, locked && styles.inputLocked, inputStyle]}
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    placeholderTextColor={COLORS.textMuted}
-                    onFocus={handleFocus}
-                    onBlur={handleBlur}
-                    multiline={multiline}
-                    maxLength={maxLength}
-                    keyboardType={keyboardType}
-                    selectionColor={COLORS.primary}
-                    {...rest}
-                    editable={isEditable}
-                />
+           <TextInput
+    {...rest}
+    style={[
+        styles.input,
+        multiline && styles.multiline,
+        locked && styles.inputLocked,
+        inputStyle,
+    ]}
+    value={value}
+    onChangeText={onChangeText}
+    placeholder={placeholder}
+    placeholderTextColor={COLORS.textMuted}
+    onFocus={handleFocus}
+    onBlur={handleBlur}
+    multiline={multiline}
+    maxLength={maxLength}
+    keyboardType={keyboardType}
+    selectionColor={COLORS.primary}
+    editable={!locked}
+    autoCorrect={false}
+    autoCapitalize="none"
+    spellCheck={false}          // ← ADD THIS
+    textContentType="none"      // ← ADD THIS (iOS)
+    importantForAutofill="no"   // ← ADD THIS (Android)
+/>
                 {locked && (
                     <>
                         <Pressable style={styles.lockTouchOverlay} onPress={onLockedPress} />

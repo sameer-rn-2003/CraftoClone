@@ -11,6 +11,8 @@ import {
     Dimensions,
     Image,
     Keyboard,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -22,7 +24,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
-    setUserName, setUserMessage,
+    setUserName, setUserMessage, setPremiumStatus, setPhotoPosition,
     setNameColor, setMessageColor,
     setNameFontSize, setMessageFontSize,
     setNameBold, setNameItalic,
@@ -353,6 +355,10 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
         }
         action();
     };
+    const handleNameChange = useCallback(
+    v => dispatch(setUserName(v)),
+    [dispatch]
+);
 
     return (
         <ScrollView
@@ -382,7 +388,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
                         <AppTextInput
                             label={t('editor.text.name.label')}
                             value={p.userName}
-                            onChangeText={v => dispatch(setUserName(v))}
+                          onChangeText={handleNameChange}
                             placeholder={t('editor.text.name.placeholder')}
                             maxLength={40}
                             returnKeyType="done"
@@ -534,27 +540,6 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
                 </View>
             </View>
         </ScrollView>
-    );
-}, (prevProps, nextProps) => {
-    const p1 = prevProps.p;
-    const p2 = nextProps.p;
-
-    return (
-        p1.isPremium === p2.isPremium &&
-        p1.showName === p2.showName &&
-        p1.userName === p2.userName &&
-        p1.nameColor === p2.nameColor &&
-        p1.nameFontSize === p2.nameFontSize &&
-        p1.nameBold === p2.nameBold &&
-        p1.nameItalic === p2.nameItalic &&
-        p1.showMessage === p2.showMessage &&
-        p1.userMessage === p2.userMessage &&
-        p1.messageColor === p2.messageColor &&
-        p1.messageFontSize === p2.messageFontSize &&
-        p1.messageBold === p2.messageBold &&
-        p1.messageItalic === p2.messageItalic &&
-        p1.textAlign === p2.textAlign &&
-        p1.textShadow === p2.textShadow
     );
 });
 
@@ -872,22 +857,51 @@ const EditorScreen = ({ navigation, route }) => {
     const previewWidth = canvasSize.width * previewScale;
     const previewHeight = canvasSize.height * previewScale;
 
-    // FIX 1: When navigating from a non-first reel, ensure the userPhoto from
-    // route params is synced back to Redux so PosterPreview always has it.
-    // Also falls back to stored profile if Redux photo is somehow missing.
+    // Sync all user profile data (userPhoto, userName, userMessage, isPremium)
+    // from route params or persistent storage so PosterPreview has the latest data.
+    // Falls back to default placeholder text when no data exists.
     useEffect(() => {
         const routeUserPhoto = route?.params?.userPhoto;
+        const routeUserName = route?.params?.userName;
+        const routeUserMessage = route?.params?.userMessage;
+
         if (routeUserPhoto && routeUserPhoto !== p.userPhoto) {
             dispatch(setUserPhoto(routeUserPhoto));
-        } else if (!p.userPhoto) {
-            // Safety net: reload from persistent storage
-            (async () => {
-                const stored = await getUserProfile();
-                if (stored?.imageUri) {
-                    dispatch(setUserPhoto(stored.imageUri));
-                }
-            })();
         }
+
+        if (routeUserName && routeUserName !== p.userName) {
+            dispatch(setUserName(routeUserName));
+        }
+
+        if (routeUserMessage && routeUserMessage !== p.userMessage) {
+            dispatch(setUserMessage(routeUserMessage));
+        }
+
+        // Safety net: reload from persistent storage if any field is missing,
+        // or set default placeholder text when nothing exists.
+        (async () => {
+            const stored = await getUserProfile();
+            if (!p.userPhoto && stored?.imageUri) {
+                dispatch(setUserPhoto(stored.imageUri));
+            }
+            if (!p.userName) {
+                if (stored?.name) {
+                    dispatch(setUserName(stored.name));
+                } else {
+                    dispatch(setUserName('Your Name'));
+                }
+            }
+            if (!p.userMessage) {
+                if (stored?.message) {
+                    dispatch(setUserMessage(stored.message));
+                } else {
+                    dispatch(setUserMessage('Your Message'));
+                }
+            }
+            if (stored?.isPremium !== undefined && stored.isPremium !== p.isPremium) {
+                dispatch(setPremiumStatus(!!stored.isPremium));
+            }
+        })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -954,9 +968,22 @@ const EditorScreen = ({ navigation, route }) => {
         const uri = await pickImage();
         if (uri) {
             await mergeUserProfile({ imageUri: uri });
+            // Center the photo on the poster canvas by computing offset from
+            // the template's photoFrame center to the canvas center.
+            const frame = p.selectedTemplate?.photoFrame;
+            if (frame && frame.width && frame.height) {
+                const frameCenterX = frame.x + frame.width / 2;
+                const frameCenterY = frame.y + frame.height / 2;
+                const canvasCenterX = canvasSize.width / 2;
+                const canvasCenterY = canvasSize.height / 2;
+                dispatch(setPhotoPosition({
+                    x: canvasCenterX - frameCenterX,
+                    y: canvasCenterY - frameCenterY,
+                }));
+            }
         }
         return uri;
-    }, [pickImage]);
+    }, [pickImage, p.selectedTemplate, canvasSize, dispatch]);
 
     const handlePreview = useCallback(() => {
         if (!p.userPhoto) {
@@ -1049,6 +1076,11 @@ const EditorScreen = ({ navigation, route }) => {
 
     return (
         <>
+         <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+>
             <View style={s.header}>
                 <Pressable
                     style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
@@ -1136,6 +1168,8 @@ const EditorScreen = ({ navigation, route }) => {
                     {renderPanel()}
                 </View>
             </View>
+
+            </KeyboardAvoidingView>
 
             <SubscriptionModal
                 visible={isSubscriptionVisible}

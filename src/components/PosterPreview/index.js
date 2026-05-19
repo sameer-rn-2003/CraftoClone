@@ -45,7 +45,6 @@ const normalizeInteractionScale = interactionScale =>
 
 const getScaledGestureDelta = (gesture, interactionScale = 1) => {
     const scale = normalizeInteractionScale(interactionScale);
-
     return {
         x: gesture.dx / scale,
         y: gesture.dy / scale,
@@ -54,6 +53,28 @@ const getScaledGestureDelta = (gesture, interactionScale = 1) => {
 
 const MIN_TEXT_SCALE = 0.25;
 const MAX_TEXT_SCALE = 3.0;
+
+// ─── Fallback text field factories ────────────────────────────────
+// Used when a template has no textFields defined (most reel/video templates).
+// Positions are expressed as fractions of canvasSize so they work at any resolution.
+
+const makeFallbackNameField = canvasSize => ({
+    y: Math.round(canvasSize.height * 0.60),
+    x: 20,
+    fieldWidth: canvasSize.width - 40,
+    align: 'center',
+    fontSize: 28,
+});
+
+const makeFallbackMessageField = canvasSize => ({
+    y: Math.round(canvasSize.height * 0.70),
+    x: 20,
+    fieldWidth: canvasSize.width - 40,
+    align: 'center',
+    fontSize: 18,
+});
+
+// ─── Background patterns ──────────────────────────────────────────
 
 const DiagonalPattern = ({ color, canvasSize }) => (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -116,6 +137,8 @@ const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
         default: return null;
     }
 };
+
+// ─── Photo animation ──────────────────────────────────────────────
 
 const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMetrics = {}) => {
     const frameWidth = Number(frameMetrics?.width) || 0;
@@ -243,16 +266,8 @@ const usePhotoAnimationStyle = ({
 
         const animation = config.loop
             ? Animated.loop(Animated.sequence([
-                Animated.timing(progress, {
-                    toValue: 1,
-                    duration,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(progress, {
-                    toValue: 0,
-                    duration,
-                    useNativeDriver: true,
-                }),
+                Animated.timing(progress, { toValue: 1, duration, useNativeDriver: true }),
+                Animated.timing(progress, { toValue: 0, duration, useNativeDriver: true }),
             ]))
             : easing;
 
@@ -270,42 +285,12 @@ const usePhotoAnimationStyle = ({
             outputRange: [config.from?.opacity ?? 1, config.to?.opacity ?? 1],
         }),
         transform: [
-            {
-                translateX: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.translateX ?? 0, config.to?.translateX ?? 0],
-                }),
-            },
-            {
-                translateY: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.translateY ?? 0, config.to?.translateY ?? 0],
-                }),
-            },
-            {
-                scale: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.scale ?? 1, config.to?.scale ?? 1],
-                }),
-            },
-            {
-                rotate: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.rotate ?? '0deg', config.to?.rotate ?? '0deg'],
-                }),
-            },
-            {
-                rotateX: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.rotateX ?? '0deg', config.to?.rotateX ?? '0deg'],
-                }),
-            },
-            {
-                rotateY: progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [config.from?.rotateY ?? '0deg', config.to?.rotateY ?? '0deg'],
-                }),
-            },
+            { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.translateX ?? 0, config.to?.translateX ?? 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.translateY ?? 0, config.to?.translateY ?? 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.scale ?? 1, config.to?.scale ?? 1] }) },
+            { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.rotate ?? '0deg', config.to?.rotate ?? '0deg'] }) },
+            { rotateX: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.rotateX ?? '0deg', config.to?.rotateX ?? '0deg'] }) },
+            { rotateY: progress.interpolate({ inputRange: [0, 1], outputRange: [config.from?.rotateY ?? '0deg', config.to?.rotateY ?? '0deg'] }) },
         ],
     } : {
         opacity: 1,
@@ -314,11 +299,7 @@ const usePhotoAnimationStyle = ({
 };
 
 const AnimatedPhotoContent = ({ photoUri, resizeMode = 'cover' }) => {
-
-    if (!photoUri) {
-        return null;
-    }
-
+    if (!photoUri) return null;
     return (
         <View style={styles.animatedPhotoContent}>
             <Image key={photoUri} source={{ uri: photoUri }} style={styles.photo} resizeMode={resizeMode} />
@@ -326,15 +307,11 @@ const AnimatedPhotoContent = ({ photoUri, resizeMode = 'cover' }) => {
     );
 };
 
-const getCenteredFallbackPhotoFrameStyle = ({
-    canvasSize = POSTER_SIZE,
-    photoShape = 'template',
-}) => {
+const getCenteredFallbackPhotoFrameStyle = ({ canvasSize = POSTER_SIZE, photoShape = 'template' }) => {
     const size = Math.max(96, Math.min(canvasSize.width, canvasSize.height) * 0.28);
     const left = (canvasSize.width - size) / 2;
     const top = (canvasSize.height - size) / 2;
     const templateRadius = size / 2;
-
     return {
         left,
         top,
@@ -367,17 +344,14 @@ const DraggablePhoto = ({
     const pan = useRef(new Animated.ValueXY({ x: photoPosition.x, y: photoPosition.y })).current;
     const scaleAnim = useRef(new Animated.Value(photoScale)).current;
 
-    // Committed "at rest" values
     const committed = useRef({ x: photoPosition.x, y: photoPosition.y });
     const committedScale = useRef(photoScale);
 
-    // Pinch state — mutated via refs so no re-renders needed
     const isPinching = useRef(false);
-    const initPinchDist = useRef(null);   // null = pinch not active
+    const initPinchDist = useRef(null);
     const initPinchScale = useRef(photoScale);
-    const localScale = useRef(photoScale); // tracks value during active pinch
+    const localScale = useRef(photoScale);
 
-    // ── Sync from external photoPosition changes ──────────────────────
     const prevPhotoPosition = useRef(photoPosition);
     if (
         (prevPhotoPosition.current.x !== photoPosition.x || prevPhotoPosition.current.y !== photoPosition.y)
@@ -389,8 +363,6 @@ const DraggablePhoto = ({
         pan.setValue({ x: photoPosition.x, y: photoPosition.y });
     }
 
-    // ── Sync from external photoScale changes (preset buttons) ────────
-    // useRef values don't update on re-render, so we sync manually.
     const prevPhotoScale = useRef(photoScale);
     if (prevPhotoScale.current !== photoScale && !isPinching.current) {
         prevPhotoScale.current = photoScale;
@@ -405,8 +377,6 @@ const DraggablePhoto = ({
             onMoveShouldSetPanResponder: () => true,
 
             onPanResponderGrant: () => {
-                // Grant fires with 1 finger only — always start in drag mode.
-                // If a second finger arrives we'll switch to pinch in onMove.
                 isPinching.current = false;
                 initPinchDist.current = null;
                 pan.setOffset(committed.current);
@@ -415,31 +385,22 @@ const DraggablePhoto = ({
 
             onPanResponderMove: (evt, gesture) => {
                 const touches = evt.nativeEvent.touches;
-
                 if (touches.length >= 2) {
-                    if (!allowPinchScale) {
-                        return;
-                    }
+                    if (!allowPinchScale) return;
                     if (!initPinchDist.current) {
-                        // ── Second finger just appeared: INITIALISE PINCH ──
                         isPinching.current = true;
                         initPinchDist.current = getTouchDistance(touches);
                         initPinchScale.current = committedScale.current;
                         localScale.current = committedScale.current;
-                        // Abandon the drag offset we started in grant
                         pan.flattenOffset();
                     } else {
-                        // ── Continuing pinch: update scale live ────────────
                         const dist = getTouchDistance(touches);
                         const ratio = dist / initPinchDist.current;
-                        const newScale = Math.min(3.0, Math.max(0.25,
-                            initPinchScale.current * ratio,
-                        ));
+                        const newScale = Math.min(3.0, Math.max(0.25, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
                     }
                 } else if (!isPinching.current) {
-                    // ── Single-finger drag ─────────────────────────────────
                     const delta = getScaledGestureDelta(gesture, interactionScale);
                     pan.setValue(delta);
                 }
@@ -447,7 +408,6 @@ const DraggablePhoto = ({
 
             onPanResponderRelease: (_, gesture) => {
                 if (isPinching.current) {
-                    // Use localScale ref — reliable, no async needed
                     committedScale.current = localScale.current;
                     dispatch(setPhotoScale(localScale.current));
                     isPinching.current = false;
@@ -472,16 +432,17 @@ const DraggablePhoto = ({
         }),
     ).current;
 
-
     const frameBaseStyle = frameStyle
         ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
         ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
+
     const photoAnimationStyle = usePhotoAnimationStyle({
         animationId: photoAnimation,
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
     });
+
     return (
         <Animated.View
             style={[
@@ -489,9 +450,6 @@ const DraggablePhoto = ({
                 {
                     ...frameBaseStyle,
                     opacity: photoAnimationStyle.opacity,
-                    // scale + translate are both in transform — this keeps the
-                    // pinch centered, the drag offset applied, and the entry
-                    // animation travelling across the poster canvas.
                     transform: [
                         ...photoAnimationStyle.transform,
                         { scale: scaleAnim },
@@ -502,16 +460,12 @@ const DraggablePhoto = ({
             {...panResponder.panHandlers}>
 
             {photoUri
-                ? <AnimatedPhotoContent
-                    photoUri={photoUri}
-                    resizeMode={resizeMode}
-                />
+                ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                     <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
                 </View>}
 
-            {/* Gesture hint badge */}
             <View style={[styles.dragHandle, { borderColor: accentColor + 'CC' }]} pointerEvents="none">
                 <Text style={styles.dragHandleIcon}>⊕</Text>
             </View>
@@ -534,12 +488,14 @@ const StaticPhoto = ({
     const frameBaseStyle = frameStyle
         ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
         ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
+
     const photoAnimationStyle = usePhotoAnimationStyle({
         animationId: photoAnimation,
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
     });
+
     return (
         <Animated.View
             style={[
@@ -557,10 +513,7 @@ const StaticPhoto = ({
             ]}
             pointerEvents="none">
             {photoUri
-                ? <AnimatedPhotoContent
-                    photoUri={photoUri}
-                    resizeMode={resizeMode}
-                />
+                ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
                 : <View style={styles.photoPlaceholder}>
                     <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
                 </View>}
@@ -644,7 +597,6 @@ const getConfigPhotoFrameStyle = ({ layer, layerStyle, photoShape = 'template' }
         : Number.isFinite(Number(layer?.border_width))
             ? Number(layer.border_width)
             : 0;
-
     return {
         ...layerStyle,
         borderRadius: resolvePhotoFrameRadius(photoShape, templateRadius),
@@ -711,11 +663,8 @@ const DraggableText = ({
 
             onPanResponderMove: (evt, gesture) => {
                 const touches = evt.nativeEvent.touches;
-
                 if (touches.length >= 2) {
-                    if (!allowPinchScale) {
-                        return;
-                    }
+                    if (!allowPinchScale) return;
                     if (!initPinchDist.current) {
                         isPinching.current = true;
                         initPinchDist.current = getTouchDistance(touches);
@@ -725,10 +674,7 @@ const DraggableText = ({
                     } else {
                         const dist = getTouchDistance(touches);
                         const ratio = dist / initPinchDist.current;
-                        const newScale = Math.min(MAX_TEXT_SCALE, Math.max(
-                            MIN_TEXT_SCALE,
-                            initPinchScale.current * ratio,
-                        ));
+                        const newScale = Math.min(MAX_TEXT_SCALE, Math.max(MIN_TEXT_SCALE, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
                     }
@@ -810,6 +756,8 @@ const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2
 const StaticNameText = props => <StaticText {...props} numberOfLines={1} />;
 const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
+// ─── PosterPreview ────────────────────────────────────────────────
+
 const PosterPreview = ({
     posterRef,
     interactive = false,
@@ -822,7 +770,6 @@ const PosterPreview = ({
     interactionScale = 1,
 }) => {
     const p = useSelector(s => s.poster);
-    // console.log('PosterPreview - selectedTemplate:', p);
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
@@ -846,91 +793,87 @@ const PosterPreview = ({
     const templateHasVideo = hasTemplateVideo(selectedTemplate);
     const hasTemplateMedia = !!templateImage || templateHasVideo;
 
-
     const accentColor = p.accentColorOverride || templateAccent || COLORS.primary;
-    const nameField = textFields?.find(f => f.key === 'name');
-    const messageField = textFields?.find(f => f.key === 'message');
 
+    // ── Text field resolution ────────────────────────────────────
+    // If the template has no textFields (most reel/video templates), we create
+    // sensible fallback positions so the user's name & message always appear
+    // on the canvas and remain draggable.
+    const nameField = textFields?.find(f => f.key === 'name') ?? makeFallbackNameField(canvasSize);
+    const messageField = textFields?.find(f => f.key === 'message') ?? makeFallbackMessageField(canvasSize);
+
+    // Center the name field on the poster so it's always visible and draggable
+    const centeredNameField = {
+        ...nameField,
+        y: nameField.y,
+        x: 20,
+        fieldWidth: canvasSize.width - 40,
+        align: 'center',
+    };
+
+    // ── Text styles ──────────────────────────────────────────────
     const nameFontWeight = p.nameBold ? 'bold' : 'normal';
     const nameFontStyle = p.nameItalic ? 'italic' : 'normal';
     const msgFontWeight = p.messageBold ? 'bold' : 'normal';
     const msgFontStyle = p.messageItalic ? 'italic' : 'normal';
     const shadowStyle = buildTextShadow(p.textShadow);
-    const nameTextStyle = nameField ? {
-        fontSize: p.nameFontSize ?? nameField.fontSize,
+
+    const nameTextStyle = {
+        fontSize: p.nameFontSize ?? nameField.fontSize ?? 28,
         fontWeight: nameFontWeight,
         fontStyle: nameFontStyle,
-        color: p.nameColor ?? nameField.color,
-        textAlign: nameField.x !== undefined ? (nameField.align || 'left') : p.textAlign,
+        color: p.nameColor ?? '#FFFFFF',
+        textAlign: p.textAlign ?? 'center',
         ...shadowStyle,
-    } : null;
-    const messageTextStyle = messageField ? {
-        fontSize: p.messageFontSize ?? messageField.fontSize,
+    };
+
+    const messageTextStyle = {
+        fontSize: p.messageFontSize ?? messageField.fontSize ?? 18,
         fontWeight: msgFontWeight,
         fontStyle: msgFontStyle,
-        color: p.messageColor ?? messageField.color,
-        textAlign: messageField.x !== undefined ? (messageField.align || 'left') : p.textAlign,
+        color: p.messageColor ?? '#FFFFFF',
+        textAlign: p.textAlign ?? 'center',
         ...shadowStyle,
-    } : null;
+    };
+
+    // ── Config-driven text layer renderer ────────────────────────
     const renderConfigTextLayer = ({ layer, resolvedText }) => {
         const editableRole = getTemplateEditableTextRole(layer);
-
-        if (!editableRole) {
-            return undefined;
-        }
-
-        if (editableRole === 'name' && !p.showName) {
-            return null;
-        }
-
-        if (editableRole === 'message' && !p.showMessage) {
-            return null;
-        }
+        if (!editableRole) return undefined;
+        if (editableRole === 'name' && !p.showName) return null;
+        if (editableRole === 'message' && !p.showMessage) return null;
 
         const field = getConfigTextField(layer);
         const text = editableRole === 'name'
-            ? (p.userName || resolvedText || '')
-            : (p.userMessage || resolvedText || '');
-        const layerFontSize = Number.isFinite(Number(layer?.fontSize))
-            ? Number(layer.fontSize)
-            : 18;
+            ? (p.userName || resolvedText || 'Your Name')
+            : (p.userMessage || resolvedText || 'Your Message');
+        const layerFontSize = Number.isFinite(Number(layer?.fontSize)) ? Number(layer.fontSize) : 18;
         const textStyle = {
-            fontSize: editableRole === 'name'
-                ? (p.nameFontSize ?? layerFontSize)
-                : (p.messageFontSize ?? layerFontSize),
-            fontWeight: editableRole === 'name'
-                ? nameFontWeight
-                : msgFontWeight,
-            fontStyle: editableRole === 'name'
-                ? nameFontStyle
-                : msgFontStyle,
-            color: editableRole === 'name'
-                ? (p.nameColor ?? layer?.color ?? '#FFFFFF')
-                : (p.messageColor ?? layer?.color ?? '#FFFFFF'),
-            textAlign: field.x !== undefined
-                ? (layer?.align || 'left')
-                : p.textAlign,
+            fontSize: editableRole === 'name' ? (p.nameFontSize ?? layerFontSize) : (p.messageFontSize ?? layerFontSize),
+            fontWeight: editableRole === 'name' ? nameFontWeight : msgFontWeight,
+            fontStyle: editableRole === 'name' ? nameFontStyle : msgFontStyle,
+            color: editableRole === 'name' ? (p.nameColor ?? '#FFFFFF') : (p.messageColor ?? '#FFFFFF'),
+            textAlign: field.x !== undefined ? (layer?.align || 'left') : p.textAlign,
             fontFamily: layer?.fontFamily,
-            letterSpacing: Number.isFinite(Number(layer?.letterSpacing))
-                ? Number(layer.letterSpacing)
-                : undefined,
-            lineHeight: Number.isFinite(Number(layer?.lineHeight))
-                ? Number(layer.lineHeight)
-                : undefined,
-            opacity: Number.isFinite(Number(layer?.opacity))
-                ? Number(layer.opacity)
-                : 1,
+            letterSpacing: Number.isFinite(Number(layer?.letterSpacing)) ? Number(layer.letterSpacing) : undefined,
+            lineHeight: Number.isFinite(Number(layer?.lineHeight)) ? Number(layer.lineHeight) : undefined,
+            opacity: Number.isFinite(Number(layer?.opacity)) ? Number(layer.opacity) : 1,
             ...shadowStyle,
         };
 
-        if (!text) {
-            return null;
-        }
+        if (!text) return undefined;
 
         if (editableRole === 'name') {
+            const centeredField = {
+                ...field,
+                y: Math.round(canvasSize.height * 0.60),
+                x: 20,
+                fieldWidth: canvasSize.width - 40,
+                align: 'center',
+            };
             return interactive
                 ? <DraggableNameText
-                    field={field}
+                    field={centeredField}
                     text={text}
                     textStyle={textStyle}
                     textPosition={p.namePosition ?? { x: 0, y: 0 }}
@@ -940,7 +883,7 @@ const PosterPreview = ({
                     allowPinchScale={allowPinchScale}
                     interactionScale={interactionScale} />
                 : <StaticNameText
-                    field={field}
+                    field={centeredField}
                     text={text}
                     textStyle={textStyle}
                     textPosition={p.namePosition ?? { x: 0, y: 0 }}
@@ -965,6 +908,8 @@ const PosterPreview = ({
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                 textScale={p.messageScale ?? 1} />;
     };
+
+    // ── Photo layer ──────────────────────────────────────────────
     const photoLayerNode = (photoFrame || p.userPhoto)
         ? (
             interactive
@@ -990,6 +935,7 @@ const PosterPreview = ({
                     photoScale={p.photoScale ?? 1} />
         )
         : null;
+
     const renderConfigUserPhotoLayer = ({ layer, layerStyle }) => {
         const configPhotoFrameStyle = getConfigPhotoFrameStyle({
             layer,
@@ -997,7 +943,6 @@ const PosterPreview = ({
             photoShape: p.photoShape ?? 'template',
         });
         const resizeMode = layer?.resizeMode ?? 'cover';
-
         return interactive
             ? <DraggablePhoto
                 frameStyle={configPhotoFrameStyle}
@@ -1023,6 +968,11 @@ const PosterPreview = ({
                 resizeMode={resizeMode} />;
     };
 
+    // ── The display text (with guaranteed fallback) ──────────────
+    // Always show "Your Name" / "Your Message" when the user hasn't typed anything.
+    const displayName = p.userName || 'Your Name';
+    const displayMessage = p.userMessage || 'Your Message';
+
     return (
         <View
             ref={posterRef}
@@ -1033,7 +983,7 @@ const PosterPreview = ({
             }]}
             collapsable={false}>
 
-            {/* ── 0. Template Image (optional) ─────────── */}
+            {/* ── 0. Template media (image / video) ── */}
             {hasTemplateMedia ? (
                 <TemplateMedia
                     template={selectedTemplate}
@@ -1046,6 +996,7 @@ const PosterPreview = ({
                 />
             ) : null}
 
+            {/* ── 1. Fallback colour header / left-bar (non-config, no media) ── */}
             {!hasTemplateMedia && !isConfigDriven ? (
                 layout === 'left' ? (
                     <View style={[styles.leftBar, {
@@ -1073,7 +1024,7 @@ const PosterPreview = ({
                 )
             ) : null}
 
-            {/* ── Background overlay (optional) ─────────── */}
+            {/* ── 2. Background overlay ── */}
             {p.bgOverlayColor && (
                 <View
                     pointerEvents="none"
@@ -1084,6 +1035,7 @@ const PosterPreview = ({
                 />
             )}
 
+            {/* ── 3. Photo + text layers ── */}
             {isConfigDriven ? (
                 <ConfiguredTemplateLayers
                     template={selectedTemplate}
@@ -1094,12 +1046,15 @@ const PosterPreview = ({
                 />
             ) : photoLayerNode}
 
-
-            {!isConfigDriven && p.showName && nameField && (
+            {/* ── 4. Name text
+                  Always rendered for non-config templates (including reel/video).
+                  Uses makeFallbackNameField when no textFields in template.
+                  Falls back to "Your Name" when user hasn't typed anything.      ── */}
+            {!isConfigDriven && p.showName && (
                 interactive
                     ? <DraggableNameText
-                        field={nameField}
-                        text={p.userName || nameField.label}
+                        field={centeredNameField}
+                        text={displayName}
                         textStyle={nameTextStyle}
                         textPosition={p.namePosition ?? { x: 0, y: 0 }}
                         textScale={p.nameScale ?? 1}
@@ -1108,19 +1063,20 @@ const PosterPreview = ({
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale} />
                     : <StaticNameText
-                        field={nameField}
-                        text={p.userName || nameField.label}
+                        field={centeredNameField}
+                        text={displayName}
                         textStyle={nameTextStyle}
-                        textPosition={p.namePosition ?? { x: 0, y: 50 }}
+                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
                         textScale={p.nameScale ?? 1} />
             )}
 
-            {/* ── 4. Message (hidden if showMessage=false) ── */}
-            {!isConfigDriven && p.showMessage && messageField && (
+            {/* ── 5. Message text
+                  Same guaranteed-render logic as name above.                     ── */}
+            {!isConfigDriven && p.showMessage && (
                 interactive
                     ? <DraggableMessageText
                         field={messageField}
-                        text={p.userMessage || messageField.label}
+                        text={displayMessage}
                         textStyle={messageTextStyle}
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                         textScale={p.messageScale ?? 1}
@@ -1130,13 +1086,13 @@ const PosterPreview = ({
                         interactionScale={interactionScale} />
                     : <StaticMessageText
                         field={messageField}
-                        text={p.userMessage || messageField.label}
+                        text={displayMessage}
                         textStyle={messageTextStyle}
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                         textScale={p.messageScale ?? 1} />
             )}
 
-            {/* ── 5. Stickers ──────────────────────────── */}
+            {/* ── 6. Stickers ── */}
             {(p.stickers ?? []).map(sticker => (
                 <DraggableSticker
                     key={sticker.id}
@@ -1146,7 +1102,7 @@ const PosterPreview = ({
                 />
             ))}
 
-            {/* ── 6. Footer ─────────────────────────────── */}
+            {/* ── 7. Footer watermark (non-config only) ── */}
             {!isConfigDriven ? (
                 <View style={[styles.footer, {
                     backgroundColor: footerColor,
@@ -1175,12 +1131,11 @@ const styles = StyleSheet.create({
         width: '100%',
         overflow: 'hidden',
     },
-    // Left vertical bar (for layout:'left' templates)
     leftBar: {
         position: 'absolute',
         top: 0,
         left: 0,
-        width: POSTER_SIZE.width * 0.42,  // ~168px
+        width: POSTER_SIZE.width * 0.42,
         height: POSTER_SIZE.height,
         overflow: 'hidden',
     },
@@ -1242,4 +1197,3 @@ const styles = StyleSheet.create({
 });
 
 export default PosterPreview;
-
