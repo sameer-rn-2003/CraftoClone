@@ -340,7 +340,7 @@ const PhotoTab = ({
     );
 };
 // Memoized TextTab to prevent unnecessary re-renders
-const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
+const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, setUserMessageInput, userNameInput, userMessageInput }) => {
     const { t } = useTranslation();
     const nameActive = idx => (p.nameFontSize ?? 26) === SIZE_PRESETS[idx];
     const msgActive = idx => (p.messageFontSize ?? 14) === SIZE_PRESETS[idx];
@@ -355,17 +355,16 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
         }
         action();
     };
-    const handleNameChange = useCallback(
-    v => dispatch(setUserName(v)),
-    [dispatch]
-);
+
 
     return (
-        <ScrollView
+     <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag">
-            <View style={{ paddingBottom: SPACING.xxl }}>
+            keyboardDismissMode="on-drag"
+            contentInsetAdjustmentBehavior="automatic"  // iOS: auto adjust for keyboard
+        >
+            <View style={{ paddingBottom: SPACING.xxxl }}>
 
                 {/* ── SHOW / HIDE NAME ────────────────── */}
                 <View style={s.visibilityRow}>
@@ -387,8 +386,12 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
                     <>
                         <AppTextInput
                             label={t('editor.text.name.label')}
-                            value={p.userName}
-                          onChangeText={handleNameChange}
+                            value={userNameInput}
+                            onChangeText={v => {
+                                console.log('Name input changed:', v);
+                                setUserNameInput(v);
+                                dispatch(setUserName(v));
+                            }}
                             placeholder={t('editor.text.name.placeholder')}
                             maxLength={40}
                             returnKeyType="done"
@@ -450,8 +453,11 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium }) => {
                         <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
                             <AppTextInput
                                 label={t('editor.text.message.label')}
-                                value={p.userMessage}
-                                onChangeText={v => dispatch(setUserMessage(v))}
+                                value={userMessageInput}
+                                onChangeText={v => {
+                                    setUserMessageInput(v);
+                                    dispatch(setUserMessage(v));
+                                }}
                                 placeholder={t('editor.text.message.placeholder')}
                                 multiline
                                 maxLength={100}
@@ -598,10 +604,12 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
     };
 
     return (
-        <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag">
+     <ScrollView
+    showsVerticalScrollIndicator={false}
+    keyboardShouldPersistTaps="handled"
+    keyboardDismissMode="on-drag"
+    contentInsetAdjustmentBehavior="automatic"
+>
             <View style={[s.sectionSlider, locked && s.lockedSection]}>
                 <Pressable
                     style={[s.sectionSliderBtn, activeSection === 'personal' && s.sectionSliderBtnActive]}
@@ -848,6 +856,8 @@ const EditorScreen = ({ navigation, route }) => {
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
     const [isTemplateMuted, setIsTemplateMuted] = useState(true);
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
+    const [userNameInput, setUserNameInput] = useState(p.userName || '');
+    const [userMessageInput, setUserMessageInput] = useState(p.userMessage || '');
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
@@ -857,9 +867,7 @@ const EditorScreen = ({ navigation, route }) => {
     const previewWidth = canvasSize.width * previewScale;
     const previewHeight = canvasSize.height * previewScale;
 
-    // Sync all user profile data (userPhoto, userName, userMessage, isPremium)
-    // from route params or persistent storage so PosterPreview has the latest data.
-    // Falls back to default placeholder text when no data exists.
+    // Sync all user profile data from route params or persistent storage
     useEffect(() => {
         const routeUserPhoto = route?.params?.userPhoto;
         const routeUserName = route?.params?.userName;
@@ -877,8 +885,6 @@ const EditorScreen = ({ navigation, route }) => {
             dispatch(setUserMessage(routeUserMessage));
         }
 
-        // Safety net: reload from persistent storage if any field is missing,
-        // or set default placeholder text when nothing exists.
         (async () => {
             const stored = await getUserProfile();
             if (!p.userPhoto && stored?.imageUri) {
@@ -887,15 +893,19 @@ const EditorScreen = ({ navigation, route }) => {
             if (!p.userName) {
                 if (stored?.name) {
                     dispatch(setUserName(stored.name));
+                    setUserNameInput(stored.name);
                 } else {
                     dispatch(setUserName('Your Name'));
+                    setUserNameInput('Your Name');
                 }
             }
             if (!p.userMessage) {
                 if (stored?.message) {
                     dispatch(setUserMessage(stored.message));
+                    setUserMessageInput(stored.message);
                 } else {
                     dispatch(setUserMessage('Your Message'));
+                    setUserMessageInput('Your Message');
                 }
             }
             if (stored?.isPremium !== undefined && stored.isPremium !== p.isPremium) {
@@ -949,7 +959,6 @@ const EditorScreen = ({ navigation, route }) => {
             if (code === 0 || code === 'PAYMENT_CANCELLED') {
                 return;
             }
-
             console.log('Subscription checkout error', error);
             Alert.alert(
                 'Subscription',
@@ -968,8 +977,6 @@ const EditorScreen = ({ navigation, route }) => {
         const uri = await pickImage();
         if (uri) {
             await mergeUserProfile({ imageUri: uri });
-            // Center the photo on the poster canvas by computing offset from
-            // the template's photoFrame center to the canvas center.
             const frame = p.selectedTemplate?.photoFrame;
             if (frame && frame.width && frame.height) {
                 const frameCenterX = frame.x + frame.width / 2;
@@ -1023,13 +1030,17 @@ const EditorScreen = ({ navigation, route }) => {
     }, [p.premiumProfile]);
 
     const handleTabPress = useCallback((tabId) => {
+        Keyboard.dismiss(); // Dismiss keyboard when switching tabs
         setActiveTab(tabId);
     }, []);
 
     const renderPanel = useCallback(() => {
         switch (activeTab) {
-            case 'photo': return <PhotoTab onPickImage={handlePickProfileImage} pickingImage={pickingImage}
-                userPhoto={p.userPhoto} photoScale={p.photoScale}
+            case 'photo': return <PhotoTab 
+                onPickImage={handlePickProfileImage} 
+                pickingImage={pickingImage}
+                userPhoto={p.userPhoto} 
+                photoScale={p.photoScale}
                 userPhotoAnimation={p.userPhotoAnimation}
                 onScaleChange={scale => dispatch(setPhotoScale(scale))}
                 onAnimationChange={handlePhotoAnimationChange}
@@ -1041,6 +1052,10 @@ const EditorScreen = ({ navigation, route }) => {
                 dispatch={dispatch}
                 onSave={handleTextSave}
                 onUnlockPremium={openSubscriptionModal}
+                setUserNameInput={setUserNameInput}
+                setUserMessageInput={setUserMessageInput}
+                userMessageInput={userMessageInput}
+                userNameInput={userNameInput}
             />;
             case 'details': return <PremiumDetailsTab
                 p={p}
@@ -1075,12 +1090,8 @@ const EditorScreen = ({ navigation, route }) => {
     const isTextTabActive = activeTab === 'text';
 
     return (
-        <>
-         <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
->
+        <View style={{ flex: 1, backgroundColor: EDITOR_COLORS.background }}>
+            {/* ── Fixed Header ─────────────────────── */}
             <View style={s.header}>
                 <Pressable
                     style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
@@ -1100,7 +1111,7 @@ const EditorScreen = ({ navigation, route }) => {
                 </Pressable>
             </View>
 
-            {/* ── Poster preview ─────────────────────── */}
+            {/* ── Poster preview (fixed, not scrollable) ─────────────────────── */}
             <View style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
                 <View style={[s.posterShadowRing, {
                     width: previewWidth + 20,
@@ -1135,7 +1146,7 @@ const EditorScreen = ({ navigation, route }) => {
                 </View>
             </View>
 
-            {/* ── Premium Tab bar ─────────────────────── */}
+            {/* ── Tab bar (fixed) ─────────────────────── */}
             <View style={s.tabBarWrapper}>
                 <View style={s.tabBar}>
                     {TABS.map(tab => {
@@ -1162,13 +1173,17 @@ const EditorScreen = ({ navigation, route }) => {
                 </View>
             </View>
 
-            {/* ── Panel ────────────────────────────────── */}
-            <View style={s.panel}>
-                <View style={s.panelInner}>
-                    {renderPanel()}
+            {/* ── Scrollable Panel with KeyboardAvoidingView ─────────────────────── */}
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            >
+                <View style={s.panel}>
+                    <View style={s.panelInner}>
+                        {renderPanel()}
+                    </View>
                 </View>
-            </View>
-
             </KeyboardAvoidingView>
 
             <SubscriptionModal
@@ -1181,7 +1196,7 @@ const EditorScreen = ({ navigation, route }) => {
                 submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
             />
-        </>
+        </View>
     );
 };
 

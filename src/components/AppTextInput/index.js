@@ -103,7 +103,7 @@ const AppTextInput = ({
         inputStyle,
     ]}
     value={value}
-    onChangeText={onChangeText}
+    onChangeText={(t) => { console.log('Input changed:', t); onChangeText(t); }}
     placeholder={placeholder}
     placeholderTextColor={COLORS.textMuted}
     onFocus={handleFocus}
@@ -114,10 +114,6 @@ const AppTextInput = ({
     selectionColor={COLORS.primary}
     editable={!locked}
     autoCorrect={false}
-    autoCapitalize="none"
-    spellCheck={false}          // ← ADD THIS
-    textContentType="none"      // ← ADD THIS (iOS)
-    importantForAutofill="no"   // ← ADD THIS (Android)
 />
                 {locked && (
                     <>
