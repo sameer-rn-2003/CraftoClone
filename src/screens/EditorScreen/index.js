@@ -358,7 +358,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
 
 
     return (
-     <ScrollView
+        <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
@@ -604,12 +604,12 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
     };
 
     return (
-     <ScrollView
-    showsVerticalScrollIndicator={false}
-    keyboardShouldPersistTaps="handled"
-    keyboardDismissMode="on-drag"
-    contentInsetAdjustmentBehavior="automatic"
->
+        <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentInsetAdjustmentBehavior="automatic"
+        >
             <View style={[s.sectionSlider, locked && s.lockedSection]}>
                 <Pressable
                     style={[s.sectionSliderBtn, activeSection === 'personal' && s.sectionSliderBtnActive]}
@@ -855,6 +855,7 @@ const EditorScreen = ({ navigation, route }) => {
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
     const [isTemplateMuted, setIsTemplateMuted] = useState(true);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
     const [userNameInput, setUserNameInput] = useState(p.userName || '');
     const [userMessageInput, setUserMessageInput] = useState(p.userMessage || '');
@@ -912,7 +913,19 @@ const EditorScreen = ({ navigation, route }) => {
                 dispatch(setPremiumStatus(!!stored.isPremium));
             }
         })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const onShow = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+        const onHide = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+        return () => {
+            onShow.remove();
+            onHide.remove();
+        };
     }, []);
 
     const loadSubscriptionPlans = useCallback(async () => {
@@ -1036,10 +1049,10 @@ const EditorScreen = ({ navigation, route }) => {
 
     const renderPanel = useCallback(() => {
         switch (activeTab) {
-            case 'photo': return <PhotoTab 
-                onPickImage={handlePickProfileImage} 
+            case 'photo': return <PhotoTab
+                onPickImage={handlePickProfileImage}
                 pickingImage={pickingImage}
-                userPhoto={p.userPhoto} 
+                userPhoto={p.userPhoto}
                 photoScale={p.photoScale}
                 userPhotoAnimation={p.userPhotoAnimation}
                 onScaleChange={scale => dispatch(setPhotoScale(scale))}
@@ -1086,117 +1099,126 @@ const EditorScreen = ({ navigation, route }) => {
         handlePremiumDetailsSave,
     ]);
 
-    const shouldCollapsePoster = false;
+    // const shouldCollapsePoster = false;
     const isTextTabActive = activeTab === 'text';
+    const isDetailsTabActive = activeTab === 'details';
+    const shouldCollapsePoster = isKeyboardVisible && (isTextTabActive || isDetailsTabActive);
 
     return (
-        <View style={{ flex: 1, backgroundColor: EDITOR_COLORS.background }}>
-            {/* ── Fixed Header ─────────────────────── */}
-            <View style={s.header}>
-                <Pressable
-                    style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
-                    onPress={isTextTabActive ? handleTextSave : handleBack}>
-                    {isTextTabActive ? (
-                        <Text style={s.headerSaveBtnText}>{t('preview.actions.save')}</Text>
-                    ) : (
-                        <MaterialCommunityIcons name="arrow-left" style={s.backIcon} />
-                    )}
-                </Pressable>
-                <View style={s.headerCenter}>
-                    <Text style={s.headerTitle}>{t('editor.title')}</Text>
+        <KeyboardAvoidingView
+            style={s.safeArea}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}>
+            <View style={{ flex: 1, backgroundColor: EDITOR_COLORS.background }}>
+                {/* ── Fixed Header ─────────────────────── */}
+                <View style={s.header}>
+                    <Pressable
+                        style={[s.backBtn, isTextTabActive && s.headerSaveBtn]}
+                        onPress={isTextTabActive ? handleTextSave : handleBack}>
+                        {isTextTabActive ? (
+                            <Text style={s.headerSaveBtnText}>{t('preview.actions.save')}</Text>
+                        ) : (
+                            <MaterialCommunityIcons name="arrow-left" style={s.backIcon} />
+                        )}
+                    </Pressable>
+                    <View style={s.headerCenter}>
+                        <Text style={s.headerTitle}>{t('editor.title')}</Text>
+                    </View>
+                    <Pressable style={s.previewBtn} onPress={handlePreview}>
+                        <MaterialCommunityIcons name="eye-outline" style={s.previewBtnIcon} />
+                        <Text style={s.previewBtnText}>{t('editor.preview')}</Text>
+                    </Pressable>
                 </View>
-                <Pressable style={s.previewBtn} onPress={handlePreview}>
-                    <MaterialCommunityIcons name="eye-outline" style={s.previewBtnIcon} />
-                    <Text style={s.previewBtnText}>{t('editor.preview')}</Text>
-                </Pressable>
-            </View>
 
-            {/* ── Poster preview (fixed, not scrollable) ─────────────────────── */}
-            <View style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
-                <View style={[s.posterShadowRing, {
-                    width: previewWidth + 20,
-                    height: previewHeight + 20,
-                }, shouldCollapsePoster && s.posterShadowRingCollapsed]} />
-                <View style={[s.posterClip, {
-                    width: previewWidth,
-                    height: previewHeight,
-                }, shouldCollapsePoster && s.posterClipCollapsed]}>
-                    <View style={[s.posterScaler, {
-                        width: canvasSize.width,
-                        height: canvasSize.height,
-                        transform: [{ scale: previewScale }],
-                        marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
-                        marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
-                    }]}>
-                        <PosterPreview
-                            interactive
-                            allowPinchScale={p.isPremium}
-                            interactionScale={previewScale}
-                            mediaMuted={isTemplateMuted}
-                            onMediaAudioStateChange={setTemplateHasAudio}
+                {/* ── Poster preview (fixed, not scrollable) ─────────────────────── */}
+                <View style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
+                    <View style={[s.posterShadowRing, {
+                        width: previewWidth + 20,
+                        height: previewHeight + 20,
+                    }, shouldCollapsePoster && s.posterShadowRingCollapsed]} />
+                    <View style={[s.posterClip, {
+                        width: previewWidth,
+                        height: previewHeight,
+                    }, shouldCollapsePoster && s.posterClipCollapsed]}>
+                        <View style={[s.posterScaler, {
+                            width: canvasSize.width,
+                            height: canvasSize.height,
+                            transform: [{ scale: previewScale }],
+                            marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
+                            marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
+                        }]}>
+                            <PosterPreview
+                                interactive
+                                allowPinchScale={p.isPremium}
+                                interactionScale={previewScale}
+                                mediaMuted={isTemplateMuted}
+                                onMediaAudioStateChange={setTemplateHasAudio}
+                            />
+                        </View>
+                        <MediaAudioToggle
+                            visible={p.selectedTemplate?.mediaType === 'VIDEO'}
+                            muted={isTemplateMuted}
+                            hasAudio={templateHasAudio}
+                            onPress={() => setIsTemplateMuted(prev => !prev)}
+                            style={s.mediaAudioToggle}
                         />
                     </View>
-                    <MediaAudioToggle
-                        visible={p.selectedTemplate?.mediaType === 'VIDEO'}
-                        muted={isTemplateMuted}
-                        hasAudio={templateHasAudio}
-                        onPress={() => setIsTemplateMuted(prev => !prev)}
-                        style={s.mediaAudioToggle}
-                    />
                 </View>
-            </View>
 
-            {/* ── Tab bar (fixed) ─────────────────────── */}
-            <View style={s.tabBarWrapper}>
-                <View style={s.tabBar}>
-                    {TABS.map(tab => {
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <Pressable
-                                key={tab.id}
-                                style={[s.tab, isActive && s.tabActive]}
-                                onPress={() => handleTabPress(tab.id)}>
-                                <MaterialCommunityIcons
-                                    name={tab.icon}
-                                    style={[s.tabIcon, isActive && s.tabIconActive]}
-                                />
-                                <Text style={[s.tabLabel, isActive && s.tabLabelActive]}>
-                                    {t(tab.labelKey)}
-                                </Text>
-                                {isActive && <View style={s.tabIndicator} />}
-                                {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
-                                    <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
-                                )}
-                            </Pressable>
-                        );
-                    })}
-                </View>
-            </View>
-
-            {/* ── Scrollable Panel with KeyboardAvoidingView ─────────────────────── */}
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-            >
-                <View style={s.panel}>
-                    <View style={s.panelInner}>
-                        {renderPanel()}
+                {/* ── Tab bar (fixed) ─────────────────────── */}
+                {!isKeyboardVisible && (
+                <View style={s.tabBarWrapper}>
+                    <View style={s.tabBar}>
+                        {TABS.map(tab => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <Pressable
+                                    key={tab.id}
+                                    style={[s.tab, isActive && s.tabActive]}
+                                    onPress={() => handleTabPress(tab.id)}>
+                                    <MaterialCommunityIcons
+                                        name={tab.icon}
+                                        style={[s.tabIcon, isActive && s.tabIconActive]}
+                                    />
+                                    <Text style={[s.tabLabel, isActive && s.tabLabelActive]}>
+                                        {t(tab.labelKey)}
+                                    </Text>
+                                    {isActive && <View style={s.tabIndicator} />}
+                                    {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
+                                        <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
+                                    )}
+                                </Pressable>
+                            );
+                        })}
                     </View>
                 </View>
-            </KeyboardAvoidingView>
+                )}
 
-            <SubscriptionModal
-                visible={isSubscriptionVisible}
-                onClose={() => {
-                    setSubscriptionVisible(false);
-                }}
-                plans={subscriptionPlans}
-                loading={subscriptionPlansLoading}
-                submittingPlanId={submittingPlanId}
-                onSubscribe={handleSubscribe}
-            />
-        </View>
+                {/* ── Scrollable Panel with KeyboardAvoidingView ─────────────────────── */}
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                >
+                    <View style={s.panel}>
+                        <View style={s.panelInner}>
+                            {renderPanel()}
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+
+                <SubscriptionModal
+                    visible={isSubscriptionVisible}
+                    onClose={() => {
+                        setSubscriptionVisible(false);
+                    }}
+                    plans={subscriptionPlans}
+                    loading={subscriptionPlansLoading}
+                    submittingPlanId={submittingPlanId}
+                    onSubscribe={handleSubscribe}
+                />
+            </View>
+        </KeyboardAvoidingView>
     );
 };
 

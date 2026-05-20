@@ -73,330 +73,330 @@ const isPremiumTemplate = item => {
 };
 
 const resData = {
-  "status": true,
-  "message": "Templates retrieved successfully",
-  "data": {
-    "data": [
-      {
-        "id": "4eed2def-3656-41a2-bf38-e3e9e3d90794",
-        "name": "Diwali",
-        "type": "VIDEO",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://www.w3schools.com/tags/mov_bbb.mp4",
-        "template_key": "templates/video.mp4",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
+    "status": true,
+    "message": "Templates retrieved successfully",
+    "data": {
+        "data": [
             {
-              "x": 140,
-              "y": 200,
-              "id": "user_photo",
-              "src": "{{user_photo}}",
-              "type": "image",
-              "width": 800,
-              "height": 800
+                "id": "4eed2def-3656-41a2-bf38-e3e9e3d90794",
+                "name": "Diwali",
+                "type": "VIDEO",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://www.w3schools.com/tags/mov_bbb.mp4",
+                "template_key": "templates/video.mp4",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 140,
+                            "y": 200,
+                            "id": "user_photo",
+                            "src": "{{user_photo}}",
+                            "type": "image",
+                            "width": 800,
+                            "height": 800
+                        },
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "frame_overlay",
+                            "src": "{{frame_png}}",
+                            "note": "Upload a PNG with transparent centre so the video shows through",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920
+                        },
+                        {
+                            "x": 60,
+                            "y": 1100,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#ffffff",
+                            "width": 960,
+                            "fontSize": 64,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 1200,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#eeeeee",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "user_photo",
+                            "type": "image",
+                            "label": "Your Photo (placed in the frame slot)",
+                            "default": ""
+                        },
+                        {
+                            "key": "frame_png",
+                            "type": "image",
+                            "label": "Frame/Border PNG (transparent centre)",
+                            "default": ""
+                        },
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        }
+                    ]
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 1,
+                "createdAt": "2026-04-20T20:31:54.411Z",
+                "updatedAt": "2026-04-20T20:32:13.937Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 0,
-              "y": 0,
-              "id": "frame_overlay",
-              "src": "{{frame_png}}",
-              "note": "Upload a PNG with transparent centre so the video shows through",
-              "type": "image",
-              "width": 1080,
-              "height": 1920
+                "id": "c910f1a6-3116-48c2-8f91-44943cdfe364",
+                "name": "test video",
+                "type": "VIDEO",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
+                "template_key": "templates/video.mp4",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 140,
+                            "y": 200,
+                            "id": "user_photo",
+                            "src": "{{user_photo}}",
+                            "type": "image",
+                            "width": 800,
+                            "height": 800
+                        },
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "frame_overlay",
+                            "src": "{{frame_png}}",
+                            "note": "Upload a PNG with transparent centre so the video shows through",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920
+                        },
+                        {
+                            "x": 60,
+                            "y": 1100,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#ffffff",
+                            "width": 960,
+                            "fontSize": 64,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 1200,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#eeeeee",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        },
+                        {
+                            "key": "background_image",
+                            "type": "image",
+                            "label": "Background Image",
+                            "default": ""
+                        },
+                        {
+                            "key": "logo_url",
+                            "type": "image",
+                            "label": "Your Logo",
+                            "default": ""
+                        }
+                    ],
+                    "background": "#ffffff"
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 2,
+                "createdAt": "2026-04-20T20:05:54.310Z",
+                "updatedAt": "2026-04-20T20:06:19.257Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 60,
-              "y": 1100,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#ffffff",
-              "width": 960,
-              "fontSize": 64,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
+                "id": "22b307ad-52a8-4d0e-acf8-04675c9b7983",
+                "name": "Diwali",
+                "type": "IMAGE",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "template_key": "templates/demon.jpeg",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "bg",
+                            "src": "{{background_image}}",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920,
+                            "opacity": 1
+                        },
+                        {
+                            "x": 60,
+                            "y": 200,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#111111",
+                            "width": 960,
+                            "fontSize": 72,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 320,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#555555",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        },
+                        {
+                            "x": 440,
+                            "y": 1700,
+                            "id": "logo",
+                            "src": "{{logo_url}}",
+                            "type": "image",
+                            "width": 200,
+                            "height": 100,
+                            "opacity": 0.9
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        },
+                        {
+                            "key": "background_image",
+                            "type": "image",
+                            "label": "Background Image",
+                            "default": ""
+                        },
+                        {
+                            "key": "logo_url",
+                            "type": "image",
+                            "label": "Your Logo",
+                            "default": ""
+                        }
+                    ],
+                    "background": "#ffffff"
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 7,
+                "createdAt": "2026-04-20T19:05:38.184Z",
+                "updatedAt": "2026-04-20T19:47:02.913Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 60,
-              "y": 1200,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#eeeeee",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
+                "id": "734b7507-4f00-4561-912b-a5136abd53b3",
+                "name": "Diwali",
+                "type": "IMAGE",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "template_key": "templates/demon.jpeg",
+                "config_json": null,
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 2,
+                "createdAt": "2026-04-20T19:01:36.882Z",
+                "updatedAt": "2026-04-20T19:06:03.122Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "user_photo",
-              "type": "image",
-              "label": "Your Photo (placed in the frame slot)",
-              "default": ""
-            },
-            {
-              "key": "frame_png",
-              "type": "image",
-              "label": "Frame/Border PNG (transparent centre)",
-              "default": ""
-            },
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            }
-          ]
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 1,
-        "createdAt": "2026-04-20T20:31:54.411Z",
-        "updatedAt": "2026-04-20T20:32:13.937Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "c910f1a6-3116-48c2-8f91-44943cdfe364",
-        "name": "test video",
-        "type": "VIDEO",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
-        "template_key": "templates/video.mp4",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
-            {
-              "x": 140,
-              "y": 200,
-              "id": "user_photo",
-              "src": "{{user_photo}}",
-              "type": "image",
-              "width": 800,
-              "height": 800
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "id": "frame_overlay",
-              "src": "{{frame_png}}",
-              "note": "Upload a PNG with transparent centre so the video shows through",
-              "type": "image",
-              "width": 1080,
-              "height": 1920
-            },
-            {
-              "x": 60,
-              "y": 1100,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#ffffff",
-              "width": 960,
-              "fontSize": 64,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
-            },
-            {
-              "x": 60,
-              "y": 1200,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#eeeeee",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
-            }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            },
-            {
-              "key": "background_image",
-              "type": "image",
-              "label": "Background Image",
-              "default": ""
-            },
-            {
-              "key": "logo_url",
-              "type": "image",
-              "label": "Your Logo",
-              "default": ""
-            }
-          ],
-          "background": "#ffffff"
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 2,
-        "createdAt": "2026-04-20T20:05:54.310Z",
-        "updatedAt": "2026-04-20T20:06:19.257Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "22b307ad-52a8-4d0e-acf8-04675c9b7983",
-        "name": "Diwali",
-        "type": "IMAGE",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "template_key": "templates/demon.jpeg",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
-            {
-              "x": 0,
-              "y": 0,
-              "id": "bg",
-              "src": "{{background_image}}",
-              "type": "image",
-              "width": 1080,
-              "height": 1920,
-              "opacity": 1
-            },
-            {
-              "x": 60,
-              "y": 200,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#111111",
-              "width": 960,
-              "fontSize": 72,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
-            },
-            {
-              "x": 60,
-              "y": 320,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#555555",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
-            },
-            {
-              "x": 440,
-              "y": 1700,
-              "id": "logo",
-              "src": "{{logo_url}}",
-              "type": "image",
-              "width": 200,
-              "height": 100,
-              "opacity": 0.9
-            }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            },
-            {
-              "key": "background_image",
-              "type": "image",
-              "label": "Background Image",
-              "default": ""
-            },
-            {
-              "key": "logo_url",
-              "type": "image",
-              "label": "Your Logo",
-              "default": ""
-            }
-          ],
-          "background": "#ffffff"
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 7,
-        "createdAt": "2026-04-20T19:05:38.184Z",
-        "updatedAt": "2026-04-20T19:47:02.913Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "734b7507-4f00-4561-912b-a5136abd53b3",
-        "name": "Diwali",
-        "type": "IMAGE",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "template_key": "templates/demon.jpeg",
-        "config_json": null,
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 2,
-        "createdAt": "2026-04-20T19:01:36.882Z",
-        "updatedAt": "2026-04-20T19:06:03.122Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      }
-    ],
-    "total": 4,
-    "page": 1,
-    "limit": 20
-  }
+        ],
+        "total": 4,
+        "page": 1,
+        "limit": 20
+    }
 }
 
 
@@ -434,7 +434,7 @@ const mapCategoryIcon = (name) => {
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const ITEM_SPACING = heightPixel(14);
-const REEL_MEDIA_HEIGHT = Math.min(heightPixel(420), SCREEN_H - heightPixel(320));
+const REEL_MEDIA_HEIGHT = Math.min(heightPixel(390), SCREEN_H - heightPixel(320));
 const META_HEIGHT = heightPixel(114);
 const ITEM_HEIGHT = REEL_MEDIA_HEIGHT + META_HEIGHT;
 const CHIP_HEIGHT = heightPixel(34);
@@ -589,7 +589,6 @@ const HomeScreen = ({ navigation }) => {
     const [activeMediaKey, setActiveMediaKey] = useState(null);
     const [categories, setCategories] = useState([]);
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
-    const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
     const [favoriteMap, setFavoriteMap] = useState({});
     const [favoriteLoadingMap, setFavoriteLoadingMap] = useState({});
     const isActionInProgress = isSaving || isSharing;
@@ -714,7 +713,7 @@ const HomeScreen = ({ navigation }) => {
             }
 
             const res = await getTemplatesApi({
-                category_id: categoryId ,
+                category_id: categoryId,
                 language: i18n.language || 'en',
                 search: searchText,
                 page: pageNumber,
@@ -727,7 +726,7 @@ const HomeScreen = ({ navigation }) => {
 
             // const apiData = resData?.data?.data || [];
             // const parsedTotal = Number(resData?.data?.total);
-             const apiData = res.data?.data?.data || [];
+            const apiData = res.data?.data?.data || [];
             const parsedTotal = Number(res.data?.data?.total);
             const hasKnownTotal = Number.isFinite(parsedTotal);
             const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
@@ -861,10 +860,6 @@ const HomeScreen = ({ navigation }) => {
         setSearch(text);
     }, []);
 
-    const handleCreatePress = useCallback(() => {
-        navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
-    }, [navigation]);
-
     const loadMore = useCallback(() => {
         if (!hasLoadedOnce || !templates.length || !hasMore || isInitialLoading || isLoadingMore) return;
 
@@ -895,6 +890,8 @@ const HomeScreen = ({ navigation }) => {
         const hasFavoritesChip = categories.some(item => item.id === FAVORITES_CHIP.id);
         return hasFavoritesChip ? categories : [...categories, FAVORITES_CHIP];
     }, [categories]);
+
+    const previewChips = useMemo(() => chips.slice(0, 6), [chips]);
 
     const reelsData = templates;
     const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
@@ -1110,7 +1107,7 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-console.log("reelsData", reelsData);
+    console.log("reelsData", reelsData);
     return (
         <>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
@@ -1121,10 +1118,11 @@ console.log("reelsData", reelsData);
                 end={{ x: 0.5, y: 1 }}
                 style={styles.staticHeader}>
 
-                {/* Header actions: search, create, profile */}
+                {/* FIX 3: headerRow with flex searchBar so logout icon has room */}
                 <View style={styles.headerRow}>
                     <View style={styles.searchBar}>
                         <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
+                        {/* FIX 3: flex:1 on TextInput + placeholderTextColor so placeholder is visible */}
                         <TextInput
                             placeholder={t('home.searchPlaceholder')}
                             style={styles.searchInput}
@@ -1134,17 +1132,9 @@ console.log("reelsData", reelsData);
                         />
                     </View>
 
+                    {/* Logout button — tap shows confirmation alert */}
                     <Pressable
-                        style={styles.createBtn}
-                        onPress={handleCreatePress}>
-                        <MaterialCommunityIcons name="plus" style={styles.createIcon} />
-                        <Text style={styles.createText}>
-                            {t('home.heroTitle.create', { defaultValue: 'Create' })}
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
-                        style={styles.profileBtn}
+                        style={styles.logoutBtn}
                         onPress={() =>
                             Alert.alert(
                                 'Logout',
@@ -1155,11 +1145,7 @@ console.log("reelsData", reelsData);
                                 ],
                             )
                         }>
-                        {userPhoto ? (
-                            <Image source={{ uri: userPhoto }} style={styles.profilePhoto} resizeMode="cover" />
-                        ) : (
-                            <MaterialCommunityIcons name="account" style={styles.profileIcon} />
-                        )}
+                        <MaterialCommunityIcons name="logout" style={styles.logoutIcon} />
                     </Pressable>
                 </View>
 
@@ -1181,18 +1167,20 @@ console.log("reelsData", reelsData);
                 <ScrollView
                     style={styles.categoryPreviewScroll}
                     contentContainerStyle={styles.chipRow}
-                    scrollEnabled={false}
-                    onContentSizeChange={(contentWidth, contentHeight) => {
-                        setHasOverflowCategories(contentHeight > CATEGORY_PREVIEW_HEIGHT + 2);
-                    }}
-                    showsVerticalScrollIndicator={false}>
-                    {chips?.map(item => {
+                    scrollEnabled={false} showsVerticalScrollIndicator={false}>
+                    {previewChips?.map(item => {
                         const isActive = activeCategory === item.id;
                         return (
                             <Pressable
                                 key={item.id}
                                 style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-                                onPress={() => handleCategoryPress(item)}>
+                                onPress={() => {
+                                    if (item.id === "all") {
+                                        setCategoryModalVisible(true);
+                                        return;
+                                    }
+                                    handleCategoryPress(item);
+                                }}>
                                 {item.icon ? (
                                     <MaterialCommunityIcons
                                         name={item.icon}
@@ -1206,13 +1194,9 @@ console.log("reelsData", reelsData);
                         );
                     })}
                 </ScrollView>
-                {hasOverflowCategories ? (
-                    <Pressable style={styles.seeMoreBtn} onPress={() => setCategoryModalVisible(true)}>
-                        <Text style={styles.seeMoreText}>See more</Text>
-                        <MaterialCommunityIcons name="chevron-down" style={styles.seeMoreIcon} />
-                    </Pressable>
-                ) : null}
+
             </LinearGradient>
+
 
             <FlatList
                 ref={flatListRef}
@@ -1360,6 +1344,9 @@ console.log("reelsData", reelsData);
                 )}
             />
 
+            {/* </View> */}
+
+
             <View style={styles.hiddenCaptureStage} pointerEvents="none">
                 <PosterPreview
                     posterRef={posterRef}
@@ -1420,9 +1407,9 @@ console.log("reelsData", reelsData);
                             </View>
                         </ScrollView>
 
-                        <Pressable style={styles.modalSeeAllBtn} onPress={handleSeeAllPress}>
+                        {/* <Pressable style={styles.modalSeeAllBtn} onPress={handleSeeAllPress}>
                             <Text style={styles.modalSeeAllText}>{t('home.seeAll')}</Text>
-                        </Pressable>
+                        </Pressable> */}
                     </Pressable>
                 </Pressable>
             </Modal>
@@ -1431,7 +1418,7 @@ console.log("reelsData", reelsData);
 };
 
 const styles = StyleSheet.create({
-    // Header row: search > create > profile
+    // FIX 3: headerRow — flex row; searchBar gets flex:1 so logout icon isn't squeezed out
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1439,54 +1426,21 @@ const styles = StyleSheet.create({
         gap: widthPixel(10),
     },
 
-    createBtn: {
-        flexShrink: 0,
-        height: heightPixel(44),
-        borderRadius: widthPixel(22),
-        paddingHorizontal: widthPixel(12),
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: widthPixel(4),
-        borderWidth: widthPixel(1),
-        borderColor: '#A7C0D3',
-    },
-
-    createIcon: {
-        fontSize: widthPixel(17),
-        color: COLORS.primary,
-    },
-
-    createText: {
-        fontSize: widthPixel(12),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.primary,
-        includeFontPadding: false,
-    },
-
-    profileBtn: {
+    logoutBtn: {
         flexShrink: 0,
         width: heightPixel(44),
         height: heightPixel(44),
-        borderRadius: heightPixel(22),
+        borderRadius: widthPixel(22),
         backgroundColor: '#FFFFFF',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: widthPixel(1),
         borderColor: '#A7C0D3',
-        overflow: 'hidden',
     },
 
-    profilePhoto: {
-        width: '100%',
-        height: '100%',
-        borderRadius: heightPixel(22),
-    },
-
-    profileIcon: {
-        fontSize: widthPixel(22),
-        color: '#5E7690',
+    logoutIcon: {
+        fontSize: widthPixel(20),
+        color: '#E53935',
     },
 
     staticHeader: {
@@ -1570,14 +1524,14 @@ const styles = StyleSheet.create({
         borderColor: COLORS.primary,
     },
     categoryChipIcon: {
-        fontSize: widthPixel(16),
+        fontSize: widthPixel(12),
         color: '#324153',
     },
     categoryChipIconActive: {
         color: COLORS.chipActiveText,
     },
     categoryChipLabel: {
-        fontSize: widthPixel(12),
+        fontSize: widthPixel(10),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.chipText,
         includeFontPadding: false,
@@ -1611,6 +1565,7 @@ const styles = StyleSheet.create({
         height: ITEM_HEIGHT,
         marginBottom: ITEM_SPACING,
         paddingHorizontal: widthPixel(10),
+
     },
     reelCard: {
         width: '100%',
