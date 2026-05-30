@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "ಸರಿ",
-        "auto": "AUTO"
+        "auto": "AUTO",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
@@ -12,7 +13,9 @@
             "home": "ಹೋಮ್",
             "myPosters": "ನನ್ನ ಪೋಸ್ಟರ್‌ಗಳು",
             "trending": "ಟ್ರೆಂಡಿಂಗ್",
-            "profile": "ಪ್ರೊಫೈಲ್"
+            "profile": "ಪ್ರೊಫೈಲ್",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "ನನ್ನ ಪೋಸ್ಟರ್‌ಗಳು",
@@ -25,7 +28,8 @@
         "festival": "ಹಬ್ಬ",
         "birthday": "ಹುಟ್ಟುಹಬ್ಬ",
         "business": "ವ್ಯಾಪಾರ",
-        "motivational": "ಪ್ರೇರಣಾದಾಯಕ"
+        "motivational": "ಪ್ರೇರಣಾದಾಯಕ",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "AI ಪೋಸ್ಟರ್ ಸ್ಟುಡಿಯೋ",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಹಂಚಿಕೊಳ್ಳಿ",
             "download": "ಡೌನ್‌ಲೋಡ್",
             "edit": "ಎಡಿಟ್",
-            "changeImage": "ಚಿತ್ರ ಬದಲಿಸಿ"
+            "changeImage": "ಚಿತ್ರ ಬದಲಿಸಿ",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "ಮಾಹಿತಿ",
             "message": "ಈ ವೈಶಿಷ್ಟ್ಯ ಇನ್ನೂ ಅಭಿವೃದ್ಧಿಯಲ್ಲಿದೆ."
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -148,6 +170,27 @@
         "stickers": {
             "hint": "ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಇಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ • ಸ್ಥಳ ಬದಲಿಸಲು ಎಳೆಯಿರಿ • ತೆಗೆದುಹಾಕಲು ಮತ್ತೆ ಟ್ಯಾಪ್ ಮಾಡಿ",
             "added": "ಸೇರಿಸಿದ ಸ್ಟಿಕರ್‌ಗಳು — ಪೋಸ್ಟರ್‌ನಲ್ಲಿ ಎಳೆದು ಸ್ಥಳ ಬದಲಾಯಿಸಿ"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
+        },
+        "premium": {
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
         }
     },
     "preview": {

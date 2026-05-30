@@ -60,8 +60,10 @@ const AppTextInput = ({
         outputRange: [0, 0.25],
     });
 
-    // const isEditable = rest.editable !== false && !locked;
-    const isEditable = locked ? false : true;
+    const isEditable = rest.editable !== false && !locked;
+    const handleChangeText = useCallback(text => {
+        onChangeText?.(text);
+    }, [onChangeText]);
 
     return (
         <View style={[styles.container, style]}>
@@ -102,8 +104,8 @@ const AppTextInput = ({
         locked && styles.inputLocked,
         inputStyle,
     ]}
-    value={value}
-    onChangeText={(t) => { console.log('Input changed:', t); onChangeText(t); }}
+    value={value ?? ''}
+    onChangeText={handleChangeText}
     placeholder={placeholder}
     placeholderTextColor={COLORS.textMuted}
     onFocus={handleFocus}
@@ -112,7 +114,7 @@ const AppTextInput = ({
     maxLength={maxLength}
     keyboardType={keyboardType}
     selectionColor={COLORS.primary}
-    editable={!locked}
+    editable={isEditable}
     autoCorrect={false}
 />
                 {locked && (

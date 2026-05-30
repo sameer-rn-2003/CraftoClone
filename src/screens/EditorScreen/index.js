@@ -12,6 +12,7 @@ import {
     Image,
     Keyboard,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -31,13 +32,16 @@ import {
     setMessageBold, setMessageItalic,
     setTextAlign, setTextShadow, setShowName, setShowMessage,
     setPhotoShape,
+    hydratePremiumProfile,
     addSticker, removeSticker,
     setPhotoScale, setPremiumProfileField,
     setUserPhotoAnimation,
     setUserPhoto,
+    cycleDesignLayout,
+    toggleSelectedTag,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
-import PosterPreview from '../../components/PosterPreview';
+import PosterPreview, { getPosterCompositionSize } from '../../components/PosterPreview';
 import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import AppTextInput from '../../components/AppTextInput';
@@ -99,6 +103,10 @@ const STICKER_ROWS = [
 const SCALE_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const SCALE_LABELS = ['50%', '75%', '100%', '125%', '150%', '200%'];
 const SIZE_PRESETS = [12, 16, 20, 24, 28, 32, 36];
+const SPECIAL_TAGS = {
+    political: ['Vote for development', 'Jan sewa', 'Youth leader', 'Public service', 'Neta ji', 'Supporter'],
+    panchayat: ['Sarpanch candidate', 'Gram vikas', 'Ward member', 'Panchayat chunav', 'Gaon ki awaz', 'Vote appeal'],
+};
 
 const TABS = [
     { id: 'photo', icon: 'camera-outline', labelKey: 'editor.tabs.photo' },
@@ -584,6 +592,38 @@ const StyleTab = ({ p, dispatch, isPremium, onUnlockPremium }) => {
     );
 };
 
+const SpecialTagsPanel = ({ p, dispatch }) => {
+    const { t } = useTranslation();
+    const type = p.specialCategoryContext?.type;
+    const tags = SPECIAL_TAGS[type] || [];
+
+    if (!type || !tags.length) {
+        return null;
+    }
+
+    return (
+        <View style={s.specialTagsCard}>
+            <SectionLabel>{t('editor.special.tagsTitle')}</SectionLabel>
+            <Text style={s.frameSizeHint}>
+                {t('editor.special.tagsHint', { name: p.specialCategoryContext?.name || '' })}
+            </Text>
+            <View style={s.optionChipRow}>
+                {tags.map(tag => {
+                    const active = (p.selectedTags || []).includes(tag);
+                    return (
+                        <OptionChip
+                            key={tag}
+                            label={tag}
+                            active={active}
+                            onPress={() => dispatch(toggleSelectedTag(tag))}
+                        />
+                    );
+                })}
+            </View>
+        </View>
+    );
+};
+
 const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave }) => {
     const { t } = useTranslation();
     const [activeSection, setActiveSection] = useState('personal');
@@ -662,6 +702,24 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             value={personal.socialHandle}
                             onChangeText={v => updateField('personal', 'socialHandle', v)}
                             placeholder={t('editor.premium.socialPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.facebookLink')}
+                            value={personal.facebookLink}
+                            onChangeText={v => updateField('personal', 'facebookLink', v)}
+                            placeholder={t('editor.premium.facebookPlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
+                        <AppTextInput
+                            label={t('editor.premium.instagramLink')}
+                            value={personal.instagramLink}
+                            onChangeText={v => updateField('personal', 'instagramLink', v)}
+                            placeholder={t('editor.premium.instagramPlaceholder')}
                             editable={!locked}
                             locked={locked}
                             onLockedPress={onUnlockPremium}
@@ -773,13 +831,24 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             locked={locked}
                             onLockedPress={onUnlockPremium}
                         />
+                        <AppTextInput
+                            label={t('editor.premium.websiteLink')}
+                            value={business.websiteLink}
+                            onChangeText={v => updateField('business', 'websiteLink', v)}
+                            placeholder={t('editor.premium.websitePlaceholder')}
+                            editable={!locked}
+                            locked={locked}
+                            onLockedPress={onUnlockPremium}
+                        />
                     </View>
                 </LockedInputWrapper>
             )}
 
+            <SpecialTagsPanel p={p} dispatch={dispatch} />
+
             <View style={s.saveRow}>
                 <AppButton
-                    title="Save"
+                    title={t('preview.actions.save')}
                     onPress={locked ? onUnlockPremium : onSave}
                     variant="primary"
                     size="md"
@@ -858,16 +927,42 @@ const EditorScreen = ({ navigation, route }) => {
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
     const [userNameInput, setUserNameInput] = useState(p.userName || '');
     const [userMessageInput, setUserMessageInput] = useState(p.userMessage || '');
+    const [pendingCropUri, setPendingCropUri] = useState(null);
+    const [cropResizeMode, setCropResizeMode] = useState('cover');
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
+    const compositionSize = useMemo(
+        () => getPosterCompositionSize(p.selectedTemplate, p),
+        [p],
+    );
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
         const maxHeight = SCREEN_H * 0.58;
-        return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
-    }, [canvasSize]);
-    const previewWidth = canvasSize.width * previewScale;
-    const previewHeight = canvasSize.height * previewScale;
+        return Math.min(maxWidth / compositionSize.width, maxHeight / compositionSize.height);
+    }, [compositionSize]);
+    const previewWidth = compositionSize.width * previewScale;
+    const previewHeight = compositionSize.height * previewScale;
 
     // Sync all user profile data from route params or persistent storage
+    useEffect(() => {
+        const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!p.isPremium) return undefined;
+        const timer = setTimeout(() => {
+            mergeUserProfile({ premiumProfile: p.premiumProfile }).catch(error => {
+                console.log('Premium profile autosave error', error);
+            });
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [p.isPremium, p.premiumProfile]);
+
     useEffect(() => {
         const routeUserPhoto = route?.params?.userPhoto;
         const routeUserName = route?.params?.userName;
@@ -894,22 +989,19 @@ const EditorScreen = ({ navigation, route }) => {
                 if (stored?.name) {
                     dispatch(setUserName(stored.name));
                     setUserNameInput(stored.name);
-                } else {
-                    dispatch(setUserName('Your Name'));
-                    setUserNameInput('Your Name');
                 }
             }
             if (!p.userMessage) {
                 if (stored?.message) {
                     dispatch(setUserMessage(stored.message));
                     setUserMessageInput(stored.message);
-                } else {
-                    dispatch(setUserMessage('Your Message'));
-                    setUserMessageInput('Your Message');
                 }
             }
             if (stored?.isPremium !== undefined && stored.isPremium !== p.isPremium) {
                 dispatch(setPremiumStatus(!!stored.isPremium));
+            }
+            if (stored?.premiumProfile) {
+                dispatch(hydratePremiumProfile(stored.premiumProfile));
             }
         })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -974,23 +1066,31 @@ const EditorScreen = ({ navigation, route }) => {
     }, [pickImage]);
 
     const handlePickProfileImage = useCallback(async () => {
-        const uri = await pickImage();
+        const uri = await pickImage({ autoStoreInProfilePhoto: false });
         if (uri) {
-            await mergeUserProfile({ imageUri: uri });
-            const frame = p.selectedTemplate?.photoFrame;
-            if (frame && frame.width && frame.height) {
-                const frameCenterX = frame.x + frame.width / 2;
-                const frameCenterY = frame.y + frame.height / 2;
-                const canvasCenterX = canvasSize.width / 2;
-                const canvasCenterY = canvasSize.height / 2;
-                dispatch(setPhotoPosition({
-                    x: canvasCenterX - frameCenterX,
-                    y: canvasCenterY - frameCenterY,
-                }));
-            }
+            setCropResizeMode('cover');
+            setPendingCropUri(uri);
         }
         return uri;
-    }, [pickImage, p.selectedTemplate, canvasSize, dispatch]);
+    }, [pickImage]);
+
+    const commitPickedProfileImage = useCallback(async () => {
+        if (!pendingCropUri) return;
+        dispatch(setUserPhoto(pendingCropUri));
+        await mergeUserProfile({ imageUri: pendingCropUri, imageFit: cropResizeMode });
+        const frame = p.selectedTemplate?.photoFrame;
+        if (frame && frame.width && frame.height) {
+            const frameCenterX = frame.x + frame.width / 2;
+            const frameCenterY = frame.y + frame.height / 2;
+            const canvasCenterX = canvasSize.width / 2;
+            const canvasCenterY = canvasSize.height / 2;
+            dispatch(setPhotoPosition({
+                x: canvasCenterX - frameCenterX,
+                y: canvasCenterY - frameCenterY,
+            }));
+        }
+        setPendingCropUri(null);
+    }, [canvasSize, cropResizeMode, dispatch, p.selectedTemplate?.photoFrame, pendingCropUri]);
 
     const handlePreview = useCallback(() => {
         if (!p.userPhoto) {
@@ -1084,9 +1184,11 @@ const EditorScreen = ({ navigation, route }) => {
         openSubscriptionModal,
         pickLogoImage,
         handlePremiumDetailsSave,
+        userMessageInput,
+        userNameInput,
     ]);
 
-    const shouldCollapsePoster = false;
+    const shouldCollapsePoster = isKeyboardVisible && (activeTab === 'text' || activeTab === 'details');
     const isTextTabActive = activeTab === 'text';
 
     return (
@@ -1122,12 +1224,12 @@ const EditorScreen = ({ navigation, route }) => {
                     height: previewHeight,
                 }, shouldCollapsePoster && s.posterClipCollapsed]}>
                     <View style={[s.posterScaler, {
-                        width: canvasSize.width,
-                        height: canvasSize.height,
-                        transform: [{ scale: previewScale }],
-                        marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
-                        marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
-                    }]}>
+                            width: compositionSize.width,
+                            height: compositionSize.height,
+                            transform: [{ scale: previewScale }],
+                            marginLeft: -(compositionSize.width * (1 - previewScale)) / 2,
+                            marginTop: -(compositionSize.height * (1 - previewScale)) / 2,
+                        }]}>
                         <PosterPreview
                             interactive
                             allowPinchScale={p.isPremium}
@@ -1143,6 +1245,14 @@ const EditorScreen = ({ navigation, route }) => {
                         onPress={() => setIsTemplateMuted(prev => !prev)}
                         style={s.mediaAudioToggle}
                     />
+                    <Pressable
+                        style={s.changeDesignBtn}
+                        onPress={() => dispatch(cycleDesignLayout())}>
+                        <MaterialCommunityIcons name="view-dashboard-edit-outline" style={s.changeDesignIcon} />
+                        <Text style={s.changeDesignText}>
+                            {t('editor.changeDesign', { index: (p.designLayoutIndex || 0) + 1 })}
+                        </Text>
+                    </Pressable>
                 </View>
             </View>
 
@@ -1176,7 +1286,7 @@ const EditorScreen = ({ navigation, route }) => {
             {/* ── Scrollable Panel with KeyboardAvoidingView ─────────────────────── */}
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <View style={s.panel}>
@@ -1196,6 +1306,53 @@ const EditorScreen = ({ navigation, route }) => {
                 submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
             />
+            <Modal
+                visible={!!pendingCropUri}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setPendingCropUri(null)}>
+                <View style={s.cropOverlay}>
+                    <View style={s.cropCard}>
+                        <Text style={s.cropTitle}>{t('editor.crop.title')}</Text>
+                        <Text style={s.cropSub}>{t('editor.crop.subtitle')}</Text>
+                        <View style={s.cropPreviewBox}>
+                            {pendingCropUri ? (
+                                <Image
+                                    source={{ uri: pendingCropUri }}
+                                    style={s.cropPreviewImage}
+                                    resizeMode={cropResizeMode}
+                                />
+                            ) : null}
+                        </View>
+                        <View style={s.optionChipRow}>
+                            {['cover', 'contain', 'stretch'].map(mode => (
+                                <OptionChip
+                                    key={mode}
+                                    label={t(`editor.crop.${mode}`)}
+                                    active={cropResizeMode === mode}
+                                    onPress={() => setCropResizeMode(mode)}
+                                />
+                            ))}
+                        </View>
+                        <View style={s.cropActions}>
+                            <AppButton
+                                title={t('common.cancel')}
+                                onPress={() => setPendingCropUri(null)}
+                                variant="outline"
+                                size="md"
+                                style={s.cropActionBtn}
+                            />
+                            <AppButton
+                                title={t('editor.crop.useImage')}
+                                onPress={commitPickedProfileImage}
+                                variant="primary"
+                                size="md"
+                                style={s.cropActionBtn}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -1288,6 +1445,30 @@ const s = StyleSheet.create({
         right: 10,
         bottom: 10,
         zIndex: 20,
+    },
+    changeDesignBtn: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        zIndex: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 7,
+        borderRadius: BORDER_RADIUS.full,
+        backgroundColor: 'rgba(17,24,39,0.78)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.22)',
+    },
+    changeDesignIcon: {
+        fontSize: 15,
+        color: EDITOR_COLORS.white,
+    },
+    changeDesignText: {
+        fontSize: FONTS.sizes.xs,
+        color: EDITOR_COLORS.white,
+        fontWeight: FONTS.weights.bold,
     },
 
     // Tab bar
@@ -1839,6 +2020,64 @@ const s = StyleSheet.create({
     optionChipTextActive: {
         color: EDITOR_COLORS.white,
         fontWeight: FONTS.weights.bold,
+    },
+    specialTagsCard: {
+        marginTop: SPACING.lg,
+        backgroundColor: EDITOR_COLORS.surface,
+        borderRadius: BORDER_RADIUS.xl,
+        padding: SPACING.md,
+        borderWidth: 1,
+        borderColor: EDITOR_COLORS.border,
+    },
+    cropOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(9,12,24,0.58)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: SPACING.base,
+    },
+    cropCard: {
+        width: '100%',
+        borderRadius: BORDER_RADIUS.xl,
+        backgroundColor: EDITOR_COLORS.surface,
+        padding: SPACING.lg,
+        borderWidth: 1,
+        borderColor: EDITOR_COLORS.border,
+        ...SHADOW.large,
+    },
+    cropTitle: {
+        fontSize: FONTS.sizes.lg,
+        color: EDITOR_COLORS.text,
+        fontWeight: FONTS.weights.extraBold,
+        textAlign: 'center',
+    },
+    cropSub: {
+        marginTop: SPACING.xs,
+        marginBottom: SPACING.md,
+        fontSize: FONTS.sizes.sm,
+        color: EDITOR_COLORS.textMuted,
+        textAlign: 'center',
+    },
+    cropPreviewBox: {
+        height: 280,
+        borderRadius: BORDER_RADIUS.lg,
+        overflow: 'hidden',
+        backgroundColor: EDITOR_COLORS.card,
+        borderWidth: 1,
+        borderColor: EDITOR_COLORS.border,
+        marginBottom: SPACING.md,
+    },
+    cropPreviewImage: {
+        width: '100%',
+        height: '100%',
+    },
+    cropActions: {
+        flexDirection: 'row',
+        gap: SPACING.md,
+        marginTop: SPACING.lg,
+    },
+    cropActionBtn: {
+        flex: 1,
     },
 
     // — Visibility toggles —

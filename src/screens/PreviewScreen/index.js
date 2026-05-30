@@ -17,7 +17,7 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
-import PosterPreview from '../../components/PosterPreview';
+import PosterPreview, { getPosterCompositionSize } from '../../components/PosterPreview';
 import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
@@ -32,18 +32,23 @@ import {
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const PreviewScreen = ({ navigation, route }) => {
-    const { selectedTemplate, userName, isPremium } = useSelector(s => s.poster);
+    const posterState = useSelector(s => s.poster);
+    const { selectedTemplate, userName, isPremium } = posterState;
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePoster, sharePosterToWhatsApp, isSaving, isSharing } =
         usePosterGenerator();
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const compositionSize = useMemo(
+        () => getPosterCompositionSize(selectedTemplate, posterState),
+        [posterState, selectedTemplate],
+    );
     const previewScale = useMemo(() => {
         const maxWidth = SCREEN_W - SPACING.base * 2;
         const maxHeight = SCREEN_H * 0.68;
-        return Math.min(maxWidth / canvasSize.width, maxHeight / canvasSize.height);
-    }, [canvasSize]);
-    const previewWidth = canvasSize.width * previewScale;
-    const previewHeight = canvasSize.height * previewScale;
+        return Math.min(maxWidth / compositionSize.width, maxHeight / compositionSize.height);
+    }, [compositionSize]);
+    const previewWidth = compositionSize.width * previewScale;
+    const previewHeight = compositionSize.height * previewScale;
     const [isTemplateMuted, setIsTemplateMuted] = useState(true);
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
 
@@ -120,11 +125,11 @@ const PreviewScreen = ({ navigation, route }) => {
                         height: previewHeight,
                     }]} pointerEvents="none">
                         <View style={[styles.posterScaler, {
-                            width: canvasSize.width,
-                            height: canvasSize.height,
+                            width: compositionSize.width,
+                            height: compositionSize.height,
                             transform: [{ scale: previewScale }],
-                            marginLeft: -(canvasSize.width * (1 - previewScale)) / 2,
-                            marginTop: -(canvasSize.height * (1 - previewScale)) / 2,
+                            marginLeft: -(compositionSize.width * (1 - previewScale)) / 2,
+                            marginTop: -(compositionSize.height * (1 - previewScale)) / 2,
                         }]}>
                             <PosterPreview
                                 interactive
@@ -145,7 +150,7 @@ const PreviewScreen = ({ navigation, route }) => {
 
                 <View style={[styles.hiddenCaptureStage, {
                     width: canvasSize.width,
-                    height: canvasSize.height,
+                    height: compositionSize.height,
                     left: -canvasSize.width * 3,
                 }]} pointerEvents="none">
                     <PosterPreview

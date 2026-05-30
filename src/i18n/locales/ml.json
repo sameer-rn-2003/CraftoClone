@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "ശരി",
-        "auto": "AUTO"
+        "auto": "AUTO",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കൂ",
@@ -12,7 +13,9 @@
             "home": "ഹോം",
             "myPosters": "എന്റെ പോസ്റ്ററുകൾ",
             "trending": "ട്രെൻഡിംഗ്",
-            "profile": "പ്രൊഫൈൽ"
+            "profile": "പ്രൊഫൈൽ",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "എന്റെ പോസ്റ്ററുകൾ",
@@ -25,7 +28,8 @@
         "festival": "ഉത്സവം",
         "birthday": "ജന്മദിനം",
         "business": "ബിസിനസ്",
-        "motivational": "പ്രേരണാത്മക"
+        "motivational": "പ്രേരണാത്മക",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "AI പോസ്റ്റർ സ്റ്റുഡിയോ",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "വാട്ട്‌സ്ആപ്പിൽ ഷെയർ ചെയ്യൂ",
             "download": "ഡൗൺലോഡ്",
             "edit": "എഡിറ്റ്",
-            "changeImage": "ചിത്രം മാറ്റുക"
+            "changeImage": "ചിത്രം മാറ്റുക",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "വിവരം",
             "message": "ഈ ഫീച്ചർ ഇപ്പോൾ വികസനത്തിലാണ്."
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -148,6 +170,27 @@
         "stickers": {
             "hint": "പോസ്റ്ററിൽ ഇടാൻ ടാപ്പ് ചെയ്യൂ • സ്ഥാനം മാറ്റാൻ ഡ്രാഗ് ചെയ്യൂ • നീക്കാൻ വീണ്ടും ടാപ്പ് ചെയ്യൂ",
             "added": "ചേർത്ത സ്റ്റിക്കറുകൾ — പോസ്റ്ററിൽ ഡ്രാഗ് ചെയ്ത് സ്ഥാനം മാറ്റൂ"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
+        },
+        "premium": {
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
         }
     },
     "preview": {

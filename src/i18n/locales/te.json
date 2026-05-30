@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "సరే",
-        "auto": "AUTO"
+        "auto": "AUTO",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "మీ భాషను ఎంచుకోండి",
@@ -12,7 +13,9 @@
             "home": "హోమ్",
             "myPosters": "నా పోస్టర్లు",
             "trending": "ట్రెండింగ్",
-            "profile": "ప్రొఫైల్"
+            "profile": "ప్రొఫైల్",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "నా పోస్టర్లు",
@@ -25,7 +28,8 @@
         "festival": "పండుగ",
         "birthday": "పుట్టినరోజు",
         "business": "వ్యాపారం",
-        "motivational": "ప్రేరణాత్మక"
+        "motivational": "ప్రేరణాత్మక",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "AI పోస్టర్ స్టూడియో",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "వాట్సాప్‌లో షేర్ చేయండి",
             "download": "డౌన్‌లోడ్",
             "edit": "ఎడిట్",
-            "changeImage": "చిత్రాన్ని మార్చండి"
+            "changeImage": "చిత్రాన్ని మార్చండి",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "సమాచారం",
             "message": "ఈ ఫీచర్ అభివృద్ధిలో ఉంది."
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -148,6 +170,27 @@
         "stickers": {
             "hint": "పోస్టర్‌పై పెట్టడానికి ట్యాప్ చేయండి • స్థానం మార్చడానికి డ్రాగ్ చేయండి • తొలగించడానికి మళ్లీ ట్యాప్ చేయండి",
             "added": "జోడించిన స్టికర్లు — పోస్టర్‌పై డ్రాగ్ చేసి స్థానం మార్చండి"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
+        },
+        "premium": {
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
         }
     },
     "preview": {

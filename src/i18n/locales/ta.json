@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "சரி",
-        "auto": "AUTO"
+        "auto": "AUTO",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "உங்கள் மொழியை தேர்ந்தெடுக்கவும்",
@@ -12,7 +13,9 @@
             "home": "முகப்பு",
             "myPosters": "என் போஸ்டர்கள்",
             "trending": "ட்ரெண்டிங்",
-            "profile": "ப்ரொஃபைல்"
+            "profile": "ப்ரொஃபைல்",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "என் போஸ்டர்கள்",
@@ -25,7 +28,8 @@
         "festival": "திருவிழா",
         "birthday": "பிறந்தநாள்",
         "business": "வணிகம்",
-        "motivational": "ஊக்கமளிக்கும்"
+        "motivational": "ஊக்கமளிக்கும்",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "AI போஸ்டர் ஸ்டூடியோ",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "வாட்ஸ்அப்பில் பகிர்",
             "download": "பதிவிறக்கம்",
             "edit": "திருத்து",
-            "changeImage": "படத்தை மாற்று"
+            "changeImage": "படத்தை மாற்று",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "தகவல்",
             "message": "இந்த அம்சம் உருவாக்கத்தில் உள்ளது."
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -148,6 +170,27 @@
         "stickers": {
             "hint": "போஸ்டரில் இட தட்டவும் • இடம் மாற்ற இழுக்கவும் • நீக்க மீண்டும் தட்டவும்",
             "added": "சேர்த்த ஸ்டிக்கர்கள் — போஸ்டரில் இழுத்து இடம் மாற்றவும்"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
+        },
+        "premium": {
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
         }
     },
     "preview": {

@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "ठीक है",
-        "auto": "ऑटो"
+        "auto": "ऑटो",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "अपनी भाषा चुनें",
@@ -12,7 +13,9 @@
             "home": "होम",
             "myPosters": "मेरे पोस्टर्स",
             "trending": "ट्रेंडिंग",
-            "profile": "प्रोफ़ाइल"
+            "profile": "प्रोफ़ाइल",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "मेरे पोस्टर्स",
@@ -25,7 +28,8 @@
         "festival": "त्योहार",
         "birthday": "जन्मदिन",
         "business": "व्यवसाय",
-        "motivational": "प्रेरणादायक"
+        "motivational": "प्रेरणादायक",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "एआई पोस्टर स्टूडियो",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "WhatsApp पर शेयर करें",
             "download": "डाउनलोड",
             "edit": "एडिट",
-            "changeImage": "इमेज बदलें"
+            "changeImage": "इमेज बदलें",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "जानकारी",
             "message": "यह फीचर अभी विकास में है।"
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -148,6 +170,27 @@
         "stickers": {
             "hint": "पोस्टर पर रखने के लिए टैप करें • जगह बदलने के लिए ड्रैग करें • हटाने के लिए फिर टैप करें",
             "added": "जोड़े गए स्टिकर्स — पोस्टर पर ड्रैग करके जगह बदलें"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
+        },
+        "premium": {
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
         }
     },
     "preview": {

@@ -53,6 +53,79 @@ const getScaledGestureDelta = (gesture, interactionScale = 1) => {
 
 const MIN_TEXT_SCALE = 0.25;
 const MAX_TEXT_SCALE = 3.0;
+const PREMIUM_TOP_BAND_HEIGHT = 170;
+const PREMIUM_BOTTOM_BAND_HEIGHT = 230;
+const SOCIAL_PLATFORMS = [
+    { key: 'facebook', icon: 'facebook' },
+    { key: 'instagram', icon: 'instagram' },
+    { key: 'twitter', icon: 'twitter' },
+    { key: 'snapchat', icon: 'snapchat' },
+    { key: 'other', icon: 'at' },
+];
+
+const buildSocialItems = handles => SOCIAL_PLATFORMS
+    .map(platform => {
+        const value = String(handles?.[platform.key] || '').trim();
+        return value ? { ...platform, text: value } : null;
+    })
+    .filter(Boolean);
+
+export const getPremiumDetailsForPoster = posterState => {
+    if (!posterState?.isPremium) return null;
+
+    const personal = posterState?.premiumProfile?.personal || {};
+    const business = posterState?.premiumProfile?.business || {};
+    const activeSection = posterState?.premiumProfile?.activeSection === 'business' ? 'business' : 'personal';
+    const hasBusiness = activeSection === 'business';
+    const source = hasBusiness ? business : personal;
+    const socialItems = buildSocialItems(source.socialHandles);
+
+    const details = hasBusiness ? {
+        type: 'business',
+        name: source.businessName,
+        description: source.businessDescription,
+        logo: source.businessLogo,
+        mobile: source.contactMobileNumber,
+        address: source.contactAddress,
+        social: source.contactSocialHandle,
+        socials: socialItems,
+    } : {
+        type: 'personal',
+        name: source.organizationName,
+        description: '',
+        logo: source.organizationLogo,
+        mobile: source.mobileNumber,
+        address: source.address,
+        social: source.socialHandle,
+        socials: socialItems,
+    };
+
+    const hasAnyDetails = [
+        details.name,
+        details.description,
+        details.logo,
+        details.mobile,
+        details.address,
+        details.social,
+        ...(details.socials || []).map(item => item.text),
+    ].some(value => typeof value === 'string' && value.trim());
+    return hasAnyDetails ? details : null;
+};
+
+export const getPosterCompositionSize = (template, posterState) => {
+    const canvasSize = getTemplateCanvasSize(template);
+    const premiumDetails = getPremiumDetailsForPoster(posterState);
+
+    return {
+        width: canvasSize.width,
+        height: canvasSize.height
+            + (premiumDetails ? PREMIUM_TOP_BAND_HEIGHT + PREMIUM_BOTTOM_BAND_HEIGHT : 0),
+        posterTop: premiumDetails ? PREMIUM_TOP_BAND_HEIGHT : 0,
+        posterHeight: canvasSize.height,
+        topBandHeight: premiumDetails ? PREMIUM_TOP_BAND_HEIGHT : 0,
+        bottomBandHeight: premiumDetails ? PREMIUM_BOTTOM_BAND_HEIGHT : 0,
+    };
+};
 
 // ─── Fallback text field factories ────────────────────────────────
 // Used when a template has no textFields defined (most reel/video templates).
@@ -72,6 +145,56 @@ const makeFallbackMessageField = canvasSize => ({
     fieldWidth: canvasSize.width - 40,
     align: 'center',
     fontSize: 18,
+});
+
+const getDesignLayout = (index = 0, canvasSize = POSTER_SIZE) => {
+    const layouts = [
+        {
+            photo: { x: canvasSize.width * 0.5, y: canvasSize.height * 0.12, anchor: 'center' },
+            nameY: canvasSize.height * 0.60,
+            messageY: canvasSize.height * 0.70,
+            align: 'center',
+        },
+        {
+            photo: { x: canvasSize.width * 0.09, y: canvasSize.height * 0.57, anchor: 'left' },
+            nameY: canvasSize.height * 0.57,
+            messageY: canvasSize.height * 0.66,
+            align: 'right',
+        },
+        {
+            photo: { x: canvasSize.width * 0.67, y: canvasSize.height * 0.57, anchor: 'left' },
+            nameY: canvasSize.height * 0.56,
+            messageY: canvasSize.height * 0.66,
+            align: 'left',
+        },
+    ];
+
+    return layouts[Math.abs(index || 0) % layouts.length];
+};
+
+const applyDesignToFrame = ({ frameStyle, layout, canvasSize }) => {
+    if (!frameStyle || !layout?.photo) return frameStyle;
+    const width = Number(frameStyle.width) || Math.min(canvasSize.width, canvasSize.height) * 0.28;
+    const height = Number(frameStyle.height) || width;
+    const left = layout.photo.anchor === 'center'
+        ? layout.photo.x - width / 2
+        : layout.photo.x;
+
+    return {
+        ...frameStyle,
+        left: Math.max(0, Math.min(canvasSize.width - width, left)),
+        top: Math.max(0, Math.min(canvasSize.height - height, layout.photo.y)),
+    };
+};
+
+const applyDesignToTextField = ({ field, y, align, canvasSize }) => ({
+    ...field,
+    y: Math.round(y ?? field.y),
+    x: align === 'center' ? 20 : field.x ?? 20,
+    fieldWidth: align === 'center'
+        ? canvasSize.width - 40
+        : field.fieldWidth ?? canvasSize.width - 40,
+    align,
 });
 
 // ─── Background patterns ──────────────────────────────────────────
@@ -756,6 +879,82 @@ const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2
 const StaticNameText = props => <StaticText {...props} numberOfLines={1} />;
 const StaticMessageText = props => <StaticText {...props} numberOfLines={2} />;
 
+export const PremiumPosterDetailsFrame = ({
+    details,
+    canvasSize = POSTER_SIZE,
+    layoutIndex = 0,
+    topHeight = PREMIUM_TOP_BAND_HEIGHT,
+    bottomHeight = PREMIUM_BOTTOM_BAND_HEIGHT,
+}) => {
+    if (!details) return null;
+
+    const variant = Math.abs(layoutIndex || 0) % 3;
+    const topAlignment = variant === 1 ? 'flex-start' : variant === 2 ? 'flex-end' : 'center';
+    const topDirection = variant === 2 ? 'row-reverse' : 'row';
+    const textAlign = variant === 1 ? 'left' : variant === 2 ? 'right' : 'center';
+    const logoSize = Math.max(72, canvasSize.width * 0.085);
+    const contactItems = [
+        details.mobile ? { icon: 'phone-outline', text: details.mobile } : null,
+        details.address ? { icon: 'map-marker-outline', text: details.address } : null,
+        details.social ? { icon: 'at', text: details.social } : null,
+    ].filter(Boolean);
+    const socialItems = details.socials || [];
+
+    return (
+        <>
+            <View style={[styles.premiumTopBand, { height: topHeight, width: canvasSize.width }]}>
+                <View style={[
+                    styles.premiumTopContent,
+                    { justifyContent: topAlignment, flexDirection: topDirection },
+                ]}>
+                    {details.logo ? (
+                        <Image
+                            source={{ uri: details.logo }}
+                            style={[styles.premiumLogo, { width: logoSize, height: logoSize }]}
+                            resizeMode="cover"
+                        />
+                    ) : null}
+                    <View style={[styles.premiumTitleWrap, { alignItems: topAlignment }]}>
+                        {details.name ? (
+                            <Text style={[styles.premiumName, { textAlign }]} numberOfLines={1}>
+                                {details.name}
+                            </Text>
+                        ) : null}
+                        {details.description ? (
+                            <Text style={[styles.premiumDescription, { textAlign }]} numberOfLines={2}>
+                                {details.description}
+                            </Text>
+                        ) : null}
+                    </View>
+                </View>
+            </View>
+            <View style={[
+                styles.premiumBottomBand,
+                { height: bottomHeight, width: canvasSize.width, top: topHeight + canvasSize.height },
+            ]}>
+                <View style={styles.premiumContactGrid}>
+                    {contactItems.map(item => (
+                        <View key={`${item.icon}_${item.text}`} style={styles.premiumContactItem}>
+                            <MaterialCommunityIcons name={item.icon} style={styles.premiumContactIcon} />
+                            <Text style={styles.premiumContactText} numberOfLines={2}>
+                                {item.text}
+                            </Text>
+                        </View>
+                    ))}
+                    {socialItems.map(item => (
+                        <View key={`${item.key}_${item.text}`} style={styles.premiumContactItem}>
+                            <MaterialCommunityIcons name={item.icon} style={styles.premiumContactIcon} />
+                            <Text style={styles.premiumContactText} numberOfLines={1}>
+                                {item.text}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        </>
+    );
+};
+
 // ─── PosterPreview ────────────────────────────────────────────────
 
 const PosterPreview = ({
@@ -773,14 +972,23 @@ const PosterPreview = ({
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const activeDesignLayout = useMemo(
+        () => getDesignLayout(p.designLayoutIndex, canvasSize),
+        [canvasSize, p.designLayoutIndex],
+    );
+    const premiumDetails = useMemo(() => getPremiumDetailsForPoster(p), [p]);
+    const compositionSize = useMemo(
+        () => getPosterCompositionSize(selectedTemplate, p),
+        [p, selectedTemplate],
+    );
+    const displayPhotoUri = p.userPhoto;
     const isConfigDriven = useMemo(() => isConfigDrivenTemplate(selectedTemplate), [selectedTemplate]);
     const renderContext = useMemo(() => buildTemplateRenderContext({
         template: selectedTemplate,
-        userPhoto: p.userPhoto,
+        userPhoto: displayPhotoUri,
         userName: p.userName,
         userMessage: p.userMessage,
-        premiumProfile: p.premiumProfile,
-    }), [p.premiumProfile, p.userMessage, p.userName, p.userPhoto, selectedTemplate]);
+    }), [displayPhotoUri, p.userMessage, p.userName, selectedTemplate]);
 
     if (!selectedTemplate) return null;
 
@@ -803,13 +1011,18 @@ const PosterPreview = ({
     const messageField = textFields?.find(f => f.key === 'message') ?? makeFallbackMessageField(canvasSize);
 
     // Center the name field on the poster so it's always visible and draggable
-    const centeredNameField = {
-        ...nameField,
-        y: nameField.y,
-        x: 20,
-        fieldWidth: canvasSize.width - 40,
-        align: 'center',
-    };
+    const centeredNameField = applyDesignToTextField({
+        field: nameField,
+        y: activeDesignLayout.nameY,
+        align: activeDesignLayout.align,
+        canvasSize,
+    });
+    const designedMessageField = applyDesignToTextField({
+        field: messageField,
+        y: activeDesignLayout.messageY,
+        align: activeDesignLayout.align,
+        canvasSize,
+    });
 
     // ── Text styles ──────────────────────────────────────────────
     const nameFontWeight = p.nameBold ? 'bold' : 'normal';
@@ -823,7 +1036,7 @@ const PosterPreview = ({
         fontWeight: nameFontWeight,
         fontStyle: nameFontStyle,
         color: p.nameColor ?? '#FFFFFF',
-        textAlign: p.textAlign ?? 'center',
+        textAlign: p.textAlign ?? activeDesignLayout.align ?? 'center',
         ...shadowStyle,
     };
 
@@ -832,7 +1045,7 @@ const PosterPreview = ({
         fontWeight: msgFontWeight,
         fontStyle: msgFontStyle,
         color: p.messageColor ?? '#FFFFFF',
-        textAlign: p.textAlign ?? 'center',
+        textAlign: p.textAlign ?? activeDesignLayout.align ?? 'center',
         ...shadowStyle,
     };
 
@@ -845,8 +1058,8 @@ const PosterPreview = ({
 
         const field = getConfigTextField(layer);
         const text = editableRole === 'name'
-            ? (p.userName || resolvedText || 'Your Name')
-            : (p.userMessage || resolvedText || 'Your Message');
+            ? (p.userName || '')
+            : (p.userMessage || '');
         const layerFontSize = Number.isFinite(Number(layer?.fontSize)) ? Number(layer.fontSize) : 18;
         const textStyle = {
             fontSize: editableRole === 'name' ? (p.nameFontSize ?? layerFontSize) : (p.messageFontSize ?? layerFontSize),
@@ -864,13 +1077,12 @@ const PosterPreview = ({
         if (!text) return undefined;
 
         if (editableRole === 'name') {
-            const centeredField = {
-                ...field,
-                y: Math.round(canvasSize.height * 0.60),
-                x: 20,
-                fieldWidth: canvasSize.width - 40,
-                align: 'center',
-            };
+            const centeredField = applyDesignToTextField({
+                field,
+                y: activeDesignLayout.nameY,
+                align: activeDesignLayout.align,
+                canvasSize,
+            });
             return interactive
                 ? <DraggableNameText
                     field={centeredField}
@@ -892,7 +1104,12 @@ const PosterPreview = ({
 
         return interactive
             ? <DraggableMessageText
-                field={field}
+                field={applyDesignToTextField({
+                    field,
+                    y: activeDesignLayout.messageY,
+                    align: activeDesignLayout.align,
+                    canvasSize,
+                })}
                 text={text}
                 textStyle={textStyle}
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}
@@ -910,12 +1127,23 @@ const PosterPreview = ({
     };
 
     // ── Photo layer ──────────────────────────────────────────────
-    const photoLayerNode = (photoFrame || p.userPhoto)
+    const basePhotoFrameStyle = getPhotoFrameBaseStyle({
+        photoFrame,
+        photoShape: p.photoShape ?? 'template',
+    }) ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape: p.photoShape ?? 'template' });
+
+    const designedPhotoFrame = applyDesignToFrame({
+        frameStyle: basePhotoFrameStyle,
+        layout: activeDesignLayout,
+        canvasSize,
+    });
+
+    const photoLayerNode = (designedPhotoFrame || displayPhotoUri)
         ? (
             interactive
                 ? <DraggablePhoto
-                    photoFrame={photoFrame}
-                    photoUri={p.userPhoto}
+                    frameStyle={designedPhotoFrame}
+                    photoUri={displayPhotoUri}
                     photoAnimation={p.userPhotoAnimation}
                     canvasSize={canvasSize}
                     accentColor={accentColor}
@@ -925,8 +1153,8 @@ const PosterPreview = ({
                     allowPinchScale={allowPinchScale}
                     interactionScale={interactionScale} />
                 : <StaticPhoto
-                    photoFrame={photoFrame}
-                    photoUri={p.userPhoto}
+                    frameStyle={designedPhotoFrame}
+                    photoUri={displayPhotoUri}
                     photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
                     photoAnimation={p.userPhotoAnimation}
                     canvasSize={canvasSize}
@@ -942,11 +1170,16 @@ const PosterPreview = ({
             layerStyle,
             photoShape: p.photoShape ?? 'template',
         });
+        const designedConfigFrameStyle = applyDesignToFrame({
+            frameStyle: configPhotoFrameStyle,
+            layout: activeDesignLayout,
+            canvasSize,
+        });
         const resizeMode = layer?.resizeMode ?? 'cover';
         return interactive
             ? <DraggablePhoto
-                frameStyle={configPhotoFrameStyle}
-                photoUri={p.userPhoto}
+                frameStyle={designedConfigFrameStyle}
+                photoUri={displayPhotoUri}
                 photoAnimation={p.userPhotoAnimation}
                 canvasSize={canvasSize}
                 accentColor={accentColor}
@@ -957,8 +1190,8 @@ const PosterPreview = ({
                 interactionScale={interactionScale}
                 resizeMode={resizeMode} />
             : <StaticPhoto
-                frameStyle={configPhotoFrameStyle}
-                photoUri={p.userPhoto}
+                frameStyle={designedConfigFrameStyle}
+                photoUri={displayPhotoUri}
                 photoPosition={p.photoPosition ?? { x: 0, y: 0 }}
                 photoAnimation={p.userPhotoAnimation}
                 canvasSize={canvasSize}
@@ -969,19 +1202,31 @@ const PosterPreview = ({
     };
 
     // ── The display text (with guaranteed fallback) ──────────────
-    // Always show "Your Name" / "Your Message" when the user hasn't typed anything.
-    const displayName = p.userName || 'Your Name';
-    const displayMessage = p.userMessage || 'Your Message';
+    const displayName = p.userName || '';
+    const displayMessage = p.userMessage || '';
 
     return (
         <View
             ref={posterRef}
-            style={[styles.poster, {
+            style={[styles.composition, {
+                width: compositionSize.width,
+                height: compositionSize.height,
+            }]}
+            collapsable={false}>
+            <PremiumPosterDetailsFrame
+                details={premiumDetails}
+                canvasSize={canvasSize}
+                layoutIndex={p.designLayoutIndex}
+                topHeight={compositionSize.topBandHeight}
+                bottomHeight={compositionSize.bottomBandHeight}
+            />
+
+            <View style={[styles.poster, {
                 backgroundColor,
                 width: canvasSize.width,
                 height: canvasSize.height,
-            }]}
-            collapsable={false}>
+                top: compositionSize.posterTop,
+            }]}>
 
             {/* ── 0. Template media (image / video) ── */}
             {hasTemplateMedia ? (
@@ -1050,7 +1295,7 @@ const PosterPreview = ({
                   Always rendered for non-config templates (including reel/video).
                   Uses makeFallbackNameField when no textFields in template.
                   Falls back to "Your Name" when user hasn't typed anything.      ── */}
-            {!isConfigDriven && p.showName && (
+            {!isConfigDriven && p.showName && !!displayName && (
                 interactive
                     ? <DraggableNameText
                         field={centeredNameField}
@@ -1072,10 +1317,10 @@ const PosterPreview = ({
 
             {/* ── 5. Message text
                   Same guaranteed-render logic as name above.                     ── */}
-            {!isConfigDriven && p.showMessage && (
+            {!isConfigDriven && p.showMessage && !!displayMessage && (
                 interactive
                     ? <DraggableMessageText
-                        field={messageField}
+                        field={designedMessageField}
                         text={displayMessage}
                         textStyle={messageTextStyle}
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
@@ -1085,12 +1330,24 @@ const PosterPreview = ({
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale} />
                     : <StaticMessageText
-                        field={messageField}
+                        field={designedMessageField}
                         text={displayMessage}
                         textStyle={messageTextStyle}
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                         textScale={p.messageScale ?? 1} />
             )}
+
+            {(p.selectedTags || []).length > 0 ? (
+                <View style={[styles.tagRibbon, {
+                    top: Math.round(canvasSize.height * 0.82),
+                    left: canvasSize.width * 0.06,
+                    right: canvasSize.width * 0.06,
+                }]} pointerEvents="none">
+                    {(p.selectedTags || []).slice(0, 3).map(tag => (
+                        <Text key={tag} style={styles.tagPill}>{tag}</Text>
+                    ))}
+                </View>
+            ) : null}
 
             {/* ── 6. Stickers ── */}
             {(p.stickers ?? []).map(sticker => (
@@ -1115,16 +1372,23 @@ const PosterPreview = ({
                     </Text>
                 </View>
             ) : null}
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    composition: {
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#FFFFFF',
+    },
     poster: {
         width: POSTER_SIZE.width,
         height: POSTER_SIZE.height,
         overflow: 'hidden',
-        position: 'relative',
+        position: 'absolute',
+        left: 0,
     },
     header: {
         height: POSTER_SIZE.height * 0.48,
@@ -1183,6 +1447,25 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: 2,
     },
+    tagRibbon: {
+        position: 'absolute',
+        zIndex: 8,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    tagPill: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 999,
+        overflow: 'hidden',
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        color: '#111827',
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
     textField: {
         position: 'absolute', left: 16, right: 16,
     },
@@ -1193,6 +1476,89 @@ const styles = StyleSheet.create({
     watermark: {
         fontSize: 10, color: COLORS.white + 'AA',
         letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '600',
+    },
+    premiumTopBand: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 2,
+        borderBottomColor: '#E5E7EB',
+        justifyContent: 'center',
+        paddingHorizontal: 34,
+    },
+    premiumTopContent: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 18,
+    },
+    premiumLogo: {
+        borderRadius: 18,
+        backgroundColor: '#EEF2FF',
+        borderWidth: 2,
+        borderColor: '#D9E2F2',
+    },
+    premiumTitleWrap: {
+        flex: 1,
+        justifyContent: 'center',
+        minWidth: 0,
+    },
+    premiumName: {
+        width: '100%',
+        fontSize: 38,
+        lineHeight: 46,
+        color: '#111827',
+        fontWeight: '800',
+    },
+    premiumDescription: {
+        width: '100%',
+        marginTop: 8,
+        fontSize: 21,
+        lineHeight: 28,
+        color: '#4B5563',
+        fontWeight: '500',
+    },
+    premiumBottomBand: {
+        position: 'absolute',
+        left: 0,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 2,
+        borderTopColor: '#E5E7EB',
+        justifyContent: 'center',
+        paddingHorizontal: 30,
+        paddingVertical: 22,
+    },
+    premiumContactGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    premiumContactItem: {
+        minWidth: '44%',
+        maxWidth: '48%',
+        minHeight: 52,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 14,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    premiumContactIcon: {
+        fontSize: 22,
+        color: '#0D62DF',
+    },
+    premiumContactText: {
+        flex: 1,
+        fontSize: 18,
+        lineHeight: 23,
+        color: '#111827',
+        fontWeight: '600',
     },
 });
 

@@ -1,14 +1,15 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import fonts, { heightPixel, widthPixel } from '../../utils/fonts';
 
 const NAV_ITEMS = [
-    { key: 'home', label: 'Home', icon: 'home' },
-    { key: 'trending', label: 'Trending', icon: 'chart-line-variant' },
-    { key: 'create', label: 'Create', icon: 'plus' },
-    { key: 'saved', label: 'Saved', icon: 'bookmark-outline' },
-    { key: 'profile', label: 'Profile', icon: 'account' },
+    { key: 'home', labelKey: 'navigation.tabs.home', icon: 'home' },
+    { key: 'trending', labelKey: 'navigation.tabs.trending', icon: 'chart-line-variant' },
+    { key: 'create', labelKey: 'navigation.tabs.create', icon: 'plus' },
+    { key: 'saved', labelKey: 'navigation.tabs.saved', icon: 'bookmark-outline' },
+    { key: 'profile', labelKey: 'navigation.tabs.profile', icon: 'account' },
 ];
 
 const CustomBottomNavigation = ({
@@ -20,6 +21,7 @@ const CustomBottomNavigation = ({
     onSavedPress,
     onProfilePress,
 }) => {
+    const { t } = useTranslation();
     const handlers = {
         home: onHomePress,
         trending: onTrendingPress,
@@ -62,7 +64,7 @@ const CustomBottomNavigation = ({
                                 </View>
                             )}
                             <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                                {item.label}
+                                {t(item.labelKey)}
                             </Text>
                         </Pressable>
                     );

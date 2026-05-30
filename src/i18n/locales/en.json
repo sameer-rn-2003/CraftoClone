@@ -1,7 +1,8 @@
 {
     "common": {
         "ok": "OK",
-        "auto": "AUTO"
+        "auto": "AUTO",
+        "cancel": "Cancel"
     },
     "languageSelection": {
         "title": "Choose your language",
@@ -12,7 +13,9 @@
             "home": "Home",
             "myPosters": "My Posters",
             "trending": "Trending",
-            "profile": "Profile"
+            "profile": "Profile",
+            "create": "Create",
+            "saved": "Saved"
         },
         "myPosters": {
             "title": "My Posters",
@@ -25,7 +28,8 @@
         "festival": "Festival",
         "birthday": "Birthday",
         "business": "Business",
-        "motivational": "Motivational"
+        "motivational": "Motivational",
+        "panchayat": "Panchayat Chunav"
     },
     "home": {
         "heroBadge": "AI Poster Studio",
@@ -49,11 +53,29 @@
             "shareWhatsApp": "Share to WhatsApp",
             "download": "Download",
             "edit": "Edit",
-            "changeImage": "Change Image"
+            "changeImage": "Change Image",
+            "changeYourImage": "Change your image",
+            "changeParty": "Change Party",
+            "changePanchayat": "Change Panchayat"
         },
         "underDevelopment": {
             "title": "Info",
             "message": "This feature is under development."
+        },
+        "create": {
+            "title": "Create Poster",
+            "customPoster": "Custom Poster",
+            "galleryTitle": "Choose from gallery",
+            "gallerySubtitle": "Select a background poster from your device",
+            "searchPlaceholder": "Search background posters"
+        },
+        "special": {
+            "selectParty": "Select Party",
+            "selectPanchayat": "Select Panchayat"
+        },
+        "devPremium": {
+            "on": "Dev Premium: ON",
+            "off": "Dev Premium: OFF"
         }
     },
     "templates": {
@@ -173,7 +195,26 @@
             "businessDescription": "Business Description",
             "businessDescriptionPlaceholder": "Describe your business",
             "uploadBusinessLogo": "Upload Business Logo",
-            "changeBusinessLogo": "Change Business Logo"
+            "changeBusinessLogo": "Change Business Logo",
+            "facebookLink": "Facebook Link",
+            "facebookPlaceholder": "https://facebook.com/username",
+            "instagramLink": "Instagram Link",
+            "instagramPlaceholder": "https://instagram.com/username",
+            "websiteLink": "Website Link",
+            "websitePlaceholder": "https://example.com"
+        },
+        "changeDesign": "Design {{index}}",
+        "special": {
+            "tagsTitle": "Poster Tags",
+            "tagsHint": "Choose tags for {{name}}"
+        },
+        "crop": {
+            "title": "Crop and resize image",
+            "subtitle": "Choose how this image should fit inside the poster frame.",
+            "cover": "Cover",
+            "contain": "Contain",
+            "stretch": "Stretch",
+            "useImage": "Use Image"
         }
     },
     "preview": {

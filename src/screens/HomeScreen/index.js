@@ -29,6 +29,7 @@ import {
     setUserName,
     setUserPhoto,
     setIsLoggedIn,
+    setSpecialCategoryContext,
 } from '../../store/posterSlice';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
@@ -44,7 +45,9 @@ import {
     normalizeTemplateApiItem,
 } from '../../utils/templateConfig';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
-import PosterPreview from '../../components/PosterPreview';
+import PosterPreview, {
+    getPremiumDetailsForPoster,
+} from '../../components/PosterPreview';
 import TemplateMedia from '../../components/TemplateMedia';
 import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers';
 import MediaAudioToggle from '../../components/MediaAudioToggle';
@@ -427,6 +430,9 @@ const mapCategoryIcon = (name) => {
             return 'lightbulb-on-outline';
         case 'political':
             return 'bank-outline';
+        case 'panchayat chunav':
+        case 'panchayat':
+            return 'home-city-outline';
         case 'social':
             return 'atom';
         default:
@@ -451,6 +457,28 @@ const FAVORITES_CHIP = {
     icon: 'bookmark',
     categoryId: 'favorites',
 };
+const SPECIAL_CATEGORY_TYPES = {
+    political: 'political',
+    'panchayat chunav': 'panchayat',
+    panchayat: 'panchayat',
+};
+const POLITICAL_PARTIES = [
+    { id: 'bjp', name: 'BJP', color: '#F97316' },
+    { id: 'congress', name: 'Congress', color: '#22C55E' },
+    { id: 'aap', name: 'AAP', color: '#2563EB' },
+    { id: 'samajwadi', name: 'Samajwadi Party', color: '#DC2626' },
+];
+const PANCHAYAT_ENTITIES = [
+    { id: 'sarpanch', name: 'Sarpanch Candidate', color: '#0EA5E9' },
+    { id: 'ward', name: 'Ward Member', color: '#8B5CF6' },
+    { id: 'gram', name: 'Gram Panchayat', color: '#16A34A' },
+    { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
+];
+const CREATE_POSTER_PRESETS = [
+    { id: 'sunrise', name: 'Sunrise Quote', color: '#F97316', source: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200' },
+    { id: 'office', name: 'Business Blue', color: '#2563EB', source: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1200' },
+    { id: 'village', name: 'Village Ground', color: '#16A34A', source: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200' },
+];
 const SETTINGS_OPTIONS = [
     { key: 'contact', label: 'Contact us', icon: 'headset' },
     { key: 'privacy', label: 'Privacy Policy', icon: 'shield-check' },
@@ -462,14 +490,21 @@ const SETTINGS_OPTIONS = [
     { key: 'delete', label: 'Delete Account', icon: 'delete', tone: 'danger' },
 ];
 
-const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
+const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay, isPremium, premiumProfile, designLayoutIndex }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [isMuted, setIsMuted] = useState(true);
     const [hasAudio, setHasAudio] = useState(true);
     const canvasSize = useMemo(() => getTemplateCanvasSize(template), [template]);
+    const premiumDetails = useMemo(
+        () => getPremiumDetailsForPoster({ isPremium, premiumProfile }),
+        [isPremium, premiumProfile],
+    );
+    const topBandHeight = premiumDetails ? heightPixel(42) : 0;
+    const bottomBandHeight = premiumDetails ? heightPixel(54) : 0;
     const posterLayout = useMemo(() => {
-        const fitLayout = getPosterFitLayout(containerSize.width, containerSize.height, canvasSize);
-        if (!containerSize.width || !containerSize.height || !canvasSize?.width || !canvasSize?.height) {
+        const availableHeight = Math.max(0, containerSize.height - topBandHeight - bottomBandHeight);
+        const fitLayout = getPosterFitLayout(containerSize.width, availableHeight, canvasSize);
+        if (!containerSize.width || !availableHeight || !canvasSize?.width || !canvasSize?.height) {
             return fitLayout;
         }
 
@@ -480,11 +515,11 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
             width: containerSize.width,
             height,
             offsetX: 0,
-            offsetY: (containerSize.height - height) / 2,
+            offsetY: topBandHeight + (availableHeight - height) / 2,
             scaleX: scale,
             scaleY: scale,
         };
-    }, [canvasSize, containerSize.height, containerSize.width]);
+    }, [bottomBandHeight, canvasSize, containerSize.height, containerSize.width, topBandHeight]);
     const hasConfigLayers = useMemo(() => isConfigDrivenTemplate(template), [template]);
     const hasTemplateBackgroundMedia = useMemo(
         () => !!(getTemplateImageSource(template) || getTemplateVideoSource(template)),
@@ -538,6 +573,35 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                     setContainerSize({ width, height });
                 }
             }}>
+            {premiumDetails ? (
+                <>
+                    <View style={[styles.reelPremiumTop, { height: topBandHeight }]}>
+                        {premiumDetails.logo ? (
+                            <Image source={{ uri: premiumDetails.logo }} style={styles.reelPremiumLogo} />
+                        ) : null}
+                        <View style={styles.reelPremiumTitleWrap}>
+                            {premiumDetails.name ? (
+                                <Text style={styles.reelPremiumName} numberOfLines={1}>{premiumDetails.name}</Text>
+                            ) : null}
+                            {premiumDetails.description ? (
+                                <Text style={styles.reelPremiumDescription} numberOfLines={1}>
+                                    {premiumDetails.description}
+                                </Text>
+                            ) : null}
+                        </View>
+                    </View>
+                    <View style={[styles.reelPremiumBottom, { height: bottomBandHeight }]}>
+                        {[
+                            premiumDetails.mobile,
+                            premiumDetails.address,
+                            premiumDetails.social,
+                            premiumDetails.website,
+                        ].filter(Boolean).slice(0, 2).map(item => (
+                            <Text key={item} style={styles.reelPremiumContact} numberOfLines={1}>{item}</Text>
+                        ))}
+                    </View>
+                </>
+            ) : null}
             <TemplateMedia
                 template={template}
                 style={[styles.reelImage, {
@@ -602,12 +666,47 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
     );
 };
 
+const getSpecialCategoryType = item => {
+    const normalized = String(item?.id ?? item?.label ?? '').trim().toLowerCase();
+    return SPECIAL_CATEGORY_TYPES[normalized] || null;
+};
+
+const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
+    id: `custom_${Date.now()}`,
+    name,
+    category: 'custom',
+    mediaType: 'IMAGE',
+    source,
+    thumbnail: source,
+    accentColor: '#0D62DF',
+    backgroundColor: '#DDE5EC',
+    config: {
+        width: 1080,
+        height: 1920,
+        layers: [
+            { id: 'bg', type: 'image', src: '{{background_image}}', x: 0, y: 0, width: 1080, height: 1920 },
+            { id: 'user_photo', type: 'image', src: '{{user_photo}}', x: 360, y: 1140, width: 360, height: 360, borderRadius: 180, borderWidth: 8, borderColor: '#FFFFFF' },
+            { id: 'headline', type: 'text', text: '{{headline}}', x: 80, y: 1520, width: 920, align: 'center', color: '#FFFFFF', fontSize: 72, fontWeight: 'bold' },
+            { id: 'subtext', type: 'text', text: '{{subtext}}', x: 100, y: 1620, width: 880, align: 'center', color: '#FFFFFF', fontSize: 40 },
+        ],
+        variables: [
+            { key: 'background_image', type: 'image', default: source },
+            { key: 'user_photo', type: 'image', default: '' },
+            { key: 'headline', type: 'text', default: 'Your Name' },
+            { key: 'subtext', type: 'text', default: 'Your Message' },
+        ],
+    },
+});
+
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const userPhoto = useSelector(state => state.poster.userPhoto);
     const userName = useSelector(state => state.poster.userName);
     const userMessage = useSelector(state => state.poster.userMessage);
     const isPremium = useSelector(state => state.poster.isPremium);
+    const premiumProfile = useSelector(state => state.poster.premiumProfile);
+    const designLayoutIndex = useSelector(state => state.poster.designLayoutIndex);
+    const specialCategoryContext = useSelector(state => state.poster.specialCategoryContext);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
     const { pickImage, loading: isPickingProfileImage } = useImagePicker();
@@ -631,6 +730,10 @@ const HomeScreen = ({ navigation }) => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
+    const [isCreateModalVisible, setCreateModalVisible] = useState(false);
+    const [createSearch, setCreateSearch] = useState('');
+    const [specialPickerType, setSpecialPickerType] = useState(null);
+    const [pendingSpecialCategory, setPendingSpecialCategory] = useState(null);
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
@@ -664,6 +767,9 @@ const HomeScreen = ({ navigation }) => {
             setCategories([
                 { id: 'all', label: t('categories.all'), icon: null, categoryId: 'all' },
                 ...formatted,
+                ...(formatted.some(item => getSpecialCategoryType(item) === 'panchayat')
+                    ? []
+                    : [{ id: 'panchayat', label: t('categories.panchayat', { defaultValue: 'Panchayat Chunav' }), icon: mapCategoryIcon('panchayat'), categoryId: null }]),
             ]);
 
         } catch (e) {
@@ -942,9 +1048,66 @@ const HomeScreen = ({ navigation }) => {
         setSearch(text);
     }, []);
 
+    const openEditorWithTemplate = useCallback((template, extraParams = {}) => {
+        dispatch(setSelectedTemplate(template));
+        navigation?.navigate?.('EditorScreen', {
+            templateId: template.id,
+            template,
+            userName,
+            userMessage,
+            userPhoto,
+            ...extraParams,
+        });
+    }, [dispatch, navigation, userMessage, userName, userPhoto]);
+
     const handleCreatePress = useCallback(() => {
-        navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
-    }, [navigation]);
+        setCreateSearch('');
+        setCreateModalVisible(true);
+    }, []);
+
+    const handleCreateFromGallery = useCallback(async () => {
+        const backgroundUri = await pickImage({ autoStoreInProfilePhoto: false });
+        if (!backgroundUri) return;
+
+        let nextUserPhoto = userPhoto;
+        if (!nextUserPhoto) {
+            nextUserPhoto = await pickImage({ autoStoreInProfilePhoto: false });
+            if (nextUserPhoto) {
+                dispatch(setUserPhoto(nextUserPhoto));
+            }
+        }
+
+        const template = buildCustomTemplate({
+            source: backgroundUri,
+            name: t('home.create.customPoster'),
+        });
+        setCreateModalVisible(false);
+        openEditorWithTemplate(template, { userPhoto: nextUserPhoto || userPhoto });
+    }, [dispatch, openEditorWithTemplate, pickImage, t, userPhoto]);
+
+    const handleCreatePresetSelect = useCallback(async preset => {
+        let nextUserPhoto = userPhoto;
+        if (!nextUserPhoto) {
+            nextUserPhoto = await pickImage({ autoStoreInProfilePhoto: false });
+            if (nextUserPhoto) {
+                dispatch(setUserPhoto(nextUserPhoto));
+            }
+        }
+        setCreateModalVisible(false);
+        openEditorWithTemplate(buildCustomTemplate({ source: preset.source, name: preset.name }), {
+            userPhoto: nextUserPhoto || userPhoto,
+        });
+    }, [dispatch, openEditorWithTemplate, pickImage, userPhoto]);
+
+    const handleDevPremiumToggle = useCallback(async () => {
+        const nextValue = !isPremium;
+        dispatch(setPremiumStatus(nextValue));
+        try {
+            await mergeUserProfile({ isPremium: nextValue });
+        } catch (error) {
+            console.log('Dev premium toggle persist error', error);
+        }
+    }, [dispatch, isPremium]);
 
     const handleHomeTabPress = useCallback(() => {
         setActiveTab('home');
@@ -993,8 +1156,28 @@ const HomeScreen = ({ navigation }) => {
         const hasFavoritesChip = categories.some(item => item.id === FAVORITES_CHIP.id);
         return hasFavoritesChip ? categories : [...categories, FAVORITES_CHIP];
     }, [categories]);
-    const previewChips = useMemo(() => chips.slice(0, CATEGORY_PREVIEW_LIMIT), [chips]);
+    const previewChips = useMemo(() => {
+        const visible = chips.slice(0, CATEGORY_PREVIEW_LIMIT);
+        if (visible.some(item => item.id === activeCategory)) {
+            return visible;
+        }
+        const activeChip = chips.find(item => item.id === activeCategory);
+        if (!activeChip) return visible;
+        return [activeChip, ...visible.filter(item => item.id !== activeChip.id)].slice(0, CATEGORY_PREVIEW_LIMIT);
+    }, [activeCategory, chips]);
     const hasMoreCategories = chips.length > CATEGORY_PREVIEW_LIMIT;
+    const filteredCreatePresets = useMemo(() => {
+        const query = createSearch.trim().toLowerCase();
+        if (!query) return CREATE_POSTER_PRESETS;
+        return CREATE_POSTER_PRESETS.filter(item => item.name.toLowerCase().includes(query));
+    }, [createSearch]);
+    const specialPickerChoices = useMemo(
+        () => specialPickerType === 'panchayat' ? PANCHAYAT_ENTITIES : POLITICAL_PARTIES,
+        [specialPickerType],
+    );
+    const specialChangeLabel = specialCategoryContext?.type === 'panchayat'
+        ? t('home.actions.changePanchayat', { defaultValue: 'Change Panchayat' })
+        : t('home.actions.changeParty', { defaultValue: 'Change Party' });
 
     const reelsData = templates;
     const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
@@ -1098,6 +1281,13 @@ const HomeScreen = ({ navigation }) => {
     }, [dispatch, navigation]);
 
     const handleCategoryPress = useCallback((item) => {
+        const specialType = getSpecialCategoryType(item);
+        if (specialType) {
+            setPendingSpecialCategory(item);
+            setSpecialPickerType(specialType);
+            return;
+        }
+
         setActiveTab('home');
         setActiveCategoryUi(item?.id);
         const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
@@ -1107,6 +1297,32 @@ const HomeScreen = ({ navigation }) => {
         dispatch(setActiveCategory(item?.id ?? 'all'));
         setPage(1);
     }, [dispatch]);
+
+    const applySpecialCategorySelection = useCallback((choice) => {
+        const item = pendingSpecialCategory || {
+            id: specialPickerType === 'panchayat' ? 'panchayat' : 'political',
+            label: specialPickerType === 'panchayat'
+                ? t('categories.panchayat', { defaultValue: 'Panchayat Chunav' })
+                : t('categories.political', { defaultValue: 'Political' }),
+            categoryId: null,
+        };
+        setSpecialPickerType(null);
+        setPendingSpecialCategory(null);
+        dispatch(setSpecialCategoryContext({
+            type: specialPickerType,
+            id: choice.id,
+            name: choice.name,
+            color: choice.color,
+        }));
+        setActiveTab('home');
+        setActiveCategoryUi(item?.id);
+        const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
+            ? null
+            : item?.categoryId;
+        setCategoryIdSelected(categoryId);
+        dispatch(setActiveCategory(item?.id ?? 'all'));
+        setPage(1);
+    }, [dispatch, pendingSpecialCategory, specialPickerType, t]);
 
     const handleSavedPress = useCallback(() => {
         handleCategoryPress(FAVORITES_CHIP);
@@ -1119,18 +1335,17 @@ const HomeScreen = ({ navigation }) => {
     const handleEdit = useCallback(
         item => {
             withPremiumAccess(item, () => {
-                dispatch(setSelectedTemplate(item));
-                navigation?.navigate?.('EditorScreen', {
-                    templateId: item.id,
-                    template: item,
-                    userName,
-                    userMessage,
-                    userPhoto,
-                });
+                openEditorWithTemplate(item);
             });
         },
-        [dispatch, navigation, userMessage, userName, userPhoto, withPremiumAccess],
+        [openEditorWithTemplate, withPremiumAccess],
     );
+
+    const handleChangeSpecialContext = useCallback(() => {
+        if (!specialCategoryContext?.type) return;
+        setPendingSpecialCategory(null);
+        setSpecialPickerType(specialCategoryContext.type);
+    }, [specialCategoryContext?.type]);
 
     const prepareTemplateForMediaAction = useCallback(
         async item => {
@@ -1338,6 +1553,20 @@ const getItemLayout = useCallback((data, index) => ({
                     </Pressable>
                 </View>
 
+                <Pressable
+                    style={[styles.devPremiumToggle, isPremium && styles.devPremiumToggleActive]}
+                    onPress={handleDevPremiumToggle}>
+                    <MaterialCommunityIcons
+                        name={isPremium ? 'crown' : 'crown-outline'}
+                        style={[styles.devPremiumIcon, isPremium && styles.devPremiumIconActive]}
+                    />
+                    <Text style={[styles.devPremiumText, isPremium && styles.devPremiumTextActive]}>
+                        {isPremium
+                            ? t('home.devPremium.on', { defaultValue: 'Dev Premium: ON' })
+                            : t('home.devPremium.off', { defaultValue: 'Dev Premium: OFF' })}
+                    </Text>
+                </Pressable>
+
                 <ScrollView
                     style={styles.categoryPreviewScroll}
                     contentContainerStyle={styles.chipRow}
@@ -1432,6 +1661,9 @@ const getItemLayout = useCallback((data, index) => ({
                                     userPhoto={userPhoto}
                                     userName={userName}
                                     userMessage={userMessage}
+                                    isPremium={isPremium}
+                                    premiumProfile={premiumProfile}
+                                    designLayoutIndex={designLayoutIndex}
                                     shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
                                 />
                             </Pressable>
@@ -1505,18 +1737,33 @@ const getItemLayout = useCallback((data, index) => ({
                                     </Pressable>
                                 </View>
 
-                                <Pressable
-                                    style={[styles.changeImageBtn, isActionInProgress && styles.actionBtnDisabled]}
-                                    onPressIn={stopCardPress}
-                                    disabled={isActionInProgress}
-                                    onPress={event => {
-                                        event.stopPropagation?.();
-                                        handleEdit(item);
-                                    }}>
-                                    <Text style={styles.changeImageText}>
-                                        {t('home.actions.changeYourImage', { defaultValue: 'Change your image' })}
-                                    </Text>
-                                </Pressable>
+                                <View style={styles.reelActionRow}>
+                                    <Pressable
+                                        style={[styles.changeImageBtn, specialCategoryContext?.type && styles.reelActionHalf, isActionInProgress && styles.actionBtnDisabled]}
+                                        onPressIn={stopCardPress}
+                                        disabled={isActionInProgress}
+                                        onPress={event => {
+                                            event.stopPropagation?.();
+                                            handleEdit(item);
+                                        }}>
+                                        <Text style={styles.changeImageText} numberOfLines={1}>
+                                            {t('home.actions.changeYourImage', { defaultValue: 'Change your image' })}
+                                        </Text>
+                                    </Pressable>
+                                    {specialCategoryContext?.type ? (
+                                        <Pressable
+                                            style={[styles.changeImageBtn, styles.reelActionHalf, styles.changePartyBtn]}
+                                            onPressIn={stopCardPress}
+                                            onPress={event => {
+                                                event.stopPropagation?.();
+                                                handleChangeSpecialContext();
+                                            }}>
+                                            <Text style={styles.changePartyText} numberOfLines={1}>
+                                                {specialChangeLabel}
+                                            </Text>
+                                        </Pressable>
+                                    ) : null}
+                                </View>
                             </Pressable>
                         </View>
                     </View>
@@ -1604,6 +1851,113 @@ const getItemLayout = useCallback((data, index) => ({
                         <Pressable style={styles.modalSeeAllBtn} onPress={handleSeeAllPress}>
                             <Text style={styles.modalSeeAllText}>{t('home.seeAll')}</Text>
                         </Pressable>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal
+                visible={isCreateModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setCreateModalVisible(false)}>
+                <Pressable style={styles.modalOverlay} onPress={() => setCreateModalVisible(false)}>
+                    <Pressable style={styles.modalCard} onPress={stopCardPress}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                {t('home.create.title', { defaultValue: 'Create Poster' })}
+                            </Text>
+                            <Pressable onPress={() => setCreateModalVisible(false)} hitSlop={10}>
+                                <MaterialCommunityIcons name="close" style={styles.modalCloseIcon} />
+                            </Pressable>
+                        </View>
+
+                        <Pressable
+                            style={styles.galleryPickBtn}
+                            onPress={handleCreateFromGallery}
+                            disabled={isPickingProfileImage}>
+                            <MaterialCommunityIcons name="image-plus" style={styles.galleryPickIcon} />
+                            <View style={styles.galleryPickTextWrap}>
+                                <Text style={styles.galleryPickTitle}>
+                                    {t('home.create.galleryTitle', { defaultValue: 'Choose from gallery' })}
+                                </Text>
+                                <Text style={styles.galleryPickSub}>
+                                    {t('home.create.gallerySubtitle', { defaultValue: 'Select a background poster from your device' })}
+                                </Text>
+                            </View>
+                        </Pressable>
+
+                        <View style={styles.createSearchBar}>
+                            <MaterialCommunityIcons name="magnify" style={styles.createSearchIcon} />
+                            <TextInput
+                                value={createSearch}
+                                onChangeText={setCreateSearch}
+                                placeholder={t('home.create.searchPlaceholder', { defaultValue: 'Search background posters' })}
+                                placeholderTextColor="#8A94A3"
+                                style={styles.createSearchInput}
+                            />
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <View style={styles.createPresetGrid}>
+                                {filteredCreatePresets.map(preset => (
+                                    <Pressable
+                                        key={preset.id}
+                                        style={styles.createPresetCard}
+                                        onPress={() => handleCreatePresetSelect(preset)}>
+                                        <Image source={{ uri: preset.source }} style={styles.createPresetImage} resizeMode="cover" />
+                                        <View style={[styles.createPresetAccent, { backgroundColor: preset.color }]} />
+                                        <Text style={styles.createPresetName} numberOfLines={1}>{preset.name}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal
+                visible={!!specialPickerType}
+                transparent
+                animationType="slide"
+                onRequestClose={() => {
+                    setSpecialPickerType(null);
+                    setPendingSpecialCategory(null);
+                }}>
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => {
+                        setSpecialPickerType(null);
+                        setPendingSpecialCategory(null);
+                    }}>
+                    <Pressable style={styles.modalCard} onPress={stopCardPress}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                {specialPickerType === 'panchayat'
+                                    ? t('home.special.selectPanchayat', { defaultValue: 'Select Panchayat' })
+                                    : t('home.special.selectParty', { defaultValue: 'Select Party' })}
+                            </Text>
+                            <Pressable
+                                onPress={() => {
+                                    setSpecialPickerType(null);
+                                    setPendingSpecialCategory(null);
+                                }}
+                                hitSlop={10}>
+                                <MaterialCommunityIcons name="close" style={styles.modalCloseIcon} />
+                            </Pressable>
+                        </View>
+
+                        <View style={styles.specialChoiceList}>
+                            {specialPickerChoices.map(choice => (
+                                <Pressable
+                                    key={choice.id}
+                                    style={styles.specialChoice}
+                                    onPress={() => applySpecialCategorySelection(choice)}>
+                                    <View style={[styles.specialChoiceSwatch, { backgroundColor: choice.color }]} />
+                                    <Text style={styles.specialChoiceText}>{choice.name}</Text>
+                                    <MaterialCommunityIcons name="chevron-right" style={styles.specialChoiceIcon} />
+                                </Pressable>
+                            ))}
+                        </View>
                     </Pressable>
                 </Pressable>
             </Modal>
@@ -1881,8 +2235,40 @@ const styles = StyleSheet.create({
         fontFamily: fonts.FONT_FAMILY.Bold,
         includeFontPadding: false,
     },
+    devPremiumToggle: {
+        alignSelf: 'flex-start',
+        marginTop: heightPixel(12),
+        minHeight: heightPixel(32),
+        borderRadius: widthPixel(16),
+        borderWidth: widthPixel(1),
+        borderColor: '#93A4B8',
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(7),
+        paddingHorizontal: widthPixel(12),
+    },
+    devPremiumToggleActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    devPremiumIcon: {
+        fontSize: widthPixel(16),
+        color: COLORS.primary,
+    },
+    devPremiumIconActive: {
+        color: '#FFFFFF',
+    },
+    devPremiumText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: COLORS.primary,
+    },
+    devPremiumTextActive: {
+        color: '#FFFFFF',
+    },
     chipRow: {
-        marginTop: heightPixel(18),
+        marginTop: heightPixel(12),
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: CHIP_GAP,
@@ -1997,6 +2383,59 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
+    reelPremiumTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(9),
+        paddingHorizontal: widthPixel(10),
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: widthPixel(1),
+        borderBottomColor: '#E5E7EB',
+    },
+    reelPremiumLogo: {
+        width: widthPixel(30),
+        height: widthPixel(30),
+        borderRadius: widthPixel(8),
+        backgroundColor: '#EEF2FF',
+    },
+    reelPremiumTitleWrap: {
+        flex: 1,
+    },
+    reelPremiumName: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#111827',
+    },
+    reelPremiumDescription: {
+        marginTop: heightPixel(1),
+        fontSize: widthPixel(9),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#6B7280',
+    },
+    reelPremiumBottom: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 12,
+        justifyContent: 'center',
+        gap: heightPixel(3),
+        paddingHorizontal: widthPixel(10),
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: widthPixel(1),
+        borderTopColor: '#E5E7EB',
+    },
+    reelPremiumContact: {
+        fontSize: widthPixel(10),
+        lineHeight: heightPixel(13),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#111827',
+    },
     listStateWrap: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -2061,6 +2500,12 @@ const styles = StyleSheet.create({
     bookmarkIconActive: {
         color: COLORS.primary,
     },
+    reelActionRow: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(8),
+    },
     changeImageBtn: {
         width: '100%',
         height: heightPixel(33),
@@ -2070,11 +2515,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#F7F7F8',
         alignItems: 'center',
         justifyContent: 'center',
+        paddingHorizontal: widthPixel(10),
+    },
+    reelActionHalf: {
+        flex: 1,
+        width: undefined,
+    },
+    changePartyBtn: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
     },
     changeImageText: {
         fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.primary,
+    },
+    changePartyText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#FFFFFF',
     },
     actionBtnDisabled: {
         opacity: 0.6,
@@ -2131,6 +2590,128 @@ const styles = StyleSheet.create({
         fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.primary,
+    },
+    galleryPickBtn: {
+        minHeight: heightPixel(70),
+        borderRadius: widthPixel(16),
+        borderWidth: widthPixel(1),
+        borderColor: '#D7DEE8',
+        backgroundColor: '#F7FAFD',
+        paddingHorizontal: widthPixel(14),
+        paddingVertical: heightPixel(12),
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(12),
+        marginBottom: heightPixel(12),
+    },
+    galleryPickIcon: {
+        fontSize: widthPixel(28),
+        color: COLORS.primary,
+    },
+    galleryPickTextWrap: {
+        flex: 1,
+    },
+    galleryPickTitle: {
+        fontSize: widthPixel(14),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#111827',
+    },
+    galleryPickSub: {
+        marginTop: heightPixel(2),
+        fontSize: widthPixel(11),
+        lineHeight: heightPixel(16),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.textSecondary,
+    },
+    createSearchBar: {
+        height: heightPixel(42),
+        borderRadius: widthPixel(21),
+        borderWidth: widthPixel(1),
+        borderColor: '#D7DEE8',
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: widthPixel(13),
+        marginBottom: heightPixel(12),
+    },
+    createSearchIcon: {
+        fontSize: widthPixel(20),
+        color: '#4B5563',
+        marginRight: widthPixel(8),
+    },
+    createSearchInput: {
+        flex: 1,
+        paddingVertical: 0,
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#111827',
+    },
+    createPresetGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: widthPixel(10),
+        paddingBottom: heightPixel(8),
+    },
+    createPresetCard: {
+        width: '31%',
+        minWidth: widthPixel(92),
+        borderRadius: widthPixel(12),
+        overflow: 'hidden',
+        backgroundColor: '#F3F6FA',
+        borderWidth: widthPixel(1),
+        borderColor: '#E1E7EF',
+    },
+    createPresetImage: {
+        width: '100%',
+        aspectRatio: 0.72,
+        backgroundColor: '#DDE5EC',
+    },
+    createPresetAccent: {
+        position: 'absolute',
+        left: widthPixel(7),
+        top: heightPixel(7),
+        width: widthPixel(10),
+        height: widthPixel(10),
+        borderRadius: widthPixel(5),
+        borderWidth: widthPixel(1),
+        borderColor: '#FFFFFF',
+    },
+    createPresetName: {
+        paddingHorizontal: widthPixel(7),
+        paddingVertical: heightPixel(7),
+        fontSize: widthPixel(10),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#111827',
+    },
+    specialChoiceList: {
+        gap: heightPixel(9),
+        paddingBottom: heightPixel(4),
+    },
+    specialChoice: {
+        minHeight: heightPixel(52),
+        borderRadius: widthPixel(14),
+        borderWidth: widthPixel(1),
+        borderColor: '#D7DEE8',
+        backgroundColor: '#FFFFFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: widthPixel(14),
+        gap: widthPixel(12),
+    },
+    specialChoiceSwatch: {
+        width: widthPixel(18),
+        height: widthPixel(18),
+        borderRadius: widthPixel(9),
+    },
+    specialChoiceText: {
+        flex: 1,
+        fontSize: widthPixel(14),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#111827',
+    },
+    specialChoiceIcon: {
+        fontSize: widthPixel(20),
+        color: '#6B7280',
     },
 });
 

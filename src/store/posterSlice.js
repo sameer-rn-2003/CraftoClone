@@ -11,11 +11,22 @@ const initialState = {
     isLoggedIn: false,
     userMessage: '',
     isPremium: false,
+    designLayoutIndex: 0,
+    specialCategoryContext: null,
+    selectedTags: [],
     premiumProfile: {
+        activeSection: 'personal',
         personal: {
             mobileNumber: '',
             address: '',
             socialHandle: '',
+            socialHandles: {
+                facebook: '',
+                instagram: '',
+                twitter: '',
+                snapchat: '',
+                other: '',
+            },
             organizationName: '',
             organizationLogo: '',
         },
@@ -26,6 +37,13 @@ const initialState = {
             contactMobileNumber: '',
             contactAddress: '',
             contactSocialHandle: '',
+            socialHandles: {
+                facebook: '',
+                instagram: '',
+                twitter: '',
+                snapchat: '',
+                other: '',
+            },
         },
     },
 
@@ -83,6 +101,7 @@ const posterSlice = createSlice({
 },
         setSelectedTemplate(state, { payload }) {
             state.selectedTemplate = payload;
+            state.designLayoutIndex = 0;
             state.photoPosition = { x: 0, y: 0 };
             state.photoScale = 1.0;
             state.namePosition = { x: 0, y: 0 };
@@ -106,10 +125,18 @@ const posterSlice = createSlice({
                 personal: {
                     ...state.premiumProfile.personal,
                     ...(payload?.personal || {}),
+                    socialHandles: {
+                        ...state.premiumProfile.personal.socialHandles,
+                        ...(payload?.personal?.socialHandles || {}),
+                    },
                 },
                 business: {
                     ...state.premiumProfile.business,
                     ...(payload?.business || {}),
+                    socialHandles: {
+                        ...state.premiumProfile.business.socialHandles,
+                        ...(payload?.business?.socialHandles || {}),
+                    },
                 },
             };
         },
@@ -117,7 +144,40 @@ const posterSlice = createSlice({
             const { section, field, value } = payload || {};
             if (!section || !field) return;
             if (!state.premiumProfile[section]) return;
+            if (field.includes('.')) {
+                const [parent, child] = field.split('.');
+                if (!state.premiumProfile[section][parent]) {
+                    state.premiumProfile[section][parent] = {};
+                }
+                state.premiumProfile[section][parent][child] = value;
+                return;
+            }
             state.premiumProfile[section][field] = value;
+        },
+        setPremiumProfileActiveSection(state, { payload }) {
+            state.premiumProfile.activeSection = payload === 'business' ? 'business' : 'personal';
+        },
+        setSpecialCategoryContext(state, { payload }) {
+            state.specialCategoryContext = payload || null;
+            state.selectedTags = [];
+        },
+        setSelectedTags(state, { payload }) {
+            state.selectedTags = Array.isArray(payload) ? payload : [];
+        },
+        toggleSelectedTag(state, { payload }) {
+            const tag = String(payload || '').trim();
+            if (!tag) return;
+            if (state.selectedTags.includes(tag)) {
+                state.selectedTags = state.selectedTags.filter(item => item !== tag);
+                return;
+            }
+            state.selectedTags.push(tag);
+        },
+        cycleDesignLayout(state) {
+            state.designLayoutIndex = ((state.designLayoutIndex || 0) + 1) % 3;
+            state.photoPosition = { x: 0, y: 0 };
+            state.namePosition = { x: 0, y: 0 };
+            state.messagePosition = { x: 0, y: 0 };
         },
         setPhotoPosition(state, { payload }) { state.photoPosition = payload; },
         setPhotoScale(state, { payload }) { state.photoScale = payload; },
@@ -214,11 +274,22 @@ const posterSlice = createSlice({
             state.bgOverlayColor = null;
             state.bgOverlayOpacity = 0.3;
             state.stickers = [];
+            state.designLayoutIndex = 0;
+            state.specialCategoryContext = null;
+            state.selectedTags = [];
             state.premiumProfile = {
+                activeSection: 'personal',
                 personal: {
                     mobileNumber: '',
                     address: '',
                     socialHandle: '',
+                    socialHandles: {
+                        facebook: '',
+                        instagram: '',
+                        twitter: '',
+                        snapchat: '',
+                        other: '',
+                    },
                     organizationName: '',
                     organizationLogo: '',
                 },
@@ -229,6 +300,13 @@ const posterSlice = createSlice({
                     contactMobileNumber: '',
                     contactAddress: '',
                     contactSocialHandle: '',
+                    socialHandles: {
+                        facebook: '',
+                        instagram: '',
+                        twitter: '',
+                        snapchat: '',
+                        other: '',
+                    },
                 },
             };
         },
@@ -240,7 +318,8 @@ const posterSlice = createSlice({
 export const {
     setSelectedTemplate, setUserPhoto, setUserName, setUserMessage,
     setUserPhotoAnimation,
-    setPremiumStatus, hydratePremiumProfile, setPremiumProfileField,
+    setPremiumStatus, hydratePremiumProfile, setPremiumProfileField, setPremiumProfileActiveSection,
+    setSpecialCategoryContext, setSelectedTags, toggleSelectedTag, cycleDesignLayout,
     setPhotoPosition, setPhotoScale,
     setNameColor, setMessageColor,
     setNameFontSize, setMessageFontSize,
