@@ -1,24 +1,38 @@
-import React, { useCallback,useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+    Pressable,
     SafeAreaView,
+    ScrollView,
+    StatusBar,
     StyleSheet,
     Text,
     View,
-    Pressable,
-    StatusBar,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { SUPPORTED_LANGUAGES } from '../../i18n/languages';
 import { setStoredLanguage } from '../../i18n/storage';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '../../utils/constants';
+import { BORDER_RADIUS, COLORS, FONTS, SPACING } from '../../utils/constants';
+import { getSupportedLanguages } from '../../apiService/langApi';
+import { formatLanguages } from '../../utils/formatLanguages';
 
-import { getSupportedLanguages } from '../../apiService/langApi'; 
-import { formatLanguages } from '../../utils/formatLanguages'; // adjust path
+const LANGUAGE_DISPLAY = {
+    hi: { nativeLabel: 'हिंदी', label: 'Hindi' },
+    mr: { nativeLabel: 'मराठी', label: 'Marathi' },
+    gu: { nativeLabel: 'ગુજરાતી', label: 'Gujarati' },
+    kn: { nativeLabel: 'ಕನ್ನಡ', label: 'kannada' },
+    te: { nativeLabel: 'తెలుగు', label: 'Telugu' },
+    en: { nativeLabel: 'English', label: 'English' },
+    ta: { nativeLabel: 'தமிழ்', label: 'Tamil' },
+    ml: { nativeLabel: 'മലയാളം', label: 'Malayalam' },
+};
+
+const applyLanguageDisplay = lang => ({
+    ...lang,
+    ...(LANGUAGE_DISPLAY[lang.code] || {}),
+});
 
 const LanguageSelectionScreen = ({ navigation }) => {
-    const { t } = useTranslation();
-    const [languages, setLanguages] = useState([]);
+    const [languages, setLanguages] = useState(SUPPORTED_LANGUAGES.map(applyLanguageDisplay));
 
     const handleSelect = useCallback(async (code) => {
         await setStoredLanguage(code);
@@ -26,121 +40,101 @@ const LanguageSelectionScreen = ({ navigation }) => {
         navigation.reset({ index: 0, routes: [{ name: 'UserSetup' }] });
     }, [navigation]);
 
-
     useEffect(() => {
+        const fetchLanguages = async () => {
+            try {
+                const res = await getSupportedLanguages();
+                const formatted = formatLanguages(res?.data?.data || []);
+                if (formatted.length) {
+                    setLanguages(formatted.map(applyLanguageDisplay));
+                }
+            } catch (error) {
+                console.log('Language fetch error', error);
+            }
+        };
+
         fetchLanguages();
     }, []);
-
-    const fetchLanguages = async () => {
-        try {
-            const res = await getSupportedLanguages();
-            const formatted = formatLanguages(res?.data?.data || []);
-            setLanguages(formatted);
-        } catch (error) {
-            console.log('Language fetch error', error);
-        }
-    };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
 
-            <View style={styles.header}>
-                <Text style={styles.title}>{t('languageSelection.title')}</Text>
-                <Text style={styles.subtitle}>{t('languageSelection.subtitle')}</Text>
-            </View>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Language</Text>
+                    <Text style={styles.subtitle}>Please select language</Text>
+                </View>
 
-            <View style={styles.list}>
-                {languages?.map(lang => (
-                    <Pressable
-                        key={lang.code}
-                        style={styles.card}
-                        onPress={() => handleSelect(lang.code)}
-                        android_ripple={{ color: 'rgba(255,255,255,0.08)' }}>
-                        <View style={styles.cardLeft}>
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{lang.nativeLabel}</Text>
-                            </View>
-                            <View style={styles.cardTextWrap}>
-                                <Text style={styles.langLabel}>{lang.label}</Text>
-                                {lang.nativeLabel !== lang.label ? (
-                                    <Text style={styles.langNative}>{lang.nativeLabel}</Text>
-                                ) : null}
-                            </View>
-                        </View>
-                        <Text style={styles.chevron}>›</Text>
-                    </Pressable>
-                ))}
-            </View>
+                <View style={styles.grid}>
+                    {languages.map(lang => (
+                        <Pressable
+                            key={lang.code}
+                            style={styles.card}
+                            onPress={() => handleSelect(lang.code)}>
+                            <Text style={styles.langNative}>{lang.nativeLabel}</Text>
+                            <Text style={styles.langLabel}>{lang.label}</Text>
+                        </Pressable>
+                    ))}
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: COLORS.white },
+    safeArea: {
+        flex: 1,
+        backgroundColor: COLORS.white,
+    },
+    container: {
+        flexGrow: 1,
+        paddingHorizontal: SPACING.xl,
+        paddingTop: 160,
+        paddingBottom: 48,
+    },
     header: {
-        paddingHorizontal: SPACING.base,
-        paddingTop: SPACING.xl,
-        paddingBottom: SPACING.lg,
-        gap: 8,
+        alignItems: 'center',
+        marginBottom: 54,
     },
     title: {
-        fontSize: FONTS.sizes.xxl,
-        fontWeight: FONTS.weights.extraBold,
-        color: '#1E2440',
-        letterSpacing: -0.5,
+        fontSize: 31,
+        fontWeight: FONTS.weights.black,
+        color: '#050505',
+        marginBottom: 22,
     },
     subtitle: {
-        fontSize: FONTS.sizes.base,
-        color: '#7C829B',
-        lineHeight: 22,
+        fontSize: 22,
+        color: '#97979D',
+        fontWeight: FONTS.weights.regular,
     },
-    list: { paddingHorizontal: SPACING.base, gap: SPACING.sm },
-    card: {
+    grid: {
         flexDirection: 'row',
-        alignItems: 'center',
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
-        paddingHorizontal: SPACING.base,
-        paddingVertical: SPACING.md,
-        borderRadius: BORDER_RADIUS.xl,
-        backgroundColor: COLORS.white,
-        borderWidth: 1,
-        borderColor: '#E2E5F2',
-        shadowColor: '#9AA3C7',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-        elevation: 4,
+        rowGap: 24,
     },
-    cardLeft: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, flex: 1 },
-    cardTextWrap: { flex: 1 },
-    badge: {
-        minWidth: 64,
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: BORDER_RADIUS.lg,
-        backgroundColor: '#EEF1FF',
-        borderWidth: 1,
-        borderColor: '#D7DDF8',
+    card: {
+        width: '47%',
+        minHeight: 146,
         alignItems: 'center',
         justifyContent: 'center',
+        borderRadius: BORDER_RADIUS.xl,
+        backgroundColor: COLORS.white,
+        borderWidth: 2,
+        borderColor: '#DFDFE1',
     },
-    badgeText: {
-        fontSize: 14,
-        color: '#4F6EF7',
+    langNative: {
+        fontSize: 25,
+        color: '#5E60D8',
         fontWeight: FONTS.weights.bold,
     },
     langLabel: {
-        fontSize: FONTS.sizes.base,
-        color: '#1E2440',
-        fontWeight: FONTS.weights.semiBold,
+        fontSize: 24,
+        color: '#050505',
+        fontWeight: FONTS.weights.regular,
+        marginTop: 4,
     },
-    langNative: {
-        fontSize: FONTS.sizes.sm,
-        color: '#7C829B',
-        marginTop: 2,
-    },
-    chevron: { fontSize: 22, color: '#9AA3C7', marginLeft: SPACING.sm },
 });
 
 export default LanguageSelectionScreen;

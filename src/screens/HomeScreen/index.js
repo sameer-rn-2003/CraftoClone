@@ -48,7 +48,9 @@ import PosterPreview from '../../components/PosterPreview';
 import TemplateMedia from '../../components/TemplateMedia';
 import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers';
 import MediaAudioToggle from '../../components/MediaAudioToggle';
+import CustomBottomNavigation from '../../components/CustomBottomNavigation';
 import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/templateMedia';
+import useImagePicker from '../../hooks/useImagePicker';
 import { getCategories } from '../../apiService/categoriesApi';
 import { getTemplatesApi } from '../../apiService/templateApi';
 import {
@@ -401,7 +403,7 @@ const resData = {
 
 
 const COLORS = {
-    pageBackground: '#F1F1F1',
+    pageBackground: '#C9E6F7',
     headerBackground: '#C9E6F7',
     cardBackground: '#FFFFFF',
     primary: '#0D62DF',
@@ -411,7 +413,7 @@ const COLORS = {
     chipBackground: '#D5E5F1',
     chipActiveText: '#FFFFFF',
     chipText: '#111827',
-    actionPanel: '#EFEFF0',
+    actionPanel: '#FFFFFF',
 };
 const mapCategoryIcon = (name) => {
     switch (name.toLowerCase()) {
@@ -433,14 +435,15 @@ const mapCategoryIcon = (name) => {
 };
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const ITEM_SPACING = heightPixel(14);
-const REEL_MEDIA_HEIGHT = Math.min(heightPixel(420), SCREEN_H - heightPixel(320));
-const META_HEIGHT = heightPixel(114);
+const REEL_MEDIA_HEIGHT = Math.round(Math.min(heightPixel(460), SCREEN_H - heightPixel(320)));
+const META_HEIGHT = Math.round(heightPixel(95));
+// ADD THIS: The exact height of one reel card
 const ITEM_HEIGHT = REEL_MEDIA_HEIGHT + META_HEIGHT;
-const CHIP_HEIGHT = heightPixel(34);
+const CHIP_HEIGHT = heightPixel(25);
 const CHIP_GAP = widthPixel(8);
 const MAX_CATEGORY_LINES = 2;
-const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(40);
+const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(24);
+const CATEGORY_PREVIEW_LIMIT = 6;
 const TEMPLATE_PAGE_SIZE = 30;
 const FAVORITES_CHIP = {
     id: 'favorites',
@@ -448,16 +451,40 @@ const FAVORITES_CHIP = {
     icon: 'bookmark',
     categoryId: 'favorites',
 };
+const SETTINGS_OPTIONS = [
+    { key: 'contact', label: 'Contact us', icon: 'headset' },
+    { key: 'privacy', label: 'Privacy Policy', icon: 'shield-check' },
+    { key: 'terms', label: 'Terms & Conditions', icon: 'file-document-outline' },
+    { key: 'refund', label: 'Refund and Cancellations', icon: 'restart' },
+    { key: 'about', label: 'About Us', icon: 'exclamation-thick' },
+    { key: 'product', label: 'Product Description', icon: 'creation' },
+    { key: 'signout', label: 'SignOut', icon: 'logout', tone: 'warning' },
+    { key: 'delete', label: 'Delete Account', icon: 'delete', tone: 'danger' },
+];
 
 const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [isMuted, setIsMuted] = useState(true);
     const [hasAudio, setHasAudio] = useState(true);
     const canvasSize = useMemo(() => getTemplateCanvasSize(template), [template]);
-    const posterLayout = useMemo(
-        () => getPosterFitLayout(containerSize.width, containerSize.height, canvasSize),
-        [canvasSize, containerSize.height, containerSize.width],
-    );
+    const posterLayout = useMemo(() => {
+        const fitLayout = getPosterFitLayout(containerSize.width, containerSize.height, canvasSize);
+        if (!containerSize.width || !containerSize.height || !canvasSize?.width || !canvasSize?.height) {
+            return fitLayout;
+        }
+
+        const scale = containerSize.width / canvasSize.width;
+        const height = canvasSize.height * scale;
+
+        return {
+            width: containerSize.width,
+            height,
+            offsetX: 0,
+            offsetY: (containerSize.height - height) / 2,
+            scaleX: scale,
+            scaleY: scale,
+        };
+    }, [canvasSize, containerSize.height, containerSize.width]);
     const hasConfigLayers = useMemo(() => isConfigDrivenTemplate(template), [template]);
     const hasTemplateBackgroundMedia = useMemo(
         () => !!(getTemplateImageSource(template) || getTemplateVideoSource(template)),
@@ -583,13 +610,14 @@ const HomeScreen = ({ navigation }) => {
     const isPremium = useSelector(state => state.poster.isPremium);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
+    const { pickImage, loading: isPickingProfileImage } = useImagePicker();
+    const [activeTab, setActiveTab] = useState('home');
     const [activeCategory, setActiveCategoryUi] = useState('all');
     const [categoryIdSelected, setCategoryIdSelected] = useState(null);
     const flatListRef = useRef(null);
     const [activeMediaKey, setActiveMediaKey] = useState(null);
     const [categories, setCategories] = useState([]);
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
-    const [hasOverflowCategories, setHasOverflowCategories] = useState(false);
     const [favoriteMap, setFavoriteMap] = useState({});
     const [favoriteLoadingMap, setFavoriteLoadingMap] = useState({});
     const isActionInProgress = isSaving || isSharing;
@@ -606,6 +634,9 @@ const HomeScreen = ({ navigation }) => {
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
+    const [settingsName, setSettingsName] = useState(userName || '');
+    const [settingsPhoto, setSettingsPhoto] = useState(userPhoto || '');
+    const [isEditingSettingsProfile, setEditingSettingsProfile] = useState(false);
     const requestIdRef = useRef(0);
     const pendingPremiumActionRef = useRef(null);
 
@@ -674,7 +705,12 @@ const HomeScreen = ({ navigation }) => {
         loadFavorites();
     }, [loadFavorites]);
 
-    const handleLogout = async () => {
+    useEffect(() => {
+        setSettingsName(userName || '');
+        setSettingsPhoto(userPhoto || '');
+    }, [userName, userPhoto]);
+
+    const handleLogout = useCallback(async () => {
         try {
             dispatch(setIsLoggedIn(false));
             await mergeUserProfile({ isLoggedIn: false });
@@ -700,7 +736,52 @@ const HomeScreen = ({ navigation }) => {
         } catch (e) {
             console.log('Token cleanup error:', e);
         }
-    };
+    }, [dispatch]);
+
+    const handleProfilePress = useCallback(() => {
+        setActiveTab('profile');
+    }, []);
+
+    const handleSettingOptionPress = useCallback((option) => {
+        if (option.key !== 'signout') {
+            Alert.alert(option.label, 'Coming soon.');
+            return;
+        }
+
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Logout', style: 'destructive', onPress: handleLogout },
+            ],
+        );
+    }, [handleLogout]);
+
+    const handleSettingsPhotoPress = useCallback(async () => {
+        const uri = await pickImage({ autoStoreInProfilePhoto: false });
+        if (uri) {
+            setSettingsPhoto(uri);
+            setEditingSettingsProfile(true);
+        }
+    }, [pickImage]);
+
+    const handleSaveSettingsProfile = useCallback(async () => {
+        const nextName = settingsName.trim();
+        if (!nextName) {
+            Alert.alert('Profile', 'Please enter your name.');
+            return;
+        }
+
+        const profile = await mergeUserProfile({
+            name: nextName,
+            imageUri: settingsPhoto,
+        });
+        dispatch(setUserName(profile.name));
+        dispatch(setUserPhoto(profile.imageUri));
+        setEditingSettingsProfile(false);
+        Alert.alert('Profile', 'Profile updated on this device.');
+    }, [dispatch, settingsName, settingsPhoto]);
 
     const fetchTemplates = useCallback(async ({ pageNumber = 1, searchText = '', categoryId = null } = {}) => {
         const requestId = ++requestIdRef.current;
@@ -865,6 +946,23 @@ const HomeScreen = ({ navigation }) => {
         navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
     }, [navigation]);
 
+    const handleHomeTabPress = useCallback(() => {
+        setActiveTab('home');
+        setActiveCategoryUi('all');
+        setCategoryIdSelected(null);
+        dispatch(setActiveCategory('all'));
+        setPage(1);
+        flatListRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+    }, [dispatch]);
+
+    const handleTrendingPress = useCallback(() => {
+        setActiveTab('trending');
+        setActiveCategoryUi('all');
+        setCategoryIdSelected(null);
+        dispatch(setActiveCategory('all'));
+        setPage(1);
+    }, [dispatch]);
+
     const loadMore = useCallback(() => {
         if (!hasLoadedOnce || !templates.length || !hasMore || isInitialLoading || isLoadingMore) return;
 
@@ -895,6 +993,8 @@ const HomeScreen = ({ navigation }) => {
         const hasFavoritesChip = categories.some(item => item.id === FAVORITES_CHIP.id);
         return hasFavoritesChip ? categories : [...categories, FAVORITES_CHIP];
     }, [categories]);
+    const previewChips = useMemo(() => chips.slice(0, CATEGORY_PREVIEW_LIMIT), [chips]);
+    const hasMoreCategories = chips.length > CATEGORY_PREVIEW_LIMIT;
 
     const reelsData = templates;
     const hasReachedEnd = hasLoadedOnce && !isInitialLoading && !hasMore && reelsData.length > 0;
@@ -989,12 +1089,6 @@ const HomeScreen = ({ navigation }) => {
         openSubscriptionModal(action);
     }, [isPremium, openSubscriptionModal]);
 
-    const handleTestSubscriptionToggle = useCallback(async () => {
-        const nextValue = !isPremium;
-        dispatch(setPremiumStatus(nextValue));
-        await mergeUserProfile({ isPremium: nextValue });
-    }, [dispatch, isPremium]);
-
     const handleSeeAllPress = useCallback(() => {
         setCategoryModalVisible(false);
         setActiveCategoryUi('all');
@@ -1004,6 +1098,7 @@ const HomeScreen = ({ navigation }) => {
     }, [dispatch, navigation]);
 
     const handleCategoryPress = useCallback((item) => {
+        setActiveTab('home');
         setActiveCategoryUi(item?.id);
         const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
             ? null
@@ -1012,6 +1107,12 @@ const HomeScreen = ({ navigation }) => {
         dispatch(setActiveCategory(item?.id ?? 'all'));
         setPage(1);
     }, [dispatch]);
+
+    const handleSavedPress = useCallback(() => {
+        handleCategoryPress(FAVORITES_CHIP);
+        setActiveTab('saved');
+        flatListRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+    }, [handleCategoryPress]);
 
     // FIX 1: Unified edit handler — always passes full context so user photo is
     // never lost in EditorScreen regardless of which reel is tapped.
@@ -1110,18 +1211,110 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-console.log("reelsData", reelsData);
+// console.log("reelsData", reelsData);
+const getItemLayout = useCallback((data, index) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+}), []);
     return (
-        <>
+        <View style={styles.screen}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
 
+            {activeTab === 'profile' ? (
+                <View style={styles.settingsScreen}>
+                    <View style={styles.settingsHeader}>
+                        <Pressable style={styles.settingsBackBtn} onPress={handleHomeTabPress} hitSlop={12}>
+                            <MaterialCommunityIcons name="chevron-left" style={styles.settingsBackIcon} />
+                        </Pressable>
+                        <Text style={styles.settingsTitle}>Settings</Text>
+                        <View style={styles.settingsHeaderSpacer} />
+                    </View>
+
+                    <View style={styles.settingsProfileCard}>
+                        <Pressable style={styles.settingsAvatarWrap} onPress={handleSettingsPhotoPress}>
+                            {settingsPhoto ? (
+                                <Image source={{ uri: settingsPhoto }} style={styles.settingsAvatar} resizeMode="cover" />
+                            ) : (
+                                <MaterialCommunityIcons name="account" style={styles.settingsAvatarIcon} />
+                            )}
+                            <View style={styles.settingsCameraBadge}>
+                                <MaterialCommunityIcons name="camera" style={styles.settingsCameraIcon} />
+                            </View>
+                        </Pressable>
+
+                        <View style={styles.settingsProfileTextWrap}>
+                            {isEditingSettingsProfile ? (
+                                <TextInput
+                                    style={styles.settingsNameInput}
+                                    value={settingsName}
+                                    onChangeText={setSettingsName}
+                                    placeholder="Your name"
+                                    placeholderTextColor="#9A9A9A"
+                                />
+                            ) : (
+                                <Text style={styles.settingsName}>{settingsName || 'Your Name'}</Text>
+                            )}
+                            <Text style={styles.settingsProfileHint}>
+                                {isEditingSettingsProfile ? 'Editing locally on this device' : 'Tap photo or edit to update'}
+                            </Text>
+                        </View>
+
+                        <Pressable
+                            style={styles.settingsEditBtn}
+                            onPress={isEditingSettingsProfile ? handleSaveSettingsProfile : () => setEditingSettingsProfile(true)}
+                            disabled={isPickingProfileImage}>
+                            <Text style={styles.settingsEditText}>
+                                {isEditingSettingsProfile ? 'Save' : 'Edit'}
+                            </Text>
+                        </Pressable>
+                    </View>
+
+                    <ScrollView contentContainerStyle={styles.settingsList} showsVerticalScrollIndicator={false}>
+                        {SETTINGS_OPTIONS.map(option => (
+                            <Pressable
+                                key={option.key}
+                                style={styles.settingsOption}
+                                onPress={() => handleSettingOptionPress(option)}>
+                                <MaterialCommunityIcons
+                                    name={option.icon}
+                                    style={[
+                                        styles.settingsOptionIcon,
+                                        option.tone === 'warning' && styles.settingsOptionIconWarning,
+                                        option.tone === 'danger' && styles.settingsOptionIconDanger,
+                                    ]}
+                                />
+                                <Text style={styles.settingsOptionText}>{option.label}</Text>
+                            </Pressable>
+                        ))}
+                    </ScrollView>
+
+                    <Text style={styles.settingsVersion}>v 2.0.0(795)</Text>
+                </View>
+            ) : (
+                <>
+                    {activeTab === 'trending' ? (
+                        <View style={styles.comingSoonScreen}>
+                            <LinearGradient
+                                colors={['#C9E6F7', '#FFFFFF']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.comingSoonCard}>
+                                <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
+                                <Text style={styles.comingSoonTitle}>Coming soon</Text>
+                                <Text style={styles.comingSoonText}>
+                                    Trending posters will appear here shortly.
+                                </Text>
+                            </LinearGradient>
+                        </View>
+                    ) : (
+                        <>
             <LinearGradient
-                colors={[COLORS.headerBackground, '#FFFFFF']}
+                colors={['#C9E6F7', '#FFFFFF']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.staticHeader}>
 
-                {/* Header actions: search, create, profile */}
                 <View style={styles.headerRow}>
                     <View style={styles.searchBar}>
                         <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
@@ -1130,63 +1323,27 @@ console.log("reelsData", reelsData);
                             style={styles.searchInput}
                             value={search}
                             onChangeText={handleSearch}
-                            placeholderTextColor="#9EB3C6"
+                            placeholderTextColor="#6D7782"
                         />
                     </View>
 
                     <Pressable
-                        style={styles.createBtn}
-                        onPress={handleCreatePress}>
-                        <MaterialCommunityIcons name="plus" style={styles.createIcon} />
-                        <Text style={styles.createText}>
-                            {t('home.heroTitle.create', { defaultValue: 'Create' })}
-                        </Text>
-                    </Pressable>
-
-                    <Pressable
-                        style={styles.profileBtn}
-                        onPress={() =>
-                            Alert.alert(
-                                'Logout',
-                                'Are you sure you want to logout?',
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Logout', style: 'destructive', onPress: handleLogout },
-                                ],
-                            )
-                        }>
-                        {userPhoto ? (
-                            <Image source={{ uri: userPhoto }} style={styles.profilePhoto} resizeMode="cover" />
-                        ) : (
-                            <MaterialCommunityIcons name="account" style={styles.profileIcon} />
-                        )}
+                        style={styles.notificationBtn}
+                        onPress={() => Alert.alert('Notifications', 'No new notifications right now.')}
+                        hitSlop={8}>
+                        <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.notificationBadgeText}>6</Text>
+                        </View>
                     </Pressable>
                 </View>
-
-                <Pressable
-                    style={[
-                        styles.subscriptionTestBtn,
-                        isPremium && styles.subscriptionTestBtnActive,
-                    ]}
-                    onPress={handleTestSubscriptionToggle}>
-                    <Text
-                        style={[
-                            styles.subscriptionTestText,
-                            isPremium && styles.subscriptionTestTextActive,
-                        ]}>
-                        {`Subscription Test: ${isPremium ? 'PREMIUM ON' : 'PREMIUM OFF'}`}
-                    </Text>
-                </Pressable>
 
                 <ScrollView
                     style={styles.categoryPreviewScroll}
                     contentContainerStyle={styles.chipRow}
                     scrollEnabled={false}
-                    onContentSizeChange={(contentWidth, contentHeight) => {
-                        setHasOverflowCategories(contentHeight > CATEGORY_PREVIEW_HEIGHT + 2);
-                    }}
                     showsVerticalScrollIndicator={false}>
-                    {chips?.map(item => {
+                    {previewChips?.map(item => {
                         const isActive = activeCategory === item.id;
                         return (
                             <Pressable
@@ -1205,13 +1362,15 @@ console.log("reelsData", reelsData);
                             </Pressable>
                         );
                     })}
+                    {hasMoreCategories ? (
+                        <Pressable style={styles.categoryChip} onPress={() => setCategoryModalVisible(true)}>
+                            <Text style={styles.categoryChipLabel}>
+                                {t('home.more', { defaultValue: 'More' })}
+                            </Text>
+                            <MaterialCommunityIcons name="chevron-down" style={styles.categoryChipIcon} />
+                        </Pressable>
+                    ) : null}
                 </ScrollView>
-                {hasOverflowCategories ? (
-                    <Pressable style={styles.seeMoreBtn} onPress={() => setCategoryModalVisible(true)}>
-                        <Text style={styles.seeMoreText}>See more</Text>
-                        <MaterialCommunityIcons name="chevron-down" style={styles.seeMoreIcon} />
-                    </Pressable>
-                ) : null}
             </LinearGradient>
 
             <FlatList
@@ -1253,13 +1412,15 @@ console.log("reelsData", reelsData);
                 }
                 keyExtractor={getTemplateListKey}
                 showsVerticalScrollIndicator={false}
-                snapToInterval={ITEM_HEIGHT + ITEM_SPACING}
-                snapToAlignment="start"
-                disableIntervalMomentum
+                // pagingEnabled
                 decelerationRate="fast"
                 viewabilityConfig={viewabilityConfig}
                 onViewableItemsChanged={onViewableItemsChanged}
                 contentContainerStyle={styles.reelsContent}
+                snapToInterval={ITEM_HEIGHT}
+    snapToAlignment="start"
+    disableIntervalMomentum={true} // Forces a swipe to snap one item at a time (like Instagram)
+    getItemLayout={getItemLayout}  // Prevents the drift you experienced earlier
                 renderItem={({ item, index }) => (
                     <View style={styles.feedItemWrap}>
                         <View style={styles.reelCard}>
@@ -1288,7 +1449,7 @@ console.log("reelsData", reelsData);
                                             hitSlop={8}
                                             disabled={isActionInProgress}>
                                             <MaterialCommunityIcons
-                                                name="download"
+                                                name="download-outline"
                                                 style={styles.metricActionIcon}
                                             />
                                             <Text style={styles.metricCount}>99</Text>
@@ -1304,7 +1465,7 @@ console.log("reelsData", reelsData);
                                             hitSlop={8}
                                             disabled={isActionInProgress}>
                                             <MaterialCommunityIcons
-                                                name="share-variant-outline"
+                                                name="share-outline"
                                                 style={styles.metricActionIcon}
                                             />
                                             <Text style={styles.metricCount}>99</Text>
@@ -1319,7 +1480,7 @@ console.log("reelsData", reelsData);
                                             }}
                                             hitSlop={8}>
                                             <MaterialCommunityIcons
-                                                name="square-edit-outline"
+                                                name="pencil-outline"
                                                 style={styles.metricActionIcon}
                                             />
                                         </Pressable>
@@ -1352,7 +1513,9 @@ console.log("reelsData", reelsData);
                                         event.stopPropagation?.();
                                         handleEdit(item);
                                     }}>
-                                    <Text style={styles.changeImageText}>{t('home.actions.changeImage')}</Text>
+                                    <Text style={styles.changeImageText}>
+                                        {t('home.actions.changeYourImage', { defaultValue: 'Change your image' })}
+                                    </Text>
                                 </Pressable>
                             </Pressable>
                         </View>
@@ -1376,6 +1539,24 @@ console.log("reelsData", reelsData);
                 loading={subscriptionPlansLoading}
                 submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
+            />
+                        </>
+                    )}
+
+            <CustomBottomNavigation
+                activeKey={
+                    activeTab === 'saved' || activeCategory === FAVORITES_CHIP.id
+                        ? 'saved'
+                        : activeTab === 'trending'
+                            ? 'trending'
+                            : 'home'
+                }
+                userPhoto={userPhoto}
+                onHomePress={handleHomeTabPress}
+                onTrendingPress={handleTrendingPress}
+                onCreatePress={handleCreatePress}
+                onSavedPress={handleSavedPress}
+                onProfilePress={handleProfilePress}
             />
 
             <Modal
@@ -1426,129 +1607,286 @@ console.log("reelsData", reelsData);
                     </Pressable>
                 </Pressable>
             </Modal>
-        </>
+                </>
+            )}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    // Header row: search > create > profile
+    screen: {
+        flex: 1,
+        backgroundColor: COLORS.pageBackground,
+    },
+    comingSoonScreen: {
+        flex: 1,
+        paddingHorizontal: widthPixel(24),
+        paddingBottom: heightPixel(128),
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: COLORS.pageBackground,
+    },
+    comingSoonCard: {
+        width: '100%',
+        borderRadius: widthPixel(28),
+        paddingHorizontal: widthPixel(24),
+        paddingVertical: heightPixel(34),
+        alignItems: 'center',
+        shadowColor: '#5B2BD8',
+        shadowOpacity: 0.24,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 8,
+    },
+    comingSoonIcon: {
+        fontSize: widthPixel(54),
+        color: '#FFFFFF',
+        marginBottom: heightPixel(10),
+    },
+    comingSoonTitle: {
+        fontSize: widthPixel(26),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#FFFFFF',
+        marginBottom: heightPixel(8),
+    },
+    comingSoonText: {
+        textAlign: 'center',
+        fontSize: widthPixel(13),
+        lineHeight: heightPixel(20),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: 'rgba(255,255,255,0.86)',
+    },
+    settingsScreen: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    settingsHeader: {
+        height: heightPixel(50),
+        paddingHorizontal: widthPixel(22),
+        // paddingTop: heightPixel(28),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: widthPixel(1.5),
+        borderBottomColor: '#59489B',
+    },
+    settingsBackBtn: {
+        width: widthPixel(42),
+        height: widthPixel(42),
+        justifyContent: 'center',
+    },
+    settingsBackIcon: {
+        fontSize: widthPixel(38),
+        color: '#080719',
+    },
+    settingsTitle: {
+        fontSize: widthPixel(21),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#080808',
+    },
+    settingsHeaderSpacer: {
+        width: widthPixel(42),
+    },
+    settingsProfileCard: {
+        marginHorizontal: widthPixel(28),
+        marginTop: heightPixel(22),
+        marginBottom: heightPixel(6),
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(12),
+    },
+    settingsAvatarWrap: {
+        width: widthPixel(68),
+        height: widthPixel(68),
+        borderRadius: widthPixel(34),
+        backgroundColor: '#F2F2F2',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    settingsAvatar: {
+        width: '100%',
+        height: '100%',
+        borderRadius: widthPixel(34),
+    },
+    settingsAvatarIcon: {
+        fontSize: widthPixel(34),
+        color: '#777777',
+    },
+    settingsCameraBadge: {
+        position: 'absolute',
+        right: 0,
+        bottom: 0,
+        width: widthPixel(24),
+        height: widthPixel(24),
+        borderRadius: widthPixel(12),
+        backgroundColor: '#5B55D9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: widthPixel(2),
+        borderColor: '#FFFFFF',
+    },
+    settingsCameraIcon: {
+        fontSize: widthPixel(13),
+        color: '#FFFFFF',
+    },
+    settingsProfileTextWrap: {
+        flex: 1,
+    },
+    settingsName: {
+        fontSize: widthPixel(18),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#1B1B1B',
+    },
+    settingsNameInput: {
+        height: heightPixel(38),
+        borderBottomWidth: widthPixel(1),
+        borderBottomColor: '#59489B',
+        paddingVertical: 0,
+        fontSize: widthPixel(17),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#1B1B1B',
+    },
+    settingsProfileHint: {
+        marginTop: heightPixel(4),
+        fontSize: widthPixel(11),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#8C8C8C',
+    },
+    settingsEditBtn: {
+        minWidth: widthPixel(58),
+        height: heightPixel(34),
+        borderRadius: widthPixel(17),
+        backgroundColor: '#5B55D9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: widthPixel(12),
+    },
+    settingsEditText: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#FFFFFF',
+    },
+    settingsList: {
+        paddingHorizontal: widthPixel(28),
+        paddingTop: heightPixel(4),
+        paddingBottom: heightPixel(110),
+    },
+    settingsOption: {
+        minHeight: heightPixel(56),
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(28),
+        borderBottomWidth: widthPixel(1.5),
+        borderBottomColor: '#59489B',
+    },
+    settingsOptionIcon: {
+        width: widthPixel(32),
+        textAlign: 'center',
+        fontSize: widthPixel(22),
+        color: '#1E1E1E',
+    },
+    settingsOptionIconWarning: {
+        color: '#C63E17',
+    },
+    settingsOptionIconDanger: {
+        color: '#FF4038',
+    },
+    settingsOptionText: {
+        flex: 1,
+        fontSize: widthPixel(16),
+        fontFamily: fonts.FONT_FAMILY.Regular,
+        color: '#222222',
+    },
+    settingsVersion: {
+        position: 'absolute',
+        bottom: heightPixel(28),
+        alignSelf: 'center',
+        fontSize: widthPixel(14),
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        color: '#A7A7A7',
+    },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: widthPixel(10),
-    },
-
-    createBtn: {
-        flexShrink: 0,
-        height: heightPixel(44),
-        borderRadius: widthPixel(22),
-        paddingHorizontal: widthPixel(12),
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: widthPixel(4),
-        borderWidth: widthPixel(1),
-        borderColor: '#A7C0D3',
-    },
-
-    createIcon: {
-        fontSize: widthPixel(17),
-        color: COLORS.primary,
-    },
-
-    createText: {
-        fontSize: widthPixel(12),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: COLORS.primary,
-        includeFontPadding: false,
-    },
-
-    profileBtn: {
-        flexShrink: 0,
-        width: heightPixel(44),
-        height: heightPixel(44),
-        borderRadius: heightPixel(22),
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: widthPixel(1),
-        borderColor: '#A7C0D3',
-        overflow: 'hidden',
-    },
-
-    profilePhoto: {
-        width: '100%',
-        height: '100%',
-        borderRadius: heightPixel(22),
-    },
-
-    profileIcon: {
-        fontSize: widthPixel(22),
-        color: '#5E7690',
+        gap: widthPixel(12),
     },
 
     staticHeader: {
-        paddingHorizontal: widthPixel(14),
-        paddingTop: heightPixel(12),
+        paddingHorizontal: widthPixel(20),
+        paddingTop: heightPixel(16),
         paddingBottom: heightPixel(14),
         backgroundColor: COLORS.headerBackground,
     },
-    subscriptionTestBtn: {
-        marginTop: heightPixel(10),
-        alignSelf: 'flex-start',
-        paddingHorizontal: widthPixel(14),
-        paddingVertical: heightPixel(10),
-        borderRadius: widthPixel(18),
-        borderWidth: widthPixel(1),
-        borderColor: '#A7C0D3',
-        backgroundColor: '#FFFFFF',
-    },
-    subscriptionTestBtnActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    subscriptionTestText: {
-        fontSize: widthPixel(12),
-        fontFamily: fonts.FONT_FAMILY.Medium,
-        color: COLORS.primary,
-    },
-    subscriptionTestTextActive: {
-        color: '#FFFFFF',
-        fontFamily: fonts.FONT_FAMILY.Bold,
-    },
-
-    // FIX 3: flex:1 instead of width:'100%' so logout icon is always visible
     searchBar: {
         flex: 1,
-        height: heightPixel(44),
-        borderRadius: widthPixel(22),
+        height: heightPixel(48),
+        borderRadius: widthPixel(24),
         backgroundColor: '#FFFFFF',
-        borderWidth: widthPixel(1),
-        borderColor: '#A7C0D3',
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: widthPixel(12),
+        paddingHorizontal: widthPixel(15),
+        shadowColor: '#8DBAD2',
+        shadowOpacity: 0.16,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
     },
     searchIcon: {
-        fontSize: widthPixel(20),
-        color: '#5E7690',
-        marginRight: widthPixel(8),
+        fontSize: widthPixel(25),
+        color: '#101417',
+        marginRight: widthPixel(10),
     },
-    // FIX 3: separate style for the TextInput so flex:1 fills remaining bar width
     searchInput: {
         flex: 1,
-        fontSize: widthPixel(12),
+        fontSize: widthPixel(13),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: '#101417',
         paddingVertical: 0,
     },
+    notificationBtn: {
+        width: widthPixel(48),
+        height: widthPixel(48),
+        borderRadius: widthPixel(24),
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#8DBAD2',
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
+    },
+    notificationIcon: {
+        fontSize: widthPixel(27),
+        color: '#111111',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: heightPixel(8),
+        right: widthPixel(8),
+        width: widthPixel(16),
+        height: widthPixel(16),
+        borderRadius: widthPixel(8),
+        backgroundColor: '#FF1E2D',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: widthPixel(1),
+        borderColor: '#FFFFFF',
+    },
+    notificationBadgeText: {
+        fontSize: widthPixel(9),
+        lineHeight: heightPixel(11),
+        color: '#FFFFFF',
+        fontFamily: fonts.FONT_FAMILY.Bold,
+        includeFontPadding: false,
+    },
     chipRow: {
-        marginTop: heightPixel(12),
+        marginTop: heightPixel(18),
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: CHIP_GAP,
+        paddingVertical: heightPixel(4),
     },
     categoryPreviewScroll: {
         maxHeight: CATEGORY_PREVIEW_HEIGHT,
@@ -1577,7 +1915,7 @@ const styles = StyleSheet.create({
         color: COLORS.chipActiveText,
     },
     categoryChipLabel: {
-        fontSize: widthPixel(12),
+        fontSize: widthPixel(13),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.chipText,
         includeFontPadding: false,
@@ -1603,22 +1941,20 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
     },
     reelsContent: {
-        paddingTop: ITEM_SPACING,
-        paddingBottom: heightPixel(24),
+        paddingTop: 0,
+        paddingBottom: heightPixel(130),
         backgroundColor: COLORS.pageBackground,
     },
     feedItemWrap: {
-        height: ITEM_HEIGHT,
-        marginBottom: ITEM_SPACING,
-        paddingHorizontal: widthPixel(10),
+        marginBottom: 0,
+        paddingHorizontal: 0,
     },
     reelCard: {
         width: '100%',
-        borderRadius: widthPixel(16),
+        borderRadius: 0,
         backgroundColor: COLORS.cardBackground,
         overflow: 'hidden',
-        borderWidth: widthPixel(1),
-        borderColor: '#DDDFE3',
+        borderWidth: 0,
     },
     mediaTapArea: {
         width: '100%',
@@ -1697,12 +2033,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: widthPixel(6),
-        minHeight: heightPixel(38),
-        paddingHorizontal: widthPixel(8),
+        minHeight: heightPixel(30),
+        paddingHorizontal: widthPixel(2),
         borderRadius: widthPixel(18),
     },
     metricActionIcon: {
-        fontSize: widthPixel(20),
+        fontSize: widthPixel(22),
         color: '#222A34',
     },
     metricCount: {
@@ -1711,11 +2047,12 @@ const styles = StyleSheet.create({
         fontFamily: fonts.FONT_FAMILY.Medium,
     },
     bookmarkBtn: {
-        minHeight: heightPixel(38),
-        minWidth: widthPixel(38),
+        height: heightPixel(30),
+        width: widthPixel(30),
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: widthPixel(19),
+        borderRadius: widthPixel(15),
+        backgroundColor: '#FFFFFF',
     },
     bookmarkIcon: {
         fontSize: widthPixel(22),
@@ -1725,8 +2062,9 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
     },
     changeImageBtn: {
-        height: heightPixel(36),
-        borderRadius: widthPixel(18),
+        width: '100%',
+        height: heightPixel(33),
+        borderRadius: widthPixel(19),
         borderWidth: widthPixel(1),
         borderColor: '#C7CCD2',
         backgroundColor: '#F7F7F8',
