@@ -53,8 +53,8 @@ const getScaledGestureDelta = (gesture, interactionScale = 1) => {
 
 const MIN_TEXT_SCALE = 0.25;
 const MAX_TEXT_SCALE = 3.0;
-const PREMIUM_TOP_BAND_HEIGHT = 170;
-const PREMIUM_BOTTOM_BAND_HEIGHT = 230;
+const PREMIUM_TOP_BAND_HEIGHT = 70;
+const PREMIUM_BOTTOM_BAND_HEIGHT = 85;
 const SOCIAL_PLATFORMS = [
     { key: 'facebook', icon: 'facebook' },
     { key: 'instagram', icon: 'instagram' },
@@ -88,6 +88,7 @@ export const getPremiumDetailsForPoster = posterState => {
         mobile: source.contactMobileNumber,
         address: source.contactAddress,
         social: source.contactSocialHandle,
+        website: source.websiteLink,
         socials: socialItems,
     } : {
         type: 'personal',
@@ -97,6 +98,7 @@ export const getPremiumDetailsForPoster = posterState => {
         mobile: source.mobileNumber,
         address: source.address,
         social: source.socialHandle,
+        website: '',
         socials: socialItems,
     };
 
@@ -107,6 +109,7 @@ export const getPremiumDetailsForPoster = posterState => {
         details.mobile,
         details.address,
         details.social,
+        details.website,
         ...(details.socials || []).map(item => item.text),
     ].some(value => typeof value === 'string' && value.trim());
     return hasAnyDetails ? details : null;
@@ -892,11 +895,12 @@ export const PremiumPosterDetailsFrame = ({
     const topAlignment = variant === 1 ? 'flex-start' : variant === 2 ? 'flex-end' : 'center';
     const topDirection = variant === 2 ? 'row-reverse' : 'row';
     const textAlign = variant === 1 ? 'left' : variant === 2 ? 'right' : 'center';
-    const logoSize = Math.max(72, canvasSize.width * 0.085);
+    const logoSize = Math.max(48, canvasSize.width * 0.065);
     const contactItems = [
         details.mobile ? { icon: 'phone-outline', text: details.mobile } : null,
         details.address ? { icon: 'map-marker-outline', text: details.address } : null,
         details.social ? { icon: 'at', text: details.social } : null,
+        details.website ? { icon: 'web', text: details.website } : null,
     ].filter(Boolean);
     const socialItems = details.socials || [];
 
@@ -1482,20 +1486,20 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         backgroundColor: '#FFFFFF',
-        borderBottomWidth: 2,
+        borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
         justifyContent: 'center',
-        paddingHorizontal: 34,
+        paddingHorizontal: 24,
     },
     premiumTopContent: {
         flex: 1,
         alignItems: 'center',
-        gap: 18,
+        gap: 4,
     },
     premiumLogo: {
-        borderRadius: 18,
+        borderRadius: 12,
         backgroundColor: '#EEF2FF',
-        borderWidth: 2,
+        borderWidth: 1.5,
         borderColor: '#D9E2F2',
     },
     premiumTitleWrap: {
@@ -1505,16 +1509,16 @@ const styles = StyleSheet.create({
     },
     premiumName: {
         width: '100%',
-        fontSize: 38,
-        lineHeight: 46,
+        fontSize: 26,
+        lineHeight: 32,
         color: '#111827',
         fontWeight: '800',
     },
     premiumDescription: {
         width: '100%',
-        marginTop: 8,
-        fontSize: 21,
-        lineHeight: 28,
+        marginTop: 2,
+        fontSize: 16,
+        lineHeight: 18,
         color: '#4B5563',
         fontWeight: '500',
     },
@@ -1522,41 +1526,41 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         backgroundColor: '#FFFFFF',
-        borderTopWidth: 2,
+        borderTopWidth: 1,
         borderTopColor: '#E5E7EB',
         justifyContent: 'center',
-        paddingHorizontal: 30,
-        paddingVertical: 22,
+        paddingHorizontal: 20,
+        paddingVertical: 5,
     },
     premiumContactGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
+        alignItems: 'flex-start',
+        justifyContent: 'flex-start',
+        gap: 3,
     },
     premiumContactItem: {
         minWidth: '44%',
         maxWidth: '48%',
-        minHeight: 52,
+        minHeight: 26,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 14,
+        gap: 3,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
         backgroundColor: '#F8FAFC',
         borderWidth: 1,
         borderColor: '#E2E8F0',
     },
     premiumContactIcon: {
-        fontSize: 22,
+        fontSize: 14,
         color: '#0D62DF',
     },
     premiumContactText: {
         flex: 1,
-        fontSize: 18,
-        lineHeight: 23,
+        fontSize: 13,
+        lineHeight: 15,
         color: '#111827',
         fontWeight: '600',
     },

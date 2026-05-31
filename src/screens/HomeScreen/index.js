@@ -479,18 +479,15 @@ const CREATE_POSTER_PRESETS = [
     { id: 'office', name: 'Business Blue', color: '#2563EB', source: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1200' },
     { id: 'village', name: 'Village Ground', color: '#16A34A', source: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200' },
 ];
-const SETTINGS_OPTIONS = [
-    { key: 'contact', label: 'Contact us', icon: 'headset' },
-    { key: 'privacy', label: 'Privacy Policy', icon: 'shield-check' },
-    { key: 'terms', label: 'Terms & Conditions', icon: 'file-document-outline' },
-    { key: 'refund', label: 'Refund and Cancellations', icon: 'restart' },
-    { key: 'about', label: 'About Us', icon: 'exclamation-thick' },
-    { key: 'product', label: 'Product Description', icon: 'creation' },
-    { key: 'signout', label: 'SignOut', icon: 'logout', tone: 'warning' },
-    { key: 'delete', label: 'Delete Account', icon: 'delete', tone: 'danger' },
+const TEMPLATE_SOCIAL_PLATFORMS = [
+    { key: 'facebook', icon: 'facebook' },
+    { key: 'instagram', icon: 'instagram' },
+    { key: 'twitter', icon: 'twitter' },
+    { key: 'snapchat', icon: 'snapchat' },
+    { key: 'other', icon: 'at' },
 ];
 
-const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay, isPremium, premiumProfile, designLayoutIndex }) => {
+const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, shouldPlay, isPremium, premiumProfile, designLayoutIndex, photoShape, photoPosition, photoScale }) => {
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [isMuted, setIsMuted] = useState(true);
     const [hasAudio, setHasAudio] = useState(true);
@@ -499,8 +496,8 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
         () => getPremiumDetailsForPoster({ isPremium, premiumProfile }),
         [isPremium, premiumProfile],
     );
-    const topBandHeight = premiumDetails ? heightPixel(42) : 0;
-    const bottomBandHeight = premiumDetails ? heightPixel(54) : 0;
+    const topBandHeight = premiumDetails ? heightPixel(34) : 0;
+    const bottomBandHeight = premiumDetails ? heightPixel(44) : 0;
     const posterLayout = useMemo(() => {
         const availableHeight = Math.max(0, containerSize.height - topBandHeight - bottomBandHeight);
         const fitLayout = getPosterFitLayout(containerSize.width, availableHeight, canvasSize);
@@ -539,11 +536,11 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
         () => getScaledPhotoFrameStyle({
             photoFrame: template?.photoFrame,
             posterLayout,
-            photoShape: 'template',
-            photoPosition: { x: 0, y: 0 },
-            photoScale: 1,
+            photoShape: photoShape || 'template',
+            photoPosition: photoPosition || { x: 0, y: 0 },
+            photoScale: photoScale || 1,
         }),
-        [posterLayout, template?.photoFrame],
+        [photoPosition, photoScale, photoShape, posterLayout, template?.photoFrame],
     );
     const fallbackBadgeStyle = useMemo(() => {
         if (!posterLayout?.width || !posterLayout?.height) {
@@ -563,6 +560,11 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
     }, [posterLayout]);
     const shouldRenderFallbackBadge = userPhoto && !photoFrameStyle;
     const isVideoTemplate = useMemo(() => !!getTemplateVideoSource(template), [template]);
+
+    const socialItems = useMemo(() => {
+        if (!premiumDetails?.socials) return [];
+        return premiumDetails.socials.slice(0, 3);
+    }, [premiumDetails?.socials]);
 
     return (
         <View
@@ -591,14 +593,25 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                         </View>
                     </View>
                     <View style={[styles.reelPremiumBottom, { height: bottomBandHeight }]}>
-                        {[
-                            premiumDetails.mobile,
-                            premiumDetails.address,
-                            premiumDetails.social,
-                            premiumDetails.website,
-                        ].filter(Boolean).slice(0, 2).map(item => (
-                            <Text key={item} style={styles.reelPremiumContact} numberOfLines={1}>{item}</Text>
-                        ))}
+                        <View style={styles.reelPremiumContactRow}>
+                            {[
+                                premiumDetails.mobile ? { icon: 'phone-outline', text: premiumDetails.mobile } : null,
+                                premiumDetails.address ? { icon: 'map-marker-outline', text: premiumDetails.address } : null,
+                                premiumDetails.social ? { icon: 'at', text: premiumDetails.social } : null,
+                                premiumDetails.website ? { icon: 'web', text: premiumDetails.website } : null,
+                            ].filter(Boolean).slice(0, 2).map(item => (
+                                <View key={item.text} style={styles.reelPremiumContactItem}>
+                                    <MaterialCommunityIcons name={item.icon} style={styles.reelPremiumContactIcon} />
+                                    <Text style={styles.reelPremiumContact} numberOfLines={1}>{item.text}</Text>
+                                </View>
+                            ))}
+                            {socialItems.map(item => (
+                                <View key={`${item.key}_${item.text}`} style={styles.reelPremiumContactItem}>
+                                    <MaterialCommunityIcons name={item.icon} style={styles.reelPremiumContactIcon} />
+                                    <Text style={styles.reelPremiumContact} numberOfLines={1}>{item.text}</Text>
+                                </View>
+                            ))}
+                        </View>
                     </View>
                 </>
             ) : null}
@@ -643,13 +656,22 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                     context={renderContext}
                     canvasLayout={posterLayout}
                     skipBackgroundLayers={hasTemplateBackgroundMedia}
-                    renderUserPhotoLayer={({ layerStyle }) => (
-                        userPhoto ? (
-                            <View style={[styles.userPhotoFrame, layerStyle]} pointerEvents="none">
+                    renderUserPhotoLayer={({ layer, layerStyle }) => {
+                        const templateRadius = Number.isFinite(Number(layer?.borderRadius))
+                            ? Number(layer.borderRadius)
+                            : Number.isFinite(Number(layer?.border_radius))
+                                ? Number(layer.border_radius)
+                                : 0;
+                        const shapeRadius = photoShape === 'circle' ? 999
+                            : photoShape === 'square' ? 4
+                            : photoShape === 'rounded' ? 24
+                            : templateRadius;
+                        return userPhoto ? (
+                            <View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }]} pointerEvents="none">
                                 <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
                             </View>
-                        ) : null
-                    )}
+                        ) : null;
+                    }}
                 />
             ) : userPhoto && photoFrameStyle ? (
                 <View style={[styles.userPhotoFrame, photoFrameStyle]} pointerEvents="none">
@@ -706,6 +728,9 @@ const HomeScreen = ({ navigation }) => {
     const isPremium = useSelector(state => state.poster.isPremium);
     const premiumProfile = useSelector(state => state.poster.premiumProfile);
     const designLayoutIndex = useSelector(state => state.poster.designLayoutIndex);
+    const photoShape = useSelector(state => state.poster.photoShape);
+    const photoPosition = useSelector(state => state.poster.photoPosition);
+    const photoScale = useSelector(state => state.poster.photoScale);
     const specialCategoryContext = useSelector(state => state.poster.specialCategoryContext);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
@@ -737,9 +762,7 @@ const HomeScreen = ({ navigation }) => {
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
-    const [settingsName, setSettingsName] = useState(userName || '');
-    const [settingsPhoto, setSettingsPhoto] = useState(userPhoto || '');
-    const [isEditingSettingsProfile, setEditingSettingsProfile] = useState(false);
+
     const requestIdRef = useRef(0);
     const pendingPremiumActionRef = useRef(null);
 
@@ -811,11 +834,6 @@ const HomeScreen = ({ navigation }) => {
         loadFavorites();
     }, [loadFavorites]);
 
-    useEffect(() => {
-        setSettingsName(userName || '');
-        setSettingsPhoto(userPhoto || '');
-    }, [userName, userPhoto]);
-
     const handleLogout = useCallback(async () => {
         try {
             dispatch(setIsLoggedIn(false));
@@ -845,49 +863,8 @@ const HomeScreen = ({ navigation }) => {
     }, [dispatch]);
 
     const handleProfilePress = useCallback(() => {
-        setActiveTab('profile');
-    }, []);
-
-    const handleSettingOptionPress = useCallback((option) => {
-        if (option.key !== 'signout') {
-            Alert.alert(option.label, 'Coming soon.');
-            return;
-        }
-
-        Alert.alert(
-            'Logout',
-            'Are you sure you want to logout?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Logout', style: 'destructive', onPress: handleLogout },
-            ],
-        );
-    }, [handleLogout]);
-
-    const handleSettingsPhotoPress = useCallback(async () => {
-        const uri = await pickImage({ autoStoreInProfilePhoto: false });
-        if (uri) {
-            setSettingsPhoto(uri);
-            setEditingSettingsProfile(true);
-        }
-    }, [pickImage]);
-
-    const handleSaveSettingsProfile = useCallback(async () => {
-        const nextName = settingsName.trim();
-        if (!nextName) {
-            Alert.alert('Profile', 'Please enter your name.');
-            return;
-        }
-
-        const profile = await mergeUserProfile({
-            name: nextName,
-            imageUri: settingsPhoto,
-        });
-        dispatch(setUserName(profile.name));
-        dispatch(setUserPhoto(profile.imageUri));
-        setEditingSettingsProfile(false);
-        Alert.alert('Profile', 'Profile updated on this device.');
-    }, [dispatch, settingsName, settingsPhoto]);
+        navigation?.navigate?.('SettingsScreen');
+    }, [navigation]);
 
     const fetchTemplates = useCallback(async ({ pageNumber = 1, searchText = '', categoryId = null } = {}) => {
         const requestId = ++requestIdRef.current;
@@ -1288,6 +1265,7 @@ const HomeScreen = ({ navigation }) => {
             return;
         }
 
+        dispatch(setSpecialCategoryContext(null));
         setActiveTab('home');
         setActiveCategoryUi(item?.id);
         const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
@@ -1436,101 +1414,28 @@ const getItemLayout = useCallback((data, index) => ({
         <View style={styles.screen}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
 
-            {activeTab === 'profile' ? (
-                <View style={styles.settingsScreen}>
-                    <View style={styles.settingsHeader}>
-                        <Pressable style={styles.settingsBackBtn} onPress={handleHomeTabPress} hitSlop={12}>
-                            <MaterialCommunityIcons name="chevron-left" style={styles.settingsBackIcon} />
-                        </Pressable>
-                        <Text style={styles.settingsTitle}>Settings</Text>
-                        <View style={styles.settingsHeaderSpacer} />
-                    </View>
-
-                    <View style={styles.settingsProfileCard}>
-                        <Pressable style={styles.settingsAvatarWrap} onPress={handleSettingsPhotoPress}>
-                            {settingsPhoto ? (
-                                <Image source={{ uri: settingsPhoto }} style={styles.settingsAvatar} resizeMode="cover" />
-                            ) : (
-                                <MaterialCommunityIcons name="account" style={styles.settingsAvatarIcon} />
-                            )}
-                            <View style={styles.settingsCameraBadge}>
-                                <MaterialCommunityIcons name="camera" style={styles.settingsCameraIcon} />
-                            </View>
-                        </Pressable>
-
-                        <View style={styles.settingsProfileTextWrap}>
-                            {isEditingSettingsProfile ? (
-                                <TextInput
-                                    style={styles.settingsNameInput}
-                                    value={settingsName}
-                                    onChangeText={setSettingsName}
-                                    placeholder="Your name"
-                                    placeholderTextColor="#9A9A9A"
-                                />
-                            ) : (
-                                <Text style={styles.settingsName}>{settingsName || 'Your Name'}</Text>
-                            )}
-                            <Text style={styles.settingsProfileHint}>
-                                {isEditingSettingsProfile ? 'Editing locally on this device' : 'Tap photo or edit to update'}
-                            </Text>
-                        </View>
-
-                        <Pressable
-                            style={styles.settingsEditBtn}
-                            onPress={isEditingSettingsProfile ? handleSaveSettingsProfile : () => setEditingSettingsProfile(true)}
-                            disabled={isPickingProfileImage}>
-                            <Text style={styles.settingsEditText}>
-                                {isEditingSettingsProfile ? 'Save' : 'Edit'}
-                            </Text>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView contentContainerStyle={styles.settingsList} showsVerticalScrollIndicator={false}>
-                        {SETTINGS_OPTIONS.map(option => (
-                            <Pressable
-                                key={option.key}
-                                style={styles.settingsOption}
-                                onPress={() => handleSettingOptionPress(option)}>
-                                <MaterialCommunityIcons
-                                    name={option.icon}
-                                    style={[
-                                        styles.settingsOptionIcon,
-                                        option.tone === 'warning' && styles.settingsOptionIconWarning,
-                                        option.tone === 'danger' && styles.settingsOptionIconDanger,
-                                    ]}
-                                />
-                                <Text style={styles.settingsOptionText}>{option.label}</Text>
-                            </Pressable>
-                        ))}
-                    </ScrollView>
-
-                    <Text style={styles.settingsVersion}>v 2.0.0(795)</Text>
+            {activeTab === 'trending' ? (
+                <View style={styles.comingSoonScreen}>
+                    <LinearGradient
+                        colors={['#C9E6F7', '#FFFFFF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.comingSoonCard}>
+                        <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
+                        <Text style={styles.comingSoonTitle}>Coming soon</Text>
+                        <Text style={styles.comingSoonText}>
+                            Trending posters will appear here shortly.
+                        </Text>
+                    </LinearGradient>
                 </View>
             ) : (
                 <>
-                    {activeTab === 'trending' ? (
-                        <View style={styles.comingSoonScreen}>
-                            <LinearGradient
-                                colors={['#C9E6F7', '#FFFFFF']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.comingSoonCard}>
-                                <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
-                                <Text style={styles.comingSoonTitle}>Coming soon</Text>
-                                <Text style={styles.comingSoonText}>
-                                    Trending posters will appear here shortly.
-                                </Text>
-                            </LinearGradient>
-                        </View>
-                    ) : (
-                        <>
-            <LinearGradient
-                colors={['#C9E6F7', '#FFFFFF']}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={styles.staticHeader}>
-
-                <View style={styles.headerRow}>
+                    <LinearGradient
+                        colors={['#C9E6F7', '#FFFFFF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.staticHeader}>
+                        <View style={styles.headerRow}>
                     <View style={styles.searchBar}>
                         <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
                         <TextInput
@@ -1544,7 +1449,7 @@ const getItemLayout = useCallback((data, index) => ({
 
                     <Pressable
                         style={styles.notificationBtn}
-                        onPress={() => Alert.alert('Notifications', 'No new notifications right now.')}
+                        onPress={() => navigation?.navigate?.('NotificationScreen')}
                         hitSlop={8}>
                         <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
                         <View style={styles.notificationBadge}>
@@ -1664,6 +1569,9 @@ const getItemLayout = useCallback((data, index) => ({
                                     isPremium={isPremium}
                                     premiumProfile={premiumProfile}
                                     designLayoutIndex={designLayoutIndex}
+                                    photoShape={photoShape}
+                                    photoPosition={photoPosition}
+                                    photoScale={photoScale}
                                     shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
                                 />
                             </Pressable>
@@ -1787,8 +1695,6 @@ const getItemLayout = useCallback((data, index) => ({
                 submittingPlanId={submittingPlanId}
                 onSubscribe={handleSubscribe}
             />
-                        </>
-                    )}
 
             <CustomBottomNavigation
                 activeKey={
@@ -2009,155 +1915,6 @@ const styles = StyleSheet.create({
         lineHeight: heightPixel(20),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: 'rgba(255,255,255,0.86)',
-    },
-    settingsScreen: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    settingsHeader: {
-        height: heightPixel(50),
-        paddingHorizontal: widthPixel(22),
-        // paddingTop: heightPixel(28),
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomWidth: widthPixel(1.5),
-        borderBottomColor: '#59489B',
-    },
-    settingsBackBtn: {
-        width: widthPixel(42),
-        height: widthPixel(42),
-        justifyContent: 'center',
-    },
-    settingsBackIcon: {
-        fontSize: widthPixel(38),
-        color: '#080719',
-    },
-    settingsTitle: {
-        fontSize: widthPixel(21),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: '#080808',
-    },
-    settingsHeaderSpacer: {
-        width: widthPixel(42),
-    },
-    settingsProfileCard: {
-        marginHorizontal: widthPixel(28),
-        marginTop: heightPixel(22),
-        marginBottom: heightPixel(6),
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: widthPixel(12),
-    },
-    settingsAvatarWrap: {
-        width: widthPixel(68),
-        height: widthPixel(68),
-        borderRadius: widthPixel(34),
-        backgroundColor: '#F2F2F2',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    settingsAvatar: {
-        width: '100%',
-        height: '100%',
-        borderRadius: widthPixel(34),
-    },
-    settingsAvatarIcon: {
-        fontSize: widthPixel(34),
-        color: '#777777',
-    },
-    settingsCameraBadge: {
-        position: 'absolute',
-        right: 0,
-        bottom: 0,
-        width: widthPixel(24),
-        height: widthPixel(24),
-        borderRadius: widthPixel(12),
-        backgroundColor: '#5B55D9',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: widthPixel(2),
-        borderColor: '#FFFFFF',
-    },
-    settingsCameraIcon: {
-        fontSize: widthPixel(13),
-        color: '#FFFFFF',
-    },
-    settingsProfileTextWrap: {
-        flex: 1,
-    },
-    settingsName: {
-        fontSize: widthPixel(18),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: '#1B1B1B',
-    },
-    settingsNameInput: {
-        height: heightPixel(38),
-        borderBottomWidth: widthPixel(1),
-        borderBottomColor: '#59489B',
-        paddingVertical: 0,
-        fontSize: widthPixel(17),
-        fontFamily: fonts.FONT_FAMILY.Medium,
-        color: '#1B1B1B',
-    },
-    settingsProfileHint: {
-        marginTop: heightPixel(4),
-        fontSize: widthPixel(11),
-        fontFamily: fonts.FONT_FAMILY.Medium,
-        color: '#8C8C8C',
-    },
-    settingsEditBtn: {
-        minWidth: widthPixel(58),
-        height: heightPixel(34),
-        borderRadius: widthPixel(17),
-        backgroundColor: '#5B55D9',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: widthPixel(12),
-    },
-    settingsEditText: {
-        fontSize: widthPixel(12),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: '#FFFFFF',
-    },
-    settingsList: {
-        paddingHorizontal: widthPixel(28),
-        paddingTop: heightPixel(4),
-        paddingBottom: heightPixel(110),
-    },
-    settingsOption: {
-        minHeight: heightPixel(56),
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: widthPixel(28),
-        borderBottomWidth: widthPixel(1.5),
-        borderBottomColor: '#59489B',
-    },
-    settingsOptionIcon: {
-        width: widthPixel(32),
-        textAlign: 'center',
-        fontSize: widthPixel(22),
-        color: '#1E1E1E',
-    },
-    settingsOptionIconWarning: {
-        color: '#C63E17',
-    },
-    settingsOptionIconDanger: {
-        color: '#FF4038',
-    },
-    settingsOptionText: {
-        flex: 1,
-        fontSize: widthPixel(16),
-        fontFamily: fonts.FONT_FAMILY.Regular,
-        color: '#222222',
-    },
-    settingsVersion: {
-        position: 'absolute',
-        bottom: heightPixel(28),
-        alignSelf: 'center',
-        fontSize: widthPixel(14),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: '#A7A7A7',
     },
     headerRow: {
         flexDirection: 'row',
@@ -2391,29 +2148,29 @@ const styles = StyleSheet.create({
         zIndex: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: widthPixel(9),
-        paddingHorizontal: widthPixel(10),
+        gap: widthPixel(6),
+        paddingHorizontal: widthPixel(8),
         backgroundColor: '#FFFFFF',
         borderBottomWidth: widthPixel(1),
         borderBottomColor: '#E5E7EB',
     },
     reelPremiumLogo: {
-        width: widthPixel(30),
-        height: widthPixel(30),
-        borderRadius: widthPixel(8),
+        width: widthPixel(22),
+        height: widthPixel(22),
+        borderRadius: widthPixel(6),
         backgroundColor: '#EEF2FF',
     },
     reelPremiumTitleWrap: {
         flex: 1,
     },
     reelPremiumName: {
-        fontSize: widthPixel(12),
+        fontSize: widthPixel(10),
         fontFamily: fonts.FONT_FAMILY.Bold,
         color: '#111827',
     },
     reelPremiumDescription: {
         marginTop: heightPixel(1),
-        fontSize: widthPixel(9),
+        fontSize: widthPixel(8),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: '#6B7280',
     },
@@ -2424,15 +2181,30 @@ const styles = StyleSheet.create({
         bottom: 0,
         zIndex: 12,
         justifyContent: 'center',
-        gap: heightPixel(3),
-        paddingHorizontal: widthPixel(10),
+        paddingHorizontal: widthPixel(8),
+        paddingVertical: heightPixel(3),
         backgroundColor: '#FFFFFF',
         borderTopWidth: widthPixel(1),
         borderTopColor: '#E5E7EB',
     },
-    reelPremiumContact: {
+    reelPremiumContactRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: widthPixel(4),
+    },
+    reelPremiumContactItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: widthPixel(3),
+    },
+    reelPremiumContactIcon: {
         fontSize: widthPixel(10),
-        lineHeight: heightPixel(13),
+        color: '#0D62DF',
+    },
+    reelPremiumContact: {
+        fontSize: widthPixel(8),
+        lineHeight: heightPixel(11),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: '#111827',
     },

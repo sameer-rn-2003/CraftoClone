@@ -7,10 +7,18 @@ const DEFAULT_PROFILE = {
     isLoggedIn: false,
     isPremium: false,
     premiumProfile: {
+        activeSection: 'personal',
         personal: {
             mobileNumber: '',
             address: '',
             socialHandle: '',
+            socialHandles: {
+                facebook: '',
+                instagram: '',
+                twitter: '',
+                snapchat: '',
+                other: '',
+            },
             organizationName: '',
             organizationLogo: '',
         },
@@ -21,6 +29,13 @@ const DEFAULT_PROFILE = {
             contactMobileNumber: '',
             contactAddress: '',
             contactSocialHandle: '',
+            socialHandles: {
+                facebook: '',
+                instagram: '',
+                twitter: '',
+                snapchat: '',
+                other: '',
+            },
         },
     },
 };
@@ -34,10 +49,18 @@ const normalizeProfile = (profile = {}) => ({
         personal: {
             ...DEFAULT_PROFILE.premiumProfile.personal,
             ...(profile?.premiumProfile?.personal || {}),
+            socialHandles: {
+                ...DEFAULT_PROFILE.premiumProfile.personal.socialHandles,
+                ...(profile?.premiumProfile?.personal?.socialHandles || {}),
+            },
         },
         business: {
             ...DEFAULT_PROFILE.premiumProfile.business,
             ...(profile?.premiumProfile?.business || {}),
+            socialHandles: {
+                ...DEFAULT_PROFILE.premiumProfile.business.socialHandles,
+                ...(profile?.premiumProfile?.business?.socialHandles || {}),
+            },
         },
     },
 });
@@ -75,10 +98,18 @@ export const mergeUserProfile = async (patch) => {
             personal: {
                 ...current.premiumProfile?.personal,
                 ...(patch?.premiumProfile?.personal || {}),
+                socialHandles: {
+                    ...(current.premiumProfile?.personal?.socialHandles || {}),
+                    ...(patch?.premiumProfile?.personal?.socialHandles || {}),
+                },
             },
             business: {
                 ...current.premiumProfile?.business,
                 ...(patch?.premiumProfile?.business || {}),
+                socialHandles: {
+                    ...(current.premiumProfile?.business?.socialHandles || {}),
+                    ...(patch?.premiumProfile?.business?.socialHandles || {}),
+                },
             },
         },
     });

@@ -35,6 +35,7 @@ import {
     hydratePremiumProfile,
     addSticker, removeSticker,
     setPhotoScale, setPremiumProfileField,
+    setPremiumProfileActiveSection,
     setUserPhotoAnimation,
     setUserPhoto,
     cycleDesignLayout,
@@ -624,10 +625,26 @@ const SpecialTagsPanel = ({ p, dispatch }) => {
     );
 };
 
+const SOCIAL_FIELDS = [
+    { key: 'facebook', labelKey: 'Facebook', icon: 'facebook', placeholderKey: '@username' },
+    { key: 'instagram', labelKey: 'Instagram', icon: 'instagram', placeholderKey: '@username' },
+    { key: 'twitter', labelKey: 'Twitter / X', icon: 'twitter', placeholderKey: '@username' },
+    { key: 'snapchat', labelKey: 'Snapchat', icon: 'snapchat', placeholderKey: '@username' },
+    { key: 'other', labelKey: 'Other', icon: 'at', placeholderKey: '@username' },
+];
+
 const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave }) => {
     const { t } = useTranslation();
-    const [activeSection, setActiveSection] = useState('personal');
+    const [activeSection, setActiveSection] = useState(p.premiumProfile?.activeSection || 'personal');
     const locked = !p.isPremium;
+
+    useEffect(() => {
+        setActiveSection(p.premiumProfile?.activeSection || 'personal');
+    }, [p.premiumProfile?.activeSection]);
+
+    const handleSave = useCallback(() => {
+        onSave(activeSection);
+    }, [activeSection, onSave]);
 
     const personal = p.premiumProfile?.personal || {};
     const business = p.premiumProfile?.business || {};
@@ -643,6 +660,27 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
         }
     };
 
+    const handleSectionToggle = (section) => {
+        setActiveSection(section);
+        dispatch(setPremiumProfileActiveSection(section));
+    };
+
+    const renderSocialHandleInputs = (section, source) => (
+        <View>
+            <SectionLabel>Social Media Handles</SectionLabel>
+            {SOCIAL_FIELDS.map(social => (
+                <AppTextInput
+                    key={social.key}
+                    label={`${social.labelKey} ${social.placeholderKey}`}
+                    value={source?.socialHandles?.[social.key] || ''}
+                    onChangeText={v => updateField(section, `socialHandles.${social.key}`, v)}
+                    placeholder={social.placeholderKey}
+
+                />
+            ))}
+        </View>
+    );
+
     return (
      <ScrollView
     showsVerticalScrollIndicator={false}
@@ -653,14 +691,14 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
             <View style={[s.sectionSlider, locked && s.lockedSection]}>
                 <Pressable
                     style={[s.sectionSliderBtn, activeSection === 'personal' && s.sectionSliderBtnActive]}
-                    onPress={() => setActiveSection('personal')}>
+                    onPress={() => handleSectionToggle('personal')}>
                     <Text style={[s.sectionSliderText, activeSection === 'personal' && s.sectionSliderTextActive]}>
                         {t('editor.premium.personal')}
                     </Text>
                 </Pressable>
                 <Pressable
                     style={[s.sectionSliderBtn, activeSection === 'business' && s.sectionSliderBtnActive]}
-                    onPress={() => setActiveSection('business')}>
+                    onPress={() => handleSectionToggle('business')}>
                     <Text style={[s.sectionSliderText, activeSection === 'business' && s.sectionSliderTextActive]}>
                         {t('editor.premium.business')}
                     </Text>
@@ -675,7 +713,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
             )}
 
             {activeSection === 'personal' ? (
-                <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
+                <LockedInputWrapper locked={false} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
                         <SectionLabel>{t('editor.premium.personalDetails')}</SectionLabel>
                         <AppTextInput
@@ -684,46 +722,24 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             onChangeText={v => updateField('personal', 'mobileNumber', v)}
                             placeholder={t('editor.premium.mobilePlaceholder')}
                             keyboardType="phone-pad"
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <AppTextInput
                             label={t('editor.premium.address')}
                             value={personal.address}
                             onChangeText={v => updateField('personal', 'address', v)}
                             placeholder={t('editor.premium.addressPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <AppTextInput
                             label={t('editor.premium.socialHandle')}
                             value={personal.socialHandle}
                             onChangeText={v => updateField('personal', 'socialHandle', v)}
                             placeholder={t('editor.premium.socialPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
-                        <AppTextInput
-                            label={t('editor.premium.facebookLink')}
-                            value={personal.facebookLink}
-                            onChangeText={v => updateField('personal', 'facebookLink', v)}
-                            placeholder={t('editor.premium.facebookPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
-                        />
-                        <AppTextInput
-                            label={t('editor.premium.instagramLink')}
-                            value={personal.instagramLink}
-                            onChangeText={v => updateField('personal', 'instagramLink', v)}
-                            placeholder={t('editor.premium.instagramPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
-                        />
+
+                        {renderSocialHandleInputs('personal', personal)}
 
                         <SectionLabel>{t('editor.premium.organizationDetails')}</SectionLabel>
                         <AppTextInput
@@ -731,19 +747,11 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             value={personal.organizationName}
                             onChangeText={v => updateField('personal', 'organizationName', v)}
                             placeholder={t('editor.premium.organizationPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <Pressable
                             style={s.logoPickerBtn}
-                            onPress={() => {
-                                if (locked) {
-                                    onUnlockPremium();
-                                    return;
-                                }
-                                handlePickLogo('personal', 'organizationLogo');
-                            }}>
+                            onPress={() => handlePickLogo('personal', 'organizationLogo')}>
                             <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
                             <Text style={s.logoPickerText}>
                                 {personal.organizationLogo
@@ -757,7 +765,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                     </View>
                 </LockedInputWrapper>
             ) : (
-                <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
+                <LockedInputWrapper locked={false} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
                         <SectionLabel>{t('editor.premium.businessInfo')}</SectionLabel>
                         <AppTextInput
@@ -765,9 +773,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             value={business.businessName}
                             onChangeText={v => updateField('business', 'businessName', v)}
                             placeholder={t('editor.premium.businessNamePlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <AppTextInput
                             label={t('editor.premium.businessDescription')}
@@ -776,21 +782,13 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             placeholder={t('editor.premium.businessDescriptionPlaceholder')}
                             multiline
                             maxLength={200}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
 
                         <SectionLabel>{t('editor.premium.businessLogo')}</SectionLabel>
                         <Pressable
                             style={s.logoPickerBtn}
-                            onPress={() => {
-                                if (locked) {
-                                    onUnlockPremium();
-                                    return;
-                                }
-                                handlePickLogo('business', 'businessLogo');
-                            }}>
+                            onPress={() => handlePickLogo('business', 'businessLogo')}>
                             <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
                             <Text style={s.logoPickerText}>
                                 {business.businessLogo
@@ -809,36 +807,31 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             onChangeText={v => updateField('business', 'contactMobileNumber', v)}
                             placeholder={t('editor.premium.mobilePlaceholder')}
                             keyboardType="phone-pad"
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <AppTextInput
                             label={t('editor.premium.address')}
                             value={business.contactAddress}
                             onChangeText={v => updateField('business', 'contactAddress', v)}
                             placeholder={t('editor.premium.addressPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                         <AppTextInput
                             label={t('editor.premium.socialHandle')}
                             value={business.contactSocialHandle}
                             onChangeText={v => updateField('business', 'contactSocialHandle', v)}
                             placeholder={t('editor.premium.socialPlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
+
+                        {renderSocialHandleInputs('business', business)}
+
                         <AppTextInput
                             label={t('editor.premium.websiteLink')}
                             value={business.websiteLink}
                             onChangeText={v => updateField('business', 'websiteLink', v)}
                             placeholder={t('editor.premium.websitePlaceholder')}
-                            editable={!locked}
-                            locked={locked}
-                            onLockedPress={onUnlockPremium}
+
                         />
                     </View>
                 </LockedInputWrapper>
@@ -849,7 +842,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
             <View style={s.saveRow}>
                 <AppButton
                     title={t('preview.actions.save')}
-                    onPress={locked ? onUnlockPremium : onSave}
+                    onPress={handleSave}
                     variant="primary"
                     size="md"
                     style={s.saveBtn}
@@ -1123,11 +1116,16 @@ const EditorScreen = ({ navigation, route }) => {
         setActiveTab('photo');
     }, [p.userName]);
 
-    const handlePremiumDetailsSave = useCallback(async () => {
+    const handlePremiumDetailsSave = useCallback(async (section) => {
         Keyboard.dismiss();
-        await mergeUserProfile({ premiumProfile: p.premiumProfile });
+        const profile = { ...p.premiumProfile };
+        if (section) {
+            profile.activeSection = section;
+            dispatch(setPremiumProfileActiveSection(section));
+        }
+        await mergeUserProfile({ premiumProfile: profile });
         setActiveTab('photo');
-    }, [p.premiumProfile]);
+    }, [p.premiumProfile, dispatch]);
 
     const handleTabPress = useCallback((tabId) => {
         Keyboard.dismiss(); // Dismiss keyboard when switching tabs
@@ -1448,8 +1446,8 @@ const s = StyleSheet.create({
     },
     changeDesignBtn: {
         position: 'absolute',
-        top: 10,
-        left: 10,
+        top: 50,
+        left: 0,
         zIndex: 25,
         flexDirection: 'row',
         alignItems: 'center',

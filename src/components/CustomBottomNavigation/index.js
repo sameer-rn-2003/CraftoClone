@@ -70,7 +70,7 @@ const CustomBottomNavigation = ({
                     );
                 })}
             </View>
-            <View style={styles.homeIndicator} />
+            {/* <View style={styles.homeIndicator} /> */}
         </View>
     );
 };
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         borderRadius: widthPixel(999),
     },
     navIcon: {
-        fontSize: widthPixel(24),
+        fontSize: widthPixel(20),
         color: '#68707A',
     },
     navIconActive: {
@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
         fontFamily: fonts.FONT_FAMILY.Bold,
     },
     createButton: {
-        width: widthPixel(54),
-        height: widthPixel(54),
+        width: widthPixel(34),
+        height: widthPixel(34),
         borderRadius: widthPixel(27),
         alignItems: 'center',
         justifyContent: 'center',
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     createIcon: {
-        fontSize: widthPixel(34),
+        fontSize: widthPixel(20),
         color: '#FFFFFF',
     },
     profileThumb: {

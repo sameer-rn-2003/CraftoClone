@@ -10,6 +10,14 @@ import HomeScreen from '../screens/HomeScreen';
 import TemplateScreen from '../screens/TemplateScreen';
 import EditorScreen from '../screens/EditorScreen';
 import PreviewScreen from '../screens/PreviewScreen';
+import NotificationScreen from '../screens/NotificationScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import ContactScreen from '../screens/ContactScreen';
+import PrivacyScreen from '../screens/PrivacyScreen';
+import TermsScreen from '../screens/TermsScreen';
+import RefundScreen from '../screens/RefundScreen';
+import AboutScreen from '../screens/AboutScreen';
+import ProductScreen from '../screens/ProductScreen';
 import LanguageSelectionScreen from '../screens/LanguageSelectionScreen';
 import UserSetupScreen from '../screens/UserSetupScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -48,6 +56,14 @@ const AppStack = () => (
         <Stack.Screen name="TemplateScreen" component={TemplateScreen} />
         <Stack.Screen name="EditorScreen" component={EditorScreen} />
         <Stack.Screen name="PreviewScreen" component={PreviewScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+        <Stack.Screen name="ContactScreen" component={ContactScreen} />
+        <Stack.Screen name="PrivacyScreen" component={PrivacyScreen} />
+        <Stack.Screen name="TermsScreen" component={TermsScreen} />
+        <Stack.Screen name="RefundScreen" component={RefundScreen} />
+        <Stack.Screen name="AboutScreen" component={AboutScreen} />
+        <Stack.Screen name="ProductScreen" component={ProductScreen} />
     </Stack.Navigator>
 );
 

@@ -48,7 +48,7 @@ export const syncSubscriptionStatus = async dispatch => {
 
     return {
         ...subscriptionStatus,
-        isPremium:true,
+        isPremium,
     };
 };
 
