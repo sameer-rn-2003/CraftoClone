@@ -702,22 +702,6 @@ const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
     thumbnail: source,
     accentColor: '#0D62DF',
     backgroundColor: '#DDE5EC',
-    config: {
-        width: 1080,
-        height: 1920,
-        layers: [
-            { id: 'bg', type: 'image', src: '{{background_image}}', x: 0, y: 0, width: 1080, height: 1920 },
-            { id: 'user_photo', type: 'image', src: '{{user_photo}}', x: 360, y: 1140, width: 360, height: 360, borderRadius: 180, borderWidth: 8, borderColor: '#FFFFFF' },
-            { id: 'headline', type: 'text', text: '{{headline}}', x: 80, y: 1520, width: 920, align: 'center', color: '#FFFFFF', fontSize: 72, fontWeight: 'bold' },
-            { id: 'subtext', type: 'text', text: '{{subtext}}', x: 100, y: 1620, width: 880, align: 'center', color: '#FFFFFF', fontSize: 40 },
-        ],
-        variables: [
-            { key: 'background_image', type: 'image', default: source },
-            { key: 'user_photo', type: 'image', default: '' },
-            { key: 'headline', type: 'text', default: 'Your Name' },
-            { key: 'subtext', type: 'text', default: 'Your Message' },
-        ],
-    },
 });
 
 const HomeScreen = ({ navigation }) => {
@@ -1404,7 +1388,7 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-// console.log("reelsData", reelsData);
+console.log("reelsData", reelsData);
 const getItemLayout = useCallback((data, index) => ({
     length: ITEM_HEIGHT,
     offset: ITEM_HEIGHT * index,
@@ -1414,99 +1398,99 @@ const getItemLayout = useCallback((data, index) => ({
         <View style={styles.screen}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
 
-            {activeTab === 'trending' ? (
-                <View style={styles.comingSoonScreen}>
-                    <LinearGradient
-                        colors={['#C9E6F7', '#FFFFFF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.comingSoonCard}>
-                        <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
-                        <Text style={styles.comingSoonTitle}>Coming soon</Text>
-                        <Text style={styles.comingSoonText}>
-                            Trending posters will appear here shortly.
-                        </Text>
-                    </LinearGradient>
-                </View>
-            ) : (
-                <>
-                    <LinearGradient
-                        colors={['#C9E6F7', '#FFFFFF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.staticHeader}>
-                        <View style={styles.headerRow}>
-                    <View style={styles.searchBar}>
-                        <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
-                        <TextInput
-                            placeholder={t('home.searchPlaceholder')}
-                            style={styles.searchInput}
-                            value={search}
-                            onChangeText={handleSearch}
-                            placeholderTextColor="#6D7782"
-                        />
-                    </View>
+            <LinearGradient
+                colors={['#C9E6F7', '#FFFFFF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.staticHeader}>
+                <View style={styles.headerRow}>
+            <View style={styles.searchBar}>
+                <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
+                <TextInput
+                    placeholder={t('home.searchPlaceholder')}
+                    style={styles.searchInput}
+                    value={search}
+                    onChangeText={handleSearch}
+                    placeholderTextColor="#6D7782"
+                />
+            </View>
 
+            <Pressable
+                style={styles.notificationBtn}
+                onPress={() => navigation?.navigate?.('NotificationScreen')}
+                hitSlop={8}>
+                <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
+                <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>6</Text>
+                </View>
+            </Pressable>
+        </View>
+
+        <Pressable
+            style={[styles.devPremiumToggle, isPremium && styles.devPremiumToggleActive]}
+            onPress={handleDevPremiumToggle}>
+            <MaterialCommunityIcons
+                name={isPremium ? 'crown' : 'crown-outline'}
+                style={[styles.devPremiumIcon, isPremium && styles.devPremiumIconActive]}
+            />
+            <Text style={[styles.devPremiumText, isPremium && styles.devPremiumTextActive]}>
+                {isPremium
+                    ? t('home.devPremium.on', { defaultValue: 'Dev Premium: ON' })
+                    : t('home.devPremium.off', { defaultValue: 'Dev Premium: OFF' })}
+            </Text>
+        </Pressable>
+
+        <ScrollView
+            style={styles.categoryPreviewScroll}
+            contentContainerStyle={styles.chipRow}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}>
+            {previewChips?.map(item => {
+                const isActive = activeCategory === item.id;
+                return (
                     <Pressable
-                        style={styles.notificationBtn}
-                        onPress={() => navigation?.navigate?.('NotificationScreen')}
-                        hitSlop={8}>
-                        <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
-                        <View style={styles.notificationBadge}>
-                            <Text style={styles.notificationBadgeText}>6</Text>
-                        </View>
+                        key={item.id}
+                        style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                        onPress={() => handleCategoryPress(item)}>
+                        {item.icon ? (
+                            <MaterialCommunityIcons
+                                name={item.icon}
+                                style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
+                            />
+                        ) : null}
+                        <Text style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
+                            {item.label}
+                        </Text>
                     </Pressable>
-                </View>
-
-                <Pressable
-                    style={[styles.devPremiumToggle, isPremium && styles.devPremiumToggleActive]}
-                    onPress={handleDevPremiumToggle}>
-                    <MaterialCommunityIcons
-                        name={isPremium ? 'crown' : 'crown-outline'}
-                        style={[styles.devPremiumIcon, isPremium && styles.devPremiumIconActive]}
-                    />
-                    <Text style={[styles.devPremiumText, isPremium && styles.devPremiumTextActive]}>
-                        {isPremium
-                            ? t('home.devPremium.on', { defaultValue: 'Dev Premium: ON' })
-                            : t('home.devPremium.off', { defaultValue: 'Dev Premium: OFF' })}
+                );
+            })}
+            {hasMoreCategories ? (
+                <Pressable style={styles.categoryChip} onPress={() => setCategoryModalVisible(true)}>
+                    <Text style={styles.categoryChipLabel}>
+                        {t('home.more', { defaultValue: 'More' })}
                     </Text>
+                    <MaterialCommunityIcons name="chevron-down" style={styles.categoryChipIcon} />
                 </Pressable>
+            ) : null}
+        </ScrollView>
+    </LinearGradient>
 
-                <ScrollView
-                    style={styles.categoryPreviewScroll}
-                    contentContainerStyle={styles.chipRow}
-                    scrollEnabled={false}
-                    showsVerticalScrollIndicator={false}>
-                    {previewChips?.map(item => {
-                        const isActive = activeCategory === item.id;
-                        return (
-                            <Pressable
-                                key={item.id}
-                                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-                                onPress={() => handleCategoryPress(item)}>
-                                {item.icon ? (
-                                    <MaterialCommunityIcons
-                                        name={item.icon}
-                                        style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
-                                    />
-                                ) : null}
-                                <Text style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
-                                    {item.label}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-                    {hasMoreCategories ? (
-                        <Pressable style={styles.categoryChip} onPress={() => setCategoryModalVisible(true)}>
-                            <Text style={styles.categoryChipLabel}>
-                                {t('home.more', { defaultValue: 'More' })}
-                            </Text>
-                            <MaterialCommunityIcons name="chevron-down" style={styles.categoryChipIcon} />
-                        </Pressable>
-                    ) : null}
-                </ScrollView>
+    {activeTab === 'trending' ? (
+        <View style={styles.comingSoonScreen}>
+            <LinearGradient
+                colors={['#C9E6F7', '#FFFFFF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.comingSoonCard}>
+                <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
+                <Text style={styles.comingSoonTitle}>Coming soon</Text>
+                <Text style={styles.comingSoonText}>
+                    Trending posters will appear here shortly.
+                </Text>
             </LinearGradient>
-
+        </View>
+    ) : (
+        <>
             <FlatList
                 ref={flatListRef}
                 data={reelsData}
@@ -1686,6 +1670,8 @@ const getItemLayout = useCallback((data, index) => ({
                     enablePhotoAnimation={false}
                 />
             </View>
+        </>
+    )}
 
             <SubscriptionModal
                 visible={isSubscriptionVisible}
@@ -1867,8 +1853,7 @@ const getItemLayout = useCallback((data, index) => ({
                     </Pressable>
                 </Pressable>
             </Modal>
-                </>
-            )}
+          
         </View>
     );
 };
