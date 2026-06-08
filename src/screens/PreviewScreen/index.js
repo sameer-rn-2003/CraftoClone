@@ -14,6 +14,7 @@ import {
     Dimensions,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
@@ -21,6 +22,9 @@ import PosterPreview, { getPosterCompositionSize } from '../../components/Poster
 import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
 import { getTemplateCanvasSize } from '../../utils/templateConfig';
+import { buildTemplateRenderContext } from '../../utils/templateConfig';
+import mediaGenerationService from '../../services/mediaGenerationService';
+import { trackTemplateActionApi } from '../../apiService/trackingApi';
 import {
     COLORS,
     FONTS,
@@ -51,6 +55,8 @@ const PreviewScreen = ({ navigation, route }) => {
     const previewHeight = compositionSize.height * previewScale;
     const [isTemplateMuted, setIsTemplateMuted] = useState(true);
     const [templateHasAudio, setTemplateHasAudio] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationMessage, setGenerationMessage] = useState('');
 
     // FIX 2: Determine if the selected template is a video so we can show the
     // correct action buttons (Download-only for VIDEO, Save+Share for IMAGE).
@@ -83,6 +89,50 @@ const PreviewScreen = ({ navigation, route }) => {
     }, [route, handleShare, handleSave]);
 
     const accentColor = selectedTemplate?.accentColor || COLORS.primary;
+
+    const handleGenerateHDVideo = useCallback(async () => {
+        if (!selectedTemplate) return;
+        try {
+            setIsGenerating(true);
+            setGenerationMessage('Submitting render job...');
+
+            const renderContext = buildTemplateRenderContext({
+                template: selectedTemplate,
+                userPhoto: posterState.userPhoto,
+                userName: posterState.userName,
+                userMessage: posterState.userMessage,
+                premiumProfile: posterState.premiumProfile,
+            });
+
+            const res = await mediaGenerationService.startMediaGeneration({ template_id: selectedTemplate.id, context: renderContext });
+            const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
+            if (!jobId) throw new Error('No job id returned by server');
+
+            setGenerationMessage('Rendering on server...');
+            const status = await mediaGenerationService.pollMediaStatus(jobId, {
+                interval: 2000,
+                maxAttempts: 120,
+                onProgress: s => setGenerationMessage(s?.status || s?.state || JSON.stringify(s)),
+            });
+
+            const url = status?.url || status?.result_url || status?.download_url;
+            if (!url) throw new Error('No output URL from render');
+
+            setGenerationMessage('Downloading generated media...');
+            const filePath = await mediaGenerationService.downloadGeneratedMedia(url, `crafto_${selectedTemplate.id}_${Date.now()}`);
+
+            Alert.alert('Saved', `File saved to ${filePath}`);
+
+            try { await trackTemplateActionApi(String(selectedTemplate.id), { action: 'download' }); } catch (e) { /* ignore */ }
+
+        } catch (e) {
+            console.error('Video generation error', e);
+            Alert.alert('Render failed', String(e?.message || e));
+        } finally {
+            setIsGenerating(false);
+            setGenerationMessage('');
+        }
+    }, [selectedTemplate, posterState]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -168,27 +218,46 @@ const PreviewScreen = ({ navigation, route }) => {
                 ─────────────────────────────────────────────────────────── */}
                 <View style={styles.actions}>
                     {isVideoTemplate ? (
-                        /* ── VIDEO: Download only ── */
-                        <Pressable
-                            style={[styles.actionBtn, styles.downloadBtn, isSaving && styles.btnDisabled]}
-                            onPress={handleSave}
-                            disabled={isSaving || isSharing}>
-                            {isSaving ? (
-                                <ActivityIndicator color={COLORS.white} size="small" />
-                            ) : (
-                                <>
-                                    <MaterialCommunityIcons name="download" style={styles.actionIcon} />
-                                    <View>
-                                        <Text style={styles.actionLabel}>
-                                            {t('preview.actions.download', { defaultValue: 'Download' })}
-                                        </Text>
-                                        <Text style={styles.actionSub}>
-                                            {t('preview.actions.downloadSub', { defaultValue: 'Save video to gallery' })}
-                                        </Text>
-                                    </View>
-                                </>
-                            )}
-                        </Pressable>
+                        /* ── VIDEO: Download + Generate HD option ── */
+                        <View style={{ width: '100%' }}>
+                            {/* <Pressable
+                                style={[styles.actionBtn, styles.downloadBtn, isSaving && styles.btnDisabled]}
+                                onPress={handleSave}
+                                disabled={isSaving || isSharing}>
+                                {isSaving ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="download" style={styles.actionIcon} />
+                                        <View>
+                                            <Text style={styles.actionLabel}>
+                                                {t('preview.actions.download', { defaultValue: 'Download' })}
+                                            </Text>
+                                            <Text style={styles.actionSub}>
+                                                {t('preview.actions.downloadSub', { defaultValue: 'Save video to gallery' })}
+                                            </Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable> */}
+
+                            <Pressable
+                                style={[styles.actionBtn, { marginTop: 12, backgroundColor: '#3B82F6' }, isGenerating && styles.btnDisabled]}
+                                onPress={handleGenerateHDVideo}
+                                disabled={isGenerating || isSaving || isSharing}>
+                                {isGenerating ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                ) : (
+                                    <>
+                                        {/* <MaterialCommunityIcons name="render" style={styles.actionIcon} /> */}
+                                        <View>
+                                            <Text style={styles.actionLabel}>Generate HD Video</Text>
+                                            <Text style={styles.actionSub}>High-quality server render (may take longer)</Text>
+                                        </View>
+                                    </>
+                                )}
+                            </Pressable>
+                        </View>
                     ) : (
                         /* ── IMAGE: Save + Share ── */
                         <>

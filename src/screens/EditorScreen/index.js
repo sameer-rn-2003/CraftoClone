@@ -367,7 +367,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
 
 
     return (
-     <ScrollView
+        <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
@@ -635,6 +635,7 @@ const SOCIAL_FIELDS = [
 
 const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave }) => {
     const { t } = useTranslation();
+    const [localProfile, setLocalProfile] = useState(() => p.premiumProfile);
     const [activeSection, setActiveSection] = useState(p.premiumProfile?.activeSection || 'personal');
     const locked = !p.isPremium;
 
@@ -646,8 +647,8 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
         onSave(activeSection);
     }, [activeSection, onSave]);
 
-    const personal = p.premiumProfile?.personal || {};
-    const business = p.premiumProfile?.business || {};
+    const personal = localProfile?.personal || {};
+    const business = localProfile?.business || {};
 
     const MAX_BOTTOM_DETAILS = 4;
     const BOTTOM_BAND_FIELDS = {
@@ -687,6 +688,28 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                 return;
             }
         }
+
+        // 1. Update local state synchronously to prevent TextInput flickering/cursor jumping
+        setLocalProfile(prev => {
+            const next = {
+                ...prev,
+                [section]: {
+                    ...prev[section],
+                }
+            };
+            if (field.includes('.')) {
+                const [parent, child] = field.split('.');
+                next[section][parent] = {
+                    ...prev[section]?.[parent],
+                    [child]: value,
+                };
+            } else {
+                next[section][field] = value;
+            }
+            return next;
+        });
+
+        // 2. Dispatch to Redux to update the poster in real-time
         dispatch(setPremiumProfileField({ section, field, value }));
     };
 
@@ -719,12 +742,12 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
     );
 
     return (
-     <ScrollView
-    showsVerticalScrollIndicator={false}
-    keyboardShouldPersistTaps="handled"
-    keyboardDismissMode="on-drag"
-    contentInsetAdjustmentBehavior="automatic"
->
+        <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentInsetAdjustmentBehavior="automatic"
+        >
             <View style={[s.sectionSlider, locked && s.lockedSection]}>
                 <Pressable
                     style={[s.sectionSliderBtn, activeSection === 'personal' && s.sectionSliderBtnActive]}
@@ -750,7 +773,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
             )}
 
             {activeSection === 'personal' ? (
-                <LockedInputWrapper locked={false} onUnlock={onUnlockPremium} showOverlay={false}>
+                <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
                         <SectionLabel>{t('editor.premium.personalDetails')}</SectionLabel>
                         <AppTextInput
@@ -802,7 +825,7 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                     </View>
                 </LockedInputWrapper>
             ) : (
-                <LockedInputWrapper locked={false} onUnlock={onUnlockPremium} showOverlay={false}>
+                <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
                     <View>
                         <SectionLabel>{t('editor.premium.businessInfo')}</SectionLabel>
                         <AppTextInput
@@ -1033,7 +1056,7 @@ const EditorScreen = ({ navigation, route }) => {
                 dispatch(hydratePremiumProfile(stored.premiumProfile));
             }
         })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadSubscriptionPlans = useCallback(async () => {
@@ -1170,10 +1193,10 @@ const EditorScreen = ({ navigation, route }) => {
 
     const renderPanel = useCallback(() => {
         switch (activeTab) {
-            case 'photo': return <PhotoTab 
-                onPickImage={handlePickProfileImage} 
+            case 'photo': return <PhotoTab
+                onPickImage={handlePickProfileImage}
                 pickingImage={pickingImage}
-                userPhoto={p.userPhoto} 
+                userPhoto={p.userPhoto}
                 photoScale={p.photoScale}
                 userPhotoAnimation={p.userPhotoAnimation}
                 onScaleChange={scale => dispatch(setPhotoScale(scale))}
@@ -1258,12 +1281,12 @@ const EditorScreen = ({ navigation, route }) => {
                     height: previewHeight,
                 }, shouldCollapsePoster && s.posterClipCollapsed]}>
                     <View style={[s.posterScaler, {
-                            width: compositionSize.width,
-                            height: compositionSize.height,
-                            transform: [{ scale: previewScale }],
-                            marginLeft: -(compositionSize.width * (1 - previewScale)) / 2,
-                            marginTop: -(compositionSize.height * (1 - previewScale)) / 2,
-                        }]}>
+                        width: compositionSize.width,
+                        height: compositionSize.height,
+                        transform: [{ scale: previewScale }],
+                        marginLeft: -(compositionSize.width * (1 - previewScale)) / 2,
+                        marginTop: -(compositionSize.height * (1 - previewScale)) / 2,
+                    }]}>
                         <PosterPreview
                             interactive
                             allowPinchScale={p.isPremium}
@@ -1320,7 +1343,7 @@ const EditorScreen = ({ navigation, route }) => {
             {/* ── Scrollable Panel with KeyboardAvoidingView ─────────────────────── */}
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <View style={s.panel}>

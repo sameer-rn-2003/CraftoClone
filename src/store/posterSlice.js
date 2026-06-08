@@ -89,6 +89,8 @@ const initialState = {
 
     // ── Home ─────────────────────────────────────────────────
     activeCategory: 'political',
+    // Notifications
+    unreadNotificationCount: 0,
 };
 
 const posterSlice = createSlice({
@@ -311,6 +313,7 @@ const posterSlice = createSlice({
             };
         },
 
+        setUnreadNotificationCount(state, { payload }) { state.unreadNotificationCount = Number(payload) || 0; },
         setActiveCategory(state, { payload }) { state.activeCategory = payload; },
     },
 });
@@ -330,6 +333,7 @@ export const {
     setBgOverlayColor, setBgOverlayOpacity,
     addSticker, updateStickerPosition, removeSticker,
     addSavedPoster, resetEditor, setActiveCategory,setIsLoggedIn,
+    setUnreadNotificationCount,
 } = posterSlice.actions;
 
 export default posterSlice.reducer;

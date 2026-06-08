@@ -2,6 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from 'react-native-config';
 
+console.log("Config:::", Config)
+
 let sessionExpiredCb = null;
 export const setSessionExpiredCallback = cb => { sessionExpiredCb = cb; };
 
@@ -60,12 +62,12 @@ API.interceptors.response.use(
         const refreshToken = await AsyncStorage.getItem('refresh_token');
 
         const res = await axios.post(
-         `${Config.BASE_URL}/v1/auth/refresh`,
+          `${Config.BASE_URL}/v1/auth/refresh`,
           {},
           {
             headers: {
               'x-api-key': Config.API_KEY,
-      Authorization: `Bearer ${refreshToken}`,
+              Authorization: `Bearer ${refreshToken}`,
             },
           }
         );

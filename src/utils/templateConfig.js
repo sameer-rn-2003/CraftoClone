@@ -393,6 +393,9 @@ export const normalizeTemplateApiItem = item => {
             item?.videoUrl,
             item?.Video,
         ),
+        // Metrics from API
+        download_count: getNumericValue(item?.download_count ?? item?.downloadCount ?? item?.downloads ?? 0, 0),
+        share_count: getNumericValue(item?.share_count ?? item?.shareCount ?? item?.shares ?? 0, 0),
     };
 
     return normalizedTemplate;

@@ -56,6 +56,9 @@ import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/temp
 import useImagePicker from '../../hooks/useImagePicker';
 import { getCategories } from '../../apiService/categoriesApi';
 import { getTemplatesApi } from '../../apiService/templateApi';
+import { getTrendingTemplatesApi } from '../../apiService/trendingApi';
+import { getUnreadNotificationCountApi } from '../../apiService/notificationApi';
+import { trackTemplateActionApi } from '../../apiService/trackingApi';
 import {
     addFavoriteApi,
     getFavoritesApi,
@@ -78,330 +81,330 @@ const isPremiumTemplate = item => {
 };
 
 const resData = {
-  "status": true,
-  "message": "Templates retrieved successfully",
-  "data": {
-    "data": [
-      {
-        "id": "4eed2def-3656-41a2-bf38-e3e9e3d90794",
-        "name": "Diwali",
-        "type": "VIDEO",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://www.w3schools.com/tags/mov_bbb.mp4",
-        "template_key": "templates/video.mp4",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
+    "status": true,
+    "message": "Templates retrieved successfully",
+    "data": {
+        "data": [
             {
-              "x": 140,
-              "y": 200,
-              "id": "user_photo",
-              "src": "{{user_photo}}",
-              "type": "image",
-              "width": 800,
-              "height": 800
+                "id": "4eed2def-3656-41a2-bf38-e3e9e3d90794",
+                "name": "Diwali",
+                "type": "VIDEO",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://www.w3schools.com/tags/mov_bbb.mp4",
+                "template_key": "templates/video.mp4",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 140,
+                            "y": 200,
+                            "id": "user_photo",
+                            "src": "{{user_photo}}",
+                            "type": "image",
+                            "width": 800,
+                            "height": 800
+                        },
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "frame_overlay",
+                            "src": "{{frame_png}}",
+                            "note": "Upload a PNG with transparent centre so the video shows through",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920
+                        },
+                        {
+                            "x": 60,
+                            "y": 1100,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#ffffff",
+                            "width": 960,
+                            "fontSize": 64,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 1200,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#eeeeee",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "user_photo",
+                            "type": "image",
+                            "label": "Your Photo (placed in the frame slot)",
+                            "default": ""
+                        },
+                        {
+                            "key": "frame_png",
+                            "type": "image",
+                            "label": "Frame/Border PNG (transparent centre)",
+                            "default": ""
+                        },
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        }
+                    ]
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 1,
+                "createdAt": "2026-04-20T20:31:54.411Z",
+                "updatedAt": "2026-04-20T20:32:13.937Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 0,
-              "y": 0,
-              "id": "frame_overlay",
-              "src": "{{frame_png}}",
-              "note": "Upload a PNG with transparent centre so the video shows through",
-              "type": "image",
-              "width": 1080,
-              "height": 1920
+                "id": "c910f1a6-3116-48c2-8f91-44943cdfe364",
+                "name": "test video",
+                "type": "VIDEO",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
+                "template_key": "templates/video.mp4",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 140,
+                            "y": 200,
+                            "id": "user_photo",
+                            "src": "{{user_photo}}",
+                            "type": "image",
+                            "width": 800,
+                            "height": 800
+                        },
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "frame_overlay",
+                            "src": "{{frame_png}}",
+                            "note": "Upload a PNG with transparent centre so the video shows through",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920
+                        },
+                        {
+                            "x": 60,
+                            "y": 1100,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#ffffff",
+                            "width": 960,
+                            "fontSize": 64,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 1200,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#eeeeee",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        },
+                        {
+                            "key": "background_image",
+                            "type": "image",
+                            "label": "Background Image",
+                            "default": ""
+                        },
+                        {
+                            "key": "logo_url",
+                            "type": "image",
+                            "label": "Your Logo",
+                            "default": ""
+                        }
+                    ],
+                    "background": "#ffffff"
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 2,
+                "createdAt": "2026-04-20T20:05:54.310Z",
+                "updatedAt": "2026-04-20T20:06:19.257Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 60,
-              "y": 1100,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#ffffff",
-              "width": 960,
-              "fontSize": 64,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
+                "id": "22b307ad-52a8-4d0e-acf8-04675c9b7983",
+                "name": "Diwali",
+                "type": "IMAGE",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "template_key": "templates/demon.jpeg",
+                "config_json": {
+                    "width": 1080,
+                    "height": 1920,
+                    "layers": [
+                        {
+                            "x": 0,
+                            "y": 0,
+                            "id": "bg",
+                            "src": "{{background_image}}",
+                            "type": "image",
+                            "width": 1080,
+                            "height": 1920,
+                            "opacity": 1
+                        },
+                        {
+                            "x": 60,
+                            "y": 200,
+                            "id": "headline",
+                            "text": "{{headline}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#111111",
+                            "width": 960,
+                            "fontSize": 72,
+                            "fontFamily": "Poppins",
+                            "fontWeight": "bold"
+                        },
+                        {
+                            "x": 60,
+                            "y": 320,
+                            "id": "subtext",
+                            "text": "{{subtext}}",
+                            "type": "text",
+                            "align": "center",
+                            "color": "#555555",
+                            "width": 960,
+                            "fontSize": 36,
+                            "fontFamily": "Inter"
+                        },
+                        {
+                            "x": 440,
+                            "y": 1700,
+                            "id": "logo",
+                            "src": "{{logo_url}}",
+                            "type": "image",
+                            "width": 200,
+                            "height": 100,
+                            "opacity": 0.9
+                        }
+                    ],
+                    "version": "1.0",
+                    "variables": [
+                        {
+                            "key": "headline",
+                            "type": "text",
+                            "label": "Headline Text",
+                            "default": "Happy Diwali!"
+                        },
+                        {
+                            "key": "subtext",
+                            "type": "text",
+                            "label": "Sub Text",
+                            "default": "Wishing you joy & prosperity"
+                        },
+                        {
+                            "key": "background_image",
+                            "type": "image",
+                            "label": "Background Image",
+                            "default": ""
+                        },
+                        {
+                            "key": "logo_url",
+                            "type": "image",
+                            "label": "Your Logo",
+                            "default": ""
+                        }
+                    ],
+                    "background": "#ffffff"
+                },
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 7,
+                "createdAt": "2026-04-20T19:05:38.184Z",
+                "updatedAt": "2026-04-20T19:47:02.913Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             },
             {
-              "x": 60,
-              "y": 1200,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#eeeeee",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
+                "id": "734b7507-4f00-4561-912b-a5136abd53b3",
+                "name": "Diwali",
+                "type": "IMAGE",
+                "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "thumbnail_key": "templates/demon.jpeg",
+                "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
+                "template_key": "templates/demon.jpeg",
+                "config_json": null,
+                "is_premium": false,
+                "language": "en",
+                "is_active": true,
+                "usage_count": 2,
+                "createdAt": "2026-04-20T19:01:36.882Z",
+                "updatedAt": "2026-04-20T19:06:03.122Z",
+                "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                "category": {
+                    "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
+                    "name": "Festival"
+                }
             }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "user_photo",
-              "type": "image",
-              "label": "Your Photo (placed in the frame slot)",
-              "default": ""
-            },
-            {
-              "key": "frame_png",
-              "type": "image",
-              "label": "Frame/Border PNG (transparent centre)",
-              "default": ""
-            },
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            }
-          ]
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 1,
-        "createdAt": "2026-04-20T20:31:54.411Z",
-        "updatedAt": "2026-04-20T20:32:13.937Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "c910f1a6-3116-48c2-8f91-44943cdfe364",
-        "name": "test video",
-        "type": "VIDEO",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/video.mp4",
-        "template_key": "templates/video.mp4",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
-            {
-              "x": 140,
-              "y": 200,
-              "id": "user_photo",
-              "src": "{{user_photo}}",
-              "type": "image",
-              "width": 800,
-              "height": 800
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "id": "frame_overlay",
-              "src": "{{frame_png}}",
-              "note": "Upload a PNG with transparent centre so the video shows through",
-              "type": "image",
-              "width": 1080,
-              "height": 1920
-            },
-            {
-              "x": 60,
-              "y": 1100,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#ffffff",
-              "width": 960,
-              "fontSize": 64,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
-            },
-            {
-              "x": 60,
-              "y": 1200,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#eeeeee",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
-            }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            },
-            {
-              "key": "background_image",
-              "type": "image",
-              "label": "Background Image",
-              "default": ""
-            },
-            {
-              "key": "logo_url",
-              "type": "image",
-              "label": "Your Logo",
-              "default": ""
-            }
-          ],
-          "background": "#ffffff"
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 2,
-        "createdAt": "2026-04-20T20:05:54.310Z",
-        "updatedAt": "2026-04-20T20:06:19.257Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "22b307ad-52a8-4d0e-acf8-04675c9b7983",
-        "name": "Diwali",
-        "type": "IMAGE",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "template_key": "templates/demon.jpeg",
-        "config_json": {
-          "width": 1080,
-          "height": 1920,
-          "layers": [
-            {
-              "x": 0,
-              "y": 0,
-              "id": "bg",
-              "src": "{{background_image}}",
-              "type": "image",
-              "width": 1080,
-              "height": 1920,
-              "opacity": 1
-            },
-            {
-              "x": 60,
-              "y": 200,
-              "id": "headline",
-              "text": "{{headline}}",
-              "type": "text",
-              "align": "center",
-              "color": "#111111",
-              "width": 960,
-              "fontSize": 72,
-              "fontFamily": "Poppins",
-              "fontWeight": "bold"
-            },
-            {
-              "x": 60,
-              "y": 320,
-              "id": "subtext",
-              "text": "{{subtext}}",
-              "type": "text",
-              "align": "center",
-              "color": "#555555",
-              "width": 960,
-              "fontSize": 36,
-              "fontFamily": "Inter"
-            },
-            {
-              "x": 440,
-              "y": 1700,
-              "id": "logo",
-              "src": "{{logo_url}}",
-              "type": "image",
-              "width": 200,
-              "height": 100,
-              "opacity": 0.9
-            }
-          ],
-          "version": "1.0",
-          "variables": [
-            {
-              "key": "headline",
-              "type": "text",
-              "label": "Headline Text",
-              "default": "Happy Diwali!"
-            },
-            {
-              "key": "subtext",
-              "type": "text",
-              "label": "Sub Text",
-              "default": "Wishing you joy & prosperity"
-            },
-            {
-              "key": "background_image",
-              "type": "image",
-              "label": "Background Image",
-              "default": ""
-            },
-            {
-              "key": "logo_url",
-              "type": "image",
-              "label": "Your Logo",
-              "default": ""
-            }
-          ],
-          "background": "#ffffff"
-        },
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 7,
-        "createdAt": "2026-04-20T19:05:38.184Z",
-        "updatedAt": "2026-04-20T19:47:02.913Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      },
-      {
-        "id": "734b7507-4f00-4561-912b-a5136abd53b3",
-        "name": "Diwali",
-        "type": "IMAGE",
-        "thumbnail_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "thumbnail_key": "templates/demon.jpeg",
-        "template_url": "https://dm8eq5jbpggtw.cloudfront.net/templates/demon.jpeg",
-        "template_key": "templates/demon.jpeg",
-        "config_json": null,
-        "is_premium": false,
-        "language": "en",
-        "is_active": true,
-        "usage_count": 2,
-        "createdAt": "2026-04-20T19:01:36.882Z",
-        "updatedAt": "2026-04-20T19:06:03.122Z",
-        "category_id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-        "category": {
-          "id": "8dfb1c6f-7e1e-4c4a-ba73-5df0cbe35bbf",
-          "name": "Festival"
-        }
-      }
-    ],
-    "total": 4,
-    "page": 1,
-    "limit": 20
-  }
+        ],
+        "total": 4,
+        "page": 1,
+        "limit": 20
+    }
 }
 
 
@@ -449,7 +452,7 @@ const CHIP_HEIGHT = heightPixel(25);
 const CHIP_GAP = widthPixel(8);
 const MAX_CATEGORY_LINES = 2;
 const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(24);
-const CATEGORY_PREVIEW_LIMIT = 6;
+const CATEGORY_PREVIEW_LIMIT = 4;
 const TEMPLATE_PAGE_SIZE = 30;
 const FAVORITES_CHIP = {
     id: 'favorites',
@@ -592,7 +595,7 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                             ) : null}
                         </View>
                     </View>
-                    <View style={[styles.reelPremiumBottom, { height: bottomBandHeight }]}>
+                    {/* <View style={[styles.reelPremiumBottom, { height: bottomBandHeight }]}>
                         <View style={styles.reelPremiumContactRow}>
                             {[
                                 premiumDetails.mobile ? { icon: 'phone-outline', text: premiumDetails.mobile } : null,
@@ -612,7 +615,7 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 </View>
                             ))}
                         </View>
-                    </View>
+                    </View> */}
                 </>
             ) : null}
             <TemplateMedia
@@ -664,8 +667,8 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 : 0;
                         const shapeRadius = photoShape === 'circle' ? 999
                             : photoShape === 'square' ? 4
-                            : photoShape === 'rounded' ? 24
-                            : templateRadius;
+                                : photoShape === 'rounded' ? 24
+                                    : templateRadius;
                         return userPhoto ? (
                             <View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }]} pointerEvents="none">
                                 <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
@@ -743,6 +746,13 @@ const HomeScreen = ({ navigation }) => {
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
+    // Trending
+    const [trendingTemplates, setTrendingTemplates] = useState([]);
+    const [trendingPage, setTrendingPage] = useState(1);
+    const [trendingHasMore, setTrendingHasMore] = useState(true);
+    const [isTrendingLoading, setIsTrendingLoading] = useState(false);
+
+    const unreadNotificationCount = useSelector(state => state.poster.unreadNotificationCount);
 
     const requestIdRef = useRef(0);
     const pendingPremiumActionRef = useRef(null);
@@ -859,7 +869,7 @@ const HomeScreen = ({ navigation }) => {
             }
 
             const res = await getTemplatesApi({
-                category_id: categoryId ,
+                category_id: categoryId,
                 language: i18n.language || 'en',
                 search: searchText,
                 page: pageNumber,
@@ -872,7 +882,7 @@ const HomeScreen = ({ navigation }) => {
 
             // const apiData = resData?.data?.data || [];
             // const parsedTotal = Number(resData?.data?.total);
-             const apiData = res.data?.data?.data || [];
+            const apiData = res.data?.data?.data || [];
             const parsedTotal = Number(res.data?.data?.total);
             const hasKnownTotal = Number.isFinite(parsedTotal);
             const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
@@ -904,6 +914,52 @@ const HomeScreen = ({ navigation }) => {
             }
         }
     }, []);
+
+    const fetchTrendingTemplates = useCallback(async ({ pageNumber = 1 } = {}) => {
+        const isFirstPage = pageNumber === 1;
+        try {
+            if (isFirstPage) setIsTrendingLoading(true);
+            const res = await getTrendingTemplatesApi({ page: pageNumber, limit: TEMPLATE_PAGE_SIZE });
+            const apiData = res.data?.data?.data || [];
+            const parsedTotal = Number(res.data?.data?.total);
+            const formatted = dedupeTemplates(apiData.map(normalizeTemplateApiItem));
+
+            setTrendingTemplates(prev => (isFirstPage ? formatted : dedupeTemplates([...prev, ...formatted])));
+            setTrendingPage(pageNumber);
+            setTrendingHasMore(Number.isFinite(parsedTotal) ? parsedTotal > pageNumber * TEMPLATE_PAGE_SIZE : apiData.length === TEMPLATE_PAGE_SIZE);
+        } catch (err) {
+            console.log('Trending fetch error', err);
+            if (isFirstPage) setTrendingTemplates([]);
+        } finally {
+            setIsTrendingLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = navigation?.addListener?.('focus', () => {
+            // refresh unread count when screen focuses
+            (async () => {
+                try {
+                    const res = await getUnreadNotificationCountApi();
+                    const count = Number(res?.data?.data ?? res?.data ?? 0) || 0;
+                    dispatch({ type: 'poster/setUnreadNotificationCount', payload: count });
+                } catch (e) {
+                    // ignore
+                }
+            })();
+        });
+
+        // initial unread fetch
+        (async () => {
+            try {
+                const res = await getUnreadNotificationCountApi();
+                const count = Number(res?.data?.data ?? res?.data ?? 0) || 0;
+                dispatch({ type: 'poster/setUnreadNotificationCount', payload: count });
+            } catch (e) { /* ignore */ }
+        })();
+
+        return unsubscribe;
+    }, [navigation, dispatch]);
 
     const fetchFavoriteTemplates = useCallback(async ({ pageNumber = 1 } = {}) => {
         const requestId = ++requestIdRef.current;
@@ -1320,7 +1376,19 @@ const HomeScreen = ({ navigation }) => {
             if (isActionInProgress) return;
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
-                await sharePosterToWhatsApp(whatsappCaption || undefined);
+                try {
+                    await sharePosterToWhatsApp(whatsappCaption || undefined);
+
+                    // optimistic UI update
+                    setTemplates(prev => prev.map(t => t.id === item.id ? { ...t, share_count: (Number(t.share_count) || 0) + 1 } : t));
+                    setTrendingTemplates(prev => prev.map(t => t.id === item.id ? { ...t, share_count: (Number(t.share_count) || 0) + 1 } : t));
+
+                    // track
+                    try { await trackTemplateActionApi(String(item.id), { action: 'share', platform: 'whatsapp' }); } catch (e) { /* ignore */ }
+                } catch (e) {
+                    // share cancelled or failed
+                    throw e;
+                }
             });
         },
         [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption, withPremiumAccess],
@@ -1331,7 +1399,18 @@ const HomeScreen = ({ navigation }) => {
             if (isActionInProgress) return;
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
-                await savePoster();
+                try {
+                    await savePoster();
+
+                    // optimistic UI update
+                    setTemplates(prev => prev.map(t => t.id === item.id ? { ...t, download_count: (Number(t.download_count) || 0) + 1 } : t));
+                    setTrendingTemplates(prev => prev.map(t => t.id === item.id ? { ...t, download_count: (Number(t.download_count) || 0) + 1 } : t));
+
+                    // track
+                    try { await trackTemplateActionApi(String(item.id), { action: 'download' }); } catch (e) { /* ignore */ }
+                } catch (e) {
+                    throw e;
+                }
             });
         },
         [isActionInProgress, prepareTemplateForMediaAction, savePoster, withPremiumAccess],
@@ -1386,12 +1465,12 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-console.log("reelsData", reelsData);
-const getItemLayout = useCallback((data, index) => ({
-    length: ITEM_HEIGHT,
-    offset: ITEM_HEIGHT * index,
-    index,
-}), []);
+    console.log("reelsData", reelsData);
+    const getItemLayout = useCallback((data, index) => ({
+        length: ITEM_HEIGHT,
+        offset: ITEM_HEIGHT * index,
+        index,
+    }), []);
     return (
         <View style={styles.screen}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
@@ -1402,274 +1481,369 @@ const getItemLayout = useCallback((data, index) => ({
                 end={{ x: 1, y: 1 }}
                 style={styles.staticHeader}>
                 <View style={styles.headerRow}>
-            <View style={styles.searchBar}>
-                <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
-                <TextInput
-                    placeholder={t('home.searchPlaceholder')}
-                    style={styles.searchInput}
-                    value={search}
-                    onChangeText={handleSearch}
-                    placeholderTextColor="#6D7782"
-                />
-            </View>
+                    <View style={styles.searchBar}>
+                        <MaterialCommunityIcons name="magnify" style={styles.searchIcon} />
+                        <TextInput
+                            placeholder={t('home.searchPlaceholder')}
+                            style={styles.searchInput}
+                            value={search}
+                            onChangeText={handleSearch}
+                            placeholderTextColor="#6D7782"
+                        />
+                    </View>
 
-            <Pressable
-                style={styles.notificationBtn}
-                onPress={() => navigation?.navigate?.('NotificationScreen')}
-                hitSlop={8}>
-                <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
-                <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>6</Text>
-                </View>
-            </Pressable>
-        </View>
-
-        <Pressable
-            style={[styles.devPremiumToggle, isPremium && styles.devPremiumToggleActive]}
-            onPress={handleDevPremiumToggle}>
-            <MaterialCommunityIcons
-                name={isPremium ? 'crown' : 'crown-outline'}
-                style={[styles.devPremiumIcon, isPremium && styles.devPremiumIconActive]}
-            />
-            <Text style={[styles.devPremiumText, isPremium && styles.devPremiumTextActive]}>
-                {isPremium
-                    ? t('home.devPremium.on', { defaultValue: 'Dev Premium: ON' })
-                    : t('home.devPremium.off', { defaultValue: 'Dev Premium: OFF' })}
-            </Text>
-        </Pressable>
-
-        <ScrollView
-            style={styles.categoryPreviewScroll}
-            contentContainerStyle={styles.chipRow}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}>
-            {previewChips?.map(item => {
-                const isActive = activeCategory === item.id;
-                return (
                     <Pressable
-                        key={item.id}
-                        style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-                        onPress={() => handleCategoryPress(item)}>
-                        {item.icon ? (
-                            <MaterialCommunityIcons
-                                name={item.icon}
-                                style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
-                            />
+                        style={styles.notificationBtn}
+                        onPress={() => navigation?.navigate?.('NotificationScreen')}
+                        hitSlop={8}>
+                        <MaterialCommunityIcons name="bell-outline" style={styles.notificationIcon} />
+                        {unreadNotificationCount > 0 ? (
+                            <View style={styles.notificationBadge}>
+                                <Text style={styles.notificationBadgeText}>{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}</Text>
+                            </View>
                         ) : null}
-                        <Text style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
-                            {item.label}
-                        </Text>
                     </Pressable>
-                );
-            })}
-            {hasMoreCategories ? (
-                <Pressable style={styles.categoryChip} onPress={() => setCategoryModalVisible(true)}>
-                    <Text style={styles.categoryChipLabel}>
-                        {t('home.more', { defaultValue: 'More' })}
+                </View>
+
+                {/* <Pressable
+                    style={[styles.devPremiumToggle, isPremium && styles.devPremiumToggleActive]}
+                    onPress={handleDevPremiumToggle}>
+                    <MaterialCommunityIcons
+                        name={isPremium ? 'crown' : 'crown-outline'}
+                        style={[styles.devPremiumIcon, isPremium && styles.devPremiumIconActive]}
+                    />
+                    <Text style={[styles.devPremiumText, isPremium && styles.devPremiumTextActive]}>
+                        {isPremium
+                            ? t('home.devPremium.on', { defaultValue: 'Dev Premium: ON' })
+                            : t('home.devPremium.off', { defaultValue: 'Dev Premium: OFF' })}
                     </Text>
-                    <MaterialCommunityIcons name="chevron-down" style={styles.categoryChipIcon} />
-                </Pressable>
-            ) : null}
-        </ScrollView>
-    </LinearGradient>
+                </Pressable> */}
 
-    {activeTab === 'trending' ? (
-        <View style={styles.comingSoonScreen}>
-            <LinearGradient
-                colors={['#C9E6F7', '#FFFFFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.comingSoonCard}>
-                <MaterialCommunityIcons name="chart-line-variant" style={styles.comingSoonIcon} />
-                <Text style={styles.comingSoonTitle}>Coming soon</Text>
-                <Text style={styles.comingSoonText}>
-                    Trending posters will appear here shortly.
-                </Text>
-            </LinearGradient>
-        </View>
-    ) : (
-        <>
-            <FlatList
-                ref={flatListRef}
-                data={reelsData}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                    isLoadingMore ? (
-                        <View style={styles.listStateWrap}>
-                            <ActivityIndicator size="small" color={COLORS.primary} />
-                            <Text style={styles.listStateText}>
-                                {t('home.loadingMore', { defaultValue: 'Loading more...' })}
-                            </Text>
-                        </View>
-                    ) : hasReachedEnd ? (
-                        <View style={styles.listStateWrap}>
-                            <Text style={styles.listStateText}>
-                                {t('home.endReached', { defaultValue: "You've reached the end." })}
-                            </Text>
-                        </View>
-                    ) : null
-                }
-                ListEmptyComponent={
-                    isInitialLoading ? (
-                        <View style={styles.listStateWrap}>
-                            <ActivityIndicator size="small" color={COLORS.primary} />
-                            <Text style={styles.listStateText}>
-                                {t('home.loadingTemplates', { defaultValue: 'Loading templates...' })}
-                            </Text>
-                        </View>
-                    ) : hasLoadedOnce ? (
-                        <View style={styles.listStateWrap}>
-                            <Text style={styles.listStateText}>
-                                {t('home.noTemplates', { defaultValue: 'No templates found.' })}
-                            </Text>
-                        </View>
-                    ) : null
-                }
-                keyExtractor={getTemplateListKey}
-                showsVerticalScrollIndicator={false}
-                // pagingEnabled
-                decelerationRate="fast"
-                viewabilityConfig={viewabilityConfig}
-                onViewableItemsChanged={onViewableItemsChanged}
-                contentContainerStyle={styles.reelsContent}
-                snapToInterval={ITEM_HEIGHT}
-    snapToAlignment="start"
-    disableIntervalMomentum={true} // Forces a swipe to snap one item at a time (like Instagram)
-    getItemLayout={getItemLayout}  // Prevents the drift you experienced earlier
-                renderItem={({ item, index }) => (
-                    <View style={styles.feedItemWrap}>
-                        <View style={styles.reelCard}>
-                            {/* FIX 1: media tap now uses handleEdit (same as bottom bar) so
-                                selectedTemplate + full context is always dispatched together */}
-                            <Pressable style={styles.mediaTapArea} onPress={() => handleEdit(item)}>
-                                <TemplatePosterPreview
-                                    template={item}
-                                    userPhoto={userPhoto}
-                                    userName={userName}
-                                    userMessage={userMessage}
-                                    isPremium={isPremium}
-                                    premiumProfile={premiumProfile}
-                                    designLayoutIndex={designLayoutIndex}
-                                    photoShape={'template'}
-                                    photoPosition={{ x: 0, y: 0 }}
-                                    photoScale={1}
-                                    shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
-                                />
+                <ScrollView
+                    style={styles.categoryPreviewScroll}
+                    contentContainerStyle={styles.chipRow}
+                    scrollEnabled={false}
+                    showsVerticalScrollIndicator={false}>
+                    {previewChips?.map(item => {
+                        const isActive = activeCategory === item.id;
+                        return (
+                            <Pressable
+                                key={item.id}
+                                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                                onPress={() => handleCategoryPress(item)}>
+                                {item.icon ? (
+                                    <MaterialCommunityIcons
+                                        name={item.icon}
+                                        style={[styles.categoryChipIcon, isActive && styles.categoryChipIconActive]}
+                                    />
+                                ) : null}
+                                <Text style={[styles.categoryChipLabel, isActive && styles.categoryChipLabelActive]}>
+                                    {item.label}
+                                </Text>
                             </Pressable>
+                        );
+                    })}
+                    {hasMoreCategories ? (
+                        <Pressable style={styles.categoryChip} onPress={() => setCategoryModalVisible(true)}>
+                            <Text style={styles.categoryChipLabel}>
+                                {t('home.more', { defaultValue: 'More' })}
+                            </Text>
+                            <MaterialCommunityIcons name="chevron-down" style={styles.categoryChipIcon} />
+                        </Pressable>
+                    ) : null}
+                </ScrollView>
+            </LinearGradient>
 
-                            <Pressable style={styles.reelMeta} onPress={() => handleEdit(item)}>
-                                <View style={styles.metricsRow}>
-                                    <View style={styles.metricsLeft}>
-                                        <Pressable
-                                            style={styles.metricAction}
-                                            onPressIn={stopCardPress}
-                                            onPress={event => {
-                                                event.stopPropagation?.();
-                                                handleDownload(item);
-                                            }}
-                                            hitSlop={8}
-                                            disabled={isActionInProgress}>
-                                            <MaterialCommunityIcons
-                                                name="download-outline"
-                                                style={styles.metricActionIcon}
-                                            />
-                                            <Text style={styles.metricCount}>99</Text>
-                                        </Pressable>
+            {activeTab === 'trending' ? (
+                <FlatList
+                    data={trendingTemplates}
+                    onEndReached={() => { if (trendingHasMore && !isTrendingLoading) fetchTrendingTemplates({ pageNumber: trendingPage + 1 }); }}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        isTrendingLoading ? (
+                            <View style={styles.listStateWrap}>
+                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                <Text style={styles.listStateText}>{t('home.loadingMore', { defaultValue: 'Loading more...' })}</Text>
+                            </View>
+                        ) : (!trendingHasMore ? (
+                            <View style={styles.listStateWrap}>
+                                <Text style={styles.listStateText}>{t('home.endReached', { defaultValue: "You've reached the end." })}</Text>
+                            </View>
+                        ) : null)
+                    }
+                    ListEmptyComponent={
+                        isTrendingLoading ? (
+                            <View style={styles.listStateWrap}>
+                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                <Text style={styles.listStateText}>{t('home.loadingTemplates', { defaultValue: 'Loading templates...' })}</Text>
+                            </View>
+                        ) : (
+                            <View style={styles.listStateWrap}>
+                                <Text style={styles.listStateText}>{t('home.noTemplates', { defaultValue: 'No templates found.' })}</Text>
+                            </View>
+                        )
+                    }
+                    keyExtractor={getTemplateListKey}
+                    showsVerticalScrollIndicator={false}
+                    decelerationRate="fast"
+                    viewabilityConfig={viewabilityConfig}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    contentContainerStyle={styles.reelsContent}
+                    snapToInterval={ITEM_HEIGHT}
+                    snapToAlignment="start"
+                    disableIntervalMomentum={true}
+                    getItemLayout={getItemLayout}
+                    renderItem={({ item, index }) => (
+                        <View style={styles.feedItemWrap}>
+                            <View style={styles.reelCard}>
+                                <Pressable style={styles.mediaTapArea} onPress={() => handleEdit(item)}>
+                                    <TemplatePosterPreview
+                                        template={item}
+                                        userPhoto={userPhoto}
+                                        userName={userName}
+                                        userMessage={userMessage}
+                                        isPremium={isPremium}
+                                        premiumProfile={premiumProfile}
+                                        designLayoutIndex={designLayoutIndex}
+                                        photoShape={'template'}
+                                        photoPosition={{ x: 0, y: 0 }}
+                                        photoScale={1}
+                                        shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
+                                    />
+                                </Pressable>
+
+                                <Pressable style={styles.reelMeta} onPress={() => handleEdit(item)}>
+                                    <View style={styles.metricsRow}>
+                                        <View style={styles.metricsLeft}>
+                                            <Pressable
+                                                style={styles.metricAction}
+                                                onPressIn={stopCardPress}
+                                                onPress={event => { event.stopPropagation?.(); handleDownload(item); }}
+                                                hitSlop={8}
+                                                disabled={isActionInProgress}>
+                                                <MaterialCommunityIcons name="download-outline" style={styles.metricActionIcon} />
+                                                <Text style={styles.metricCount}>{item.download_count ?? 0}</Text>
+                                            </Pressable>
+
+                                            <Pressable
+                                                style={styles.metricAction}
+                                                onPressIn={stopCardPress}
+                                                onPress={event => { event.stopPropagation?.(); handleShareToWhatsApp(item); }}
+                                                hitSlop={8}
+                                                disabled={isActionInProgress}>
+                                                <MaterialCommunityIcons name="share-outline" style={styles.metricActionIcon} />
+                                                <Text style={styles.metricCount}>{item.share_count ?? 0}</Text>
+                                            </Pressable>
+
+                                            <Pressable
+                                                style={styles.metricAction}
+                                                onPressIn={stopCardPress}
+                                                onPress={event => { event.stopPropagation?.(); handleEdit(item); }}
+                                                hitSlop={8}>
+                                                <MaterialCommunityIcons name="pencil-outline" style={styles.metricActionIcon} />
+                                            </Pressable>
+                                        </View>
 
                                         <Pressable
-                                            style={styles.metricAction}
+                                            style={styles.bookmarkBtn}
                                             onPressIn={stopCardPress}
-                                            onPress={event => {
-                                                event.stopPropagation?.();
-                                                handleShareToWhatsApp(item);
-                                            }}
-                                            hitSlop={8}
-                                            disabled={isActionInProgress}>
+                                            onPress={event => { event.stopPropagation?.(); handleFavoriteToggle(item); }}
+                                            disabled={!!favoriteLoadingMap[item.id]}
+                                            hitSlop={10}>
                                             <MaterialCommunityIcons
-                                                name="share-outline"
-                                                style={styles.metricActionIcon}
-                                            />
-                                            <Text style={styles.metricCount}>99</Text>
-                                        </Pressable>
-
-                                        <Pressable
-                                            style={styles.metricAction}
-                                            onPressIn={stopCardPress}
-                                            onPress={event => {
-                                                event.stopPropagation?.();
-                                                handleEdit(item);
-                                            }}
-                                            hitSlop={8}>
-                                            <MaterialCommunityIcons
-                                                name="pencil-outline"
-                                                style={styles.metricActionIcon}
+                                                name={favoriteMap[item.id] ? 'bookmark' : 'bookmark-outline'}
+                                                style={styles.bookmarkIcon}
                                             />
                                         </Pressable>
                                     </View>
-
-                                    <Pressable
-                                        style={styles.bookmarkBtn}
-                                        onPressIn={stopCardPress}
-                                        onPress={event => {
-                                            event.stopPropagation?.();
-                                            handleFavoriteToggle(item);
-                                        }}
-                                        disabled={!!favoriteLoadingMap[item.id]}
-                                        hitSlop={10}>
-                                        <MaterialCommunityIcons
-                                            name={favoriteMap[item.id] ? 'bookmark' : 'bookmark-outline'}
-                                            style={[
-                                                styles.bookmarkIcon,
-                                                favoriteMap[item.id] && styles.bookmarkIconActive,
-                                            ]}
+                                </Pressable>
+                            </View>
+                        </View>
+                    )}
+                />
+            ) : (
+                <>
+                    <FlatList
+                        ref={flatListRef}
+                        data={reelsData}
+                        onEndReached={loadMore}
+                        onEndReachedThreshold={0.5}
+                        ListFooterComponent={
+                            isLoadingMore ? (
+                                <View style={styles.listStateWrap}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <Text style={styles.listStateText}>
+                                        {t('home.loadingMore', { defaultValue: 'Loading more...' })}
+                                    </Text>
+                                </View>
+                            ) : hasReachedEnd ? (
+                                <View style={styles.listStateWrap}>
+                                    <Text style={styles.listStateText}>
+                                        {t('home.endReached', { defaultValue: "You've reached the end." })}
+                                    </Text>
+                                </View>
+                            ) : null
+                        }
+                        ListEmptyComponent={
+                            isInitialLoading ? (
+                                <View style={styles.listStateWrap}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <Text style={styles.listStateText}>
+                                        {t('home.loadingTemplates', { defaultValue: 'Loading templates...' })}
+                                    </Text>
+                                </View>
+                            ) : hasLoadedOnce ? (
+                                <View style={styles.listStateWrap}>
+                                    <Text style={styles.listStateText}>
+                                        {t('home.noTemplates', { defaultValue: 'No templates found.' })}
+                                    </Text>
+                                </View>
+                            ) : null
+                        }
+                        keyExtractor={getTemplateListKey}
+                        showsVerticalScrollIndicator={false}
+                        // pagingEnabled
+                        decelerationRate="fast"
+                        viewabilityConfig={viewabilityConfig}
+                        onViewableItemsChanged={onViewableItemsChanged}
+                        contentContainerStyle={styles.reelsContent}
+                        snapToInterval={ITEM_HEIGHT}
+                        snapToAlignment="start"
+                        disableIntervalMomentum={true} // Forces a swipe to snap one item at a time (like Instagram)
+                        getItemLayout={getItemLayout}  // Prevents the drift you experienced earlier
+                        renderItem={({ item, index }) => (
+                            <View style={styles.feedItemWrap}>
+                                <View style={styles.reelCard}>
+                                    {/* FIX 1: media tap now uses handleEdit (same as bottom bar) so
+                                selectedTemplate + full context is always dispatched together */}
+                                    <Pressable style={styles.mediaTapArea} onPress={() => handleEdit(item)}>
+                                        <TemplatePosterPreview
+                                            template={item}
+                                            userPhoto={userPhoto}
+                                            userName={userName}
+                                            userMessage={userMessage}
+                                            isPremium={isPremium}
+                                            premiumProfile={premiumProfile}
+                                            designLayoutIndex={designLayoutIndex}
+                                            photoShape={'template'}
+                                            photoPosition={{ x: 0, y: 0 }}
+                                            photoScale={1}
+                                            shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
                                         />
                                     </Pressable>
-                                </View>
 
-                                <View style={styles.reelActionRow}>
-                                    <Pressable
-                                        style={[styles.changeImageBtn, specialCategoryContext?.type && styles.reelActionHalf, isActionInProgress && styles.actionBtnDisabled]}
-                                        onPressIn={stopCardPress}
-                                        disabled={isActionInProgress}
-                                        onPress={event => {
-                                            event.stopPropagation?.();
-                                            handleEdit(item);
-                                        }}>
-                                        <Text style={styles.changeImageText} numberOfLines={1}>
-                                            {t('home.actions.changeYourImage', { defaultValue: 'Change your image' })}
-                                        </Text>
+                                    <Pressable style={styles.reelMeta} onPress={() => handleEdit(item)}>
+                                        <View style={styles.metricsRow}>
+                                            <View style={styles.metricsLeft}>
+                                                <Pressable
+                                                    style={styles.metricAction}
+                                                    onPressIn={stopCardPress}
+                                                    onPress={event => {
+                                                        event.stopPropagation?.();
+                                                        handleDownload(item);
+                                                    }}
+                                                    hitSlop={8}
+                                                    disabled={isActionInProgress}>
+                                                    <MaterialCommunityIcons
+                                                        name="download-outline"
+                                                        style={styles.metricActionIcon}
+                                                    />
+                                                    <Text style={styles.metricCount}>{item.download_count ?? 0}</Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                    style={styles.metricAction}
+                                                    onPressIn={stopCardPress}
+                                                    onPress={event => {
+                                                        event.stopPropagation?.();
+                                                        handleShareToWhatsApp(item);
+                                                    }}
+                                                    hitSlop={8}
+                                                    disabled={isActionInProgress}>
+                                                    <MaterialCommunityIcons
+                                                        name="share-outline"
+                                                        style={styles.metricActionIcon}
+                                                    />
+                                                    <Text style={styles.metricCount}>{item.share_count ?? 0}</Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                    style={styles.metricAction}
+                                                    onPressIn={stopCardPress}
+                                                    onPress={event => {
+                                                        event.stopPropagation?.();
+                                                        handleEdit(item);
+                                                    }}
+                                                    hitSlop={8}>
+                                                    <MaterialCommunityIcons
+                                                        name="pencil-outline"
+                                                        style={styles.metricActionIcon}
+                                                    />
+                                                </Pressable>
+                                            </View>
+
+                                            <Pressable
+                                                style={styles.bookmarkBtn}
+                                                onPressIn={stopCardPress}
+                                                onPress={event => {
+                                                    event.stopPropagation?.();
+                                                    handleFavoriteToggle(item);
+                                                }}
+                                                disabled={!!favoriteLoadingMap[item.id]}
+                                                hitSlop={10}>
+                                                <MaterialCommunityIcons
+                                                    name={favoriteMap[item.id] ? 'bookmark' : 'bookmark-outline'}
+                                                    style={[
+                                                        styles.bookmarkIcon,
+                                                        favoriteMap[item.id] && styles.bookmarkIconActive,
+                                                    ]}
+                                                />
+                                            </Pressable>
+                                        </View>
+
+                                        <View style={styles.reelActionRow}>
+                                            <Pressable
+                                                style={[styles.changeImageBtn, specialCategoryContext?.type && styles.reelActionHalf, isActionInProgress && styles.actionBtnDisabled]}
+                                                onPressIn={stopCardPress}
+                                                disabled={isActionInProgress}
+                                                onPress={event => {
+                                                    event.stopPropagation?.();
+                                                    handleEdit(item);
+                                                }}>
+                                                <Text style={styles.changeImageText} numberOfLines={1}>
+                                                    {t('home.actions.changeYourImage', { defaultValue: 'Change your image' })}
+                                                </Text>
+                                            </Pressable>
+                                            {specialCategoryContext?.type ? (
+                                                <Pressable
+                                                    style={[styles.changeImageBtn, styles.reelActionHalf, styles.changePartyBtn]}
+                                                    onPressIn={stopCardPress}
+                                                    onPress={event => {
+                                                        event.stopPropagation?.();
+                                                        handleChangeSpecialContext();
+                                                    }}>
+                                                    <Text style={styles.changePartyText} numberOfLines={1}>
+                                                        {specialChangeLabel}
+                                                    </Text>
+                                                </Pressable>
+                                            ) : null}
+                                        </View>
                                     </Pressable>
-                                    {specialCategoryContext?.type ? (
-                                        <Pressable
-                                            style={[styles.changeImageBtn, styles.reelActionHalf, styles.changePartyBtn]}
-                                            onPressIn={stopCardPress}
-                                            onPress={event => {
-                                                event.stopPropagation?.();
-                                                handleChangeSpecialContext();
-                                            }}>
-                                            <Text style={styles.changePartyText} numberOfLines={1}>
-                                                {specialChangeLabel}
-                                            </Text>
-                                        </Pressable>
-                                    ) : null}
                                 </View>
-                            </Pressable>
-                        </View>
-                    </View>
-                )}
-            />
+                            </View>
+                        )}
+                    />
 
-            <View style={styles.hiddenCaptureStage} pointerEvents="none">
-                <PosterPreview
-                    posterRef={posterRef}
-                    playVideo={false}
-                    preferStillImageForVideo
-                    enablePhotoAnimation={false}
-                />
-            </View>
-        </>
-    )}
+                    <View style={styles.hiddenCaptureStage} pointerEvents="none">
+                        <PosterPreview
+                            posterRef={posterRef}
+                            playVideo={false}
+                            preferStillImageForVideo
+                            enablePhotoAnimation={false}
+                        />
+                    </View>
+                </>
+            )}
 
             <SubscriptionModal
                 visible={isSubscriptionVisible}
@@ -1851,7 +2025,7 @@ const getItemLayout = useCallback((data, index) => ({
                     </Pressable>
                 </Pressable>
             </Modal>
-          
+
         </View>
     );
 };
@@ -1909,12 +2083,12 @@ const styles = StyleSheet.create({
     staticHeader: {
         paddingHorizontal: widthPixel(20),
         paddingTop: heightPixel(16),
-        paddingBottom: heightPixel(14),
+        paddingBottom: heightPixel(4),
         backgroundColor: COLORS.headerBackground,
     },
     searchBar: {
         flex: 1,
-        height: heightPixel(48),
+        height: heightPixel(30),
         borderRadius: widthPixel(24),
         backgroundColor: '#FFFFFF',
         flexDirection: 'row',
@@ -1927,20 +2101,20 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     searchIcon: {
-        fontSize: widthPixel(25),
+        fontSize: widthPixel(15),
         color: '#101417',
         marginRight: widthPixel(10),
     },
     searchInput: {
         flex: 1,
-        fontSize: widthPixel(13),
+        fontSize: widthPixel(12),
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: '#101417',
         paddingVertical: 0,
     },
     notificationBtn: {
-        width: widthPixel(48),
-        height: widthPixel(48),
+        width: widthPixel(30),
+        height: widthPixel(30),
         borderRadius: widthPixel(24),
         backgroundColor: '#FFFFFF',
         alignItems: 'center',
@@ -1952,15 +2126,15 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     notificationIcon: {
-        fontSize: widthPixel(27),
+        fontSize: widthPixel(18),
         color: '#111111',
     },
     notificationBadge: {
         position: 'absolute',
-        top: heightPixel(8),
-        right: widthPixel(8),
-        width: widthPixel(16),
-        height: widthPixel(16),
+        top: heightPixel(2),
+        right: widthPixel(2),
+        width: widthPixel(14),
+        height: widthPixel(14),
         borderRadius: widthPixel(8),
         backgroundColor: '#FF1E2D',
         alignItems: 'center',
@@ -1969,7 +2143,7 @@ const styles = StyleSheet.create({
         borderColor: '#FFFFFF',
     },
     notificationBadgeText: {
-        fontSize: widthPixel(9),
+        fontSize: widthPixel(8),
         lineHeight: heightPixel(11),
         color: '#FFFFFF',
         fontFamily: fonts.FONT_FAMILY.Bold,
@@ -2008,7 +2182,7 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
     },
     chipRow: {
-        marginTop: heightPixel(12),
+        marginTop: heightPixel(4),
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: CHIP_GAP,
