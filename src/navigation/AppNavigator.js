@@ -30,6 +30,7 @@ import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 
 import { getUserProfile } from '../utils/userStorage';
 import { setIsLoggedIn } from '../store/posterSlice';
+import { setSessionExpiredCallback } from '../apiService/apiService';
 
 const Stack = createStackNavigator();
 
@@ -77,6 +78,11 @@ const AppNavigator = () => {
     useEffect(() => {
         let mounted = true;
 
+        // Register session expiry callback to switch to auth stack
+        setSessionExpiredCallback(() => {
+            if (mounted) dispatch(setIsLoggedIn(false));
+        });
+
         const initApp = async () => {
             try {
                 // 🌐 Language setup
@@ -109,6 +115,7 @@ const AppNavigator = () => {
 
         return () => {
             mounted = false;
+            setSessionExpiredCallback(null);
         };
     }, [dispatch]);
 

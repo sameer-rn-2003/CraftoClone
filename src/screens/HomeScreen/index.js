@@ -712,9 +712,6 @@ const HomeScreen = ({ navigation }) => {
     const isPremium = useSelector(state => state.poster.isPremium);
     const premiumProfile = useSelector(state => state.poster.premiumProfile);
     const designLayoutIndex = useSelector(state => state.poster.designLayoutIndex);
-    const photoShape = useSelector(state => state.poster.photoShape);
-    const photoPosition = useSelector(state => state.poster.photoPosition);
-    const photoScale = useSelector(state => state.poster.photoScale);
     const specialCategoryContext = useSelector(state => state.poster.specialCategoryContext);
     const { t } = useTranslation();
     const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
@@ -1169,6 +1166,7 @@ const HomeScreen = ({ navigation }) => {
         try {
             setSubscriptionPlansLoading(true);
             const response = await getSubscriptionPlansApi();
+            console.log('Subscription plans response', response?.data?.data);
             const nextPlans = Array.isArray(response?.data?.data)
                 ? response.data.data.filter(plan => plan?.is_active !== false)
                 : [];
@@ -1553,9 +1551,9 @@ const getItemLayout = useCallback((data, index) => ({
                                     isPremium={isPremium}
                                     premiumProfile={premiumProfile}
                                     designLayoutIndex={designLayoutIndex}
-                                    photoShape={photoShape}
-                                    photoPosition={photoPosition}
-                                    photoScale={photoScale}
+                                    photoShape={'template'}
+                                    photoPosition={{ x: 0, y: 0 }}
+                                    photoScale={1}
                                     shouldPlay={activeMediaKey === getTemplateListKey(item, index)}
                                 />
                             </Pressable>
@@ -2102,7 +2100,7 @@ const styles = StyleSheet.create({
     },
     reelAudioToggle: {
         right: widthPixel(14),
-        bottom: heightPixel(14),
+        bottom: heightPixel(40),
         zIndex: 5,
     },
     userPhotoFrame: {

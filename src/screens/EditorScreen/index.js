@@ -649,7 +649,44 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
     const personal = p.premiumProfile?.personal || {};
     const business = p.premiumProfile?.business || {};
 
+    const MAX_BOTTOM_DETAILS = 4;
+    const BOTTOM_BAND_FIELDS = {
+        personal: ['mobileNumber', 'address', 'socialHandle'],
+        business: ['contactMobileNumber', 'contactAddress', 'contactSocialHandle', 'websiteLink'],
+    };
+
+    const countBottomDetails = (section) => {
+        const source = section === 'personal' ? personal : business;
+        let count = 0;
+        for (const field of BOTTOM_BAND_FIELDS[section]) {
+            if (source[field]?.trim()) count++;
+        }
+        if (source.socialHandles) {
+            for (const key of ['facebook', 'instagram', 'twitter', 'snapchat', 'other']) {
+                if (source.socialHandles[key]?.trim()) count++;
+            }
+        }
+        return count;
+    };
+
     const updateField = (section, field, value) => {
+        const isBottomField = BOTTOM_BAND_FIELDS[section].includes(field) || field.startsWith('socialHandles.');
+        if (isBottomField && value?.trim()) {
+            const source = section === 'personal' ? personal : business;
+            let currentValue;
+            if (field.startsWith('socialHandles.')) {
+                currentValue = source.socialHandles?.[field.split('.')[1]] || '';
+            } else {
+                currentValue = source[field] || '';
+            }
+            if (!currentValue?.trim() && countBottomDetails(section) >= MAX_BOTTOM_DETAILS) {
+                Alert.alert(
+                    'Limit Reached',
+                    'Only 4 contact details can be shown in the bottom section. Remove an existing detail before adding a new one.',
+                );
+                return;
+            }
+        }
         dispatch(setPremiumProfileField({ section, field, value }));
     };
 
@@ -947,14 +984,13 @@ const EditorScreen = ({ navigation, route }) => {
     }, []);
 
     useEffect(() => {
-        if (!p.isPremium) return undefined;
         const timer = setTimeout(() => {
             mergeUserProfile({ premiumProfile: p.premiumProfile }).catch(error => {
                 console.log('Premium profile autosave error', error);
             });
         }, 350);
         return () => clearTimeout(timer);
-    }, [p.isPremium, p.premiumProfile]);
+    }, [p.premiumProfile]);
 
     useEffect(() => {
         const routeUserPhoto = route?.params?.userPhoto;

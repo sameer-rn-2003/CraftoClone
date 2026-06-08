@@ -2,6 +2,9 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from 'react-native-config';
 
+let sessionExpiredCb = null;
+export const setSessionExpiredCallback = cb => { sessionExpiredCb = cb; };
+
 const API = axios.create({
   baseURL: Config.BASE_URL,
   timeout: 10000,
@@ -80,11 +83,15 @@ API.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
 
-        // ❌ Refresh failed → logout
-        await AsyncStorage.clear();
-
-        // optional: navigation reset or global event
-        console.log('Session expired, logout user');
+        // Refresh failed — remove tokens, keep user data, switch to auth
+        await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
+        const profileRaw = await AsyncStorage.getItem('user_profile');
+        if (profileRaw) {
+          const profile = JSON.parse(profileRaw);
+          profile.isLoggedIn = false;
+          await AsyncStorage.setItem('user_profile', JSON.stringify(profile));
+        }
+        sessionExpiredCb?.();
 
         return Promise.reject(err);
       } finally {
