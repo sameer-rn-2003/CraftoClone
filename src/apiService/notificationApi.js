@@ -10,11 +10,15 @@ export const getUnreadNotificationCountApi = () => {
 
 export const markNotificationReadApi = (id) => {
     if (!id) return Promise.reject(new Error('notification id required'));
-    return API.patch(`/v1/notifications/${id}/read`);
+    return API.patch('/v1/notifications/mark-read', {
+        notificationIds: [id],
+    });
 };
 
-export const markAllNotificationsReadApi = () => {
-    return API.patch('/v1/notifications/read-all');
+export const markAllNotificationsReadApi = (notificationIds = []) => {
+    return API.patch('/v1/notifications/mark-read', {
+        notificationIds,
+    });
 };
 
 export default {

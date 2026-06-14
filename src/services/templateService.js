@@ -14,8 +14,8 @@
 //         'left' → coloured bar on left side
 
 // ─── Poster metrics ──────────────────────────────────────────────
-const W = 400;   // poster width
-const H = 560;   // poster height
+const W = 300;   // poster width
+const H = 300;   // poster height
 
 export const TEMPLATES = [
 
@@ -28,17 +28,19 @@ export const TEMPLATES = [
         name: 'Election Rally',
         category: 'political',
         layout: 'top',
-        Image: require("../assets/images/happydiwali.jpg"),
+        width: W,
+        height: H,
+        Image: require("../assets/images/image-1.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         backgroundColor: '#0D1B3E',
         accentColor: '#FF416C',
         headerColor: '#C0392B',
         footerColor: '#8B0000',
         pattern: 'diagonal',
-        photoFrame: { x: 65, y: 110, width: 250, height: 250, borderRadius: 125, borderColor: '#FFD700', borderWidth: 4 },
+        photoFrame: { x: 45, y: 45, width: 210, height: 210, borderRadius: 105, borderColor: '#FFD700', borderWidth: 4 },
         textFields: [
             { key: 'name', label: 'Your Name', y: 20, fontSize: 28, fontWeight: '800', color: '#FFD700', align: 'center' },
-            { key: 'message', label: 'Your Slogan', y: 358, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
+            { key: 'message', label: 'Your Slogan', y: 260, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
         ],
     },
 
@@ -47,18 +49,20 @@ export const TEMPLATES = [
         name: 'Presidential',
         category: 'political',
         layout: 'left',
+        width: W,
+        height: H,
         backgroundColor: '#0A1824',
         accentColor: '#F7921E',
-        Image: require("../assets/images/happydiwali2.jpg"),
+        Image: require("../assets/images/image-2.jpg"),
         headerColor: '#1B3A56',   // used as left bar colour
         footerColor: '#0D2235',
         pattern: 'diagonal',
 
-        photoFrame: { x: 12, y: 100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
+        photoFrame: { x: 16, y: 54, width: 110, height: 192, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
         textFields: [
             // Text sits to the RIGHT of the photo
-            { key: 'name', label: 'Leader Name', x: 174, y: 100, fieldWidth: 212, fontSize: 22, fontWeight: '900', color: '#FFFFFF', align: 'left' },
-            { key: 'message', label: 'Your Vision →', x: 174, y: 152, fieldWidth: 212, fontSize: 13, fontWeight: '400', color: '#F7921E', align: 'left' },
+            { key: 'name', label: 'Leader Name', x: 140, y: 92, fieldWidth: 145, fontSize: 20, fontWeight: '900', color: '#FFFFFF', align: 'left' },
+            { key: 'message', label: 'Your Vision →', x: 140, y: 132, fieldWidth: 145, fontSize: 12, fontWeight: '400', color: '#F7921E', align: 'left' },
         ],
     },
 
@@ -67,18 +71,20 @@ export const TEMPLATES = [
         name: 'People Power',
         category: 'political',
         layout: 'top',
+        width: W,
+        height: H,
         backgroundColor: '#1A0005',
-        Image: require("../assets/images/happydiwali4.jpg"),
+        Image: require("../assets/images/image-4.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         accentColor: '#FFD700',
         headerColor: '#5C0015',
         footerColor: '#8B0000',
         pattern: 'diagonal',
         // ── Small circle top-RIGHT, big name text top-left ─────────
-        photoFrame: { x: 0, y: 22, width: 120, height: 120, borderRadius: 60, borderColor: '#FFD700', borderWidth: 3 },
+        photoFrame: { x: 12, y: 18, width: 90, height: 90, borderRadius: 45, borderColor: '#FFD700', borderWidth: 3 },
         textFields: [
-            { key: 'name', label: 'Your Name', x: 14, y: 30, fieldWidth: 236, fontSize: 26, fontWeight: '900', color: '#FFD700', align: 'left' },
-            { key: 'message', label: 'Your Slogan', x: 14, y: 80, fieldWidth: 236, fontSize: 13, fontWeight: '400', color: '#FFFFFF', align: 'left' },
+            { key: 'name', label: 'Your Name', x: 112, y: 34, fieldWidth: 170, fontSize: 22, fontWeight: '900', color: '#FFD700', align: 'left' },
+            { key: 'message', label: 'Your Slogan', x: 112, y: 72, fieldWidth: 170, fontSize: 12, fontWeight: '400', color: '#FFFFFF', align: 'left' },
         ],
     },
     {
@@ -86,16 +92,18 @@ export const TEMPLATES = [
         name: 'Election Rally',
         category: 'political',
         layout: 'top',
-        Image: require("../assets/images/happydiwali.jpg"),
+        width: W,
+        height: H,
+        Image: require("../assets/images/image-1.jpg"),
         backgroundColor: '#0D1B3E',
         accentColor: '#FF416C',
         headerColor: '#C0392B',
         footerColor: '#8B0000',
         pattern: 'diagonal',
-        photoFrame: { x: 65, y: 110, width: 250, height: 250, borderRadius: 125, borderColor: '#FFD700', borderWidth: 4 },
+        photoFrame: { x: 45, y: 45, width: 210, height: 210, borderRadius: 105, borderColor: '#FFD700', borderWidth: 4 },
         textFields: [
             { key: 'name', label: 'Your Name', y: 20, fontSize: 28, fontWeight: '800', color: '#FFD700', align: 'center' },
-            { key: 'message', label: 'Your Slogan', y: 358, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
+            { key: 'message', label: 'Your Slogan', y: 260, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
         ],
     },
 
@@ -104,19 +112,21 @@ export const TEMPLATES = [
         name: 'Presidential',
         category: 'political',
         layout: 'left',
+        width: W,
+        height: H,
         backgroundColor: '#0A1824',
         accentColor: '#F7921E',
-        Image: require("../assets/images/happydiwali2.jpg"),
+        Image: require("../assets/images/image-2.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         headerColor: '#1B3A56',   // used as left bar colour
         footerColor: '#0D2235',
         pattern: 'diagonal',
 
-        photoFrame: { x: 12, y: 100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
+        photoFrame: { x: 16, y: 54, width: 110, height: 192, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
         textFields: [
             // Text sits to the RIGHT of the photo
-            { key: 'name', label: 'Leader Name', x: 174, y: 100, fieldWidth: 212, fontSize: 22, fontWeight: '900', color: '#FFFFFF', align: 'left' },
-            { key: 'message', label: 'Your Vision →', x: 174, y: 152, fieldWidth: 212, fontSize: 13, fontWeight: '400', color: '#F7921E', align: 'left' },
+            { key: 'name', label: 'Leader Name', x: 140, y: 92, fieldWidth: 145, fontSize: 20, fontWeight: '900', color: '#FFFFFF', align: 'left' },
+            { key: 'message', label: 'Your Vision →', x: 140, y: 132, fieldWidth: 145, fontSize: 12, fontWeight: '400', color: '#F7921E', align: 'left' },
         ],
     },
 
@@ -125,18 +135,20 @@ export const TEMPLATES = [
         name: 'People Power',
         category: 'political',
         layout: 'top',
+        width: W,
+        height: H,
         backgroundColor: '#1A0005',
-        Image: require("../assets/images/happydiwali4.jpg"),
+        Image: require("../assets/images/image-4.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         accentColor: '#FFD700',
         headerColor: '#5C0015',
         footerColor: '#8B0000',
         pattern: 'diagonal',
         // ── Small circle top-RIGHT, big name text top-left ─────────
-        photoFrame: { x: 0, y: 22, width: 120, height: 120, borderRadius: 60, borderColor: '#FFD700', borderWidth: 3 },
+        photoFrame: { x: 12, y: 18, width: 90, height: 90, borderRadius: 45, borderColor: '#FFD700', borderWidth: 3 },
         textFields: [
-            { key: 'name', label: 'Your Name', x: 14, y: 30, fieldWidth: 236, fontSize: 26, fontWeight: '900', color: '#FFD700', align: 'left' },
-            { key: 'message', label: 'Your Slogan', x: 14, y: 80, fieldWidth: 236, fontSize: 13, fontWeight: '400', color: '#FFFFFF', align: 'left' },
+            { key: 'name', label: 'Your Name', x: 112, y: 34, fieldWidth: 170, fontSize: 22, fontWeight: '900', color: '#FFD700', align: 'left' },
+            { key: 'message', label: 'Your Slogan', x: 112, y: 72, fieldWidth: 170, fontSize: 12, fontWeight: '400', color: '#FFFFFF', align: 'left' },
         ],
     },
     {
@@ -144,17 +156,19 @@ export const TEMPLATES = [
         name: 'Election Rally',
         category: 'political',
         layout: 'top',
-        Image: require("../assets/images/happydiwali.jpg"),
+        width: W,
+        height: H,
+        Image: require("../assets/images/image-1.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         backgroundColor: '#0D1B3E',
         accentColor: '#FF416C',
         headerColor: '#C0392B',
         footerColor: '#8B0000',
         pattern: 'diagonal',
-        photoFrame: { x: 65, y: 110, width: 250, height: 250, borderRadius: 125, borderColor: '#FFD700', borderWidth: 4 },
+        photoFrame: { x: 45, y: 45, width: 210, height: 210, borderRadius: 105, borderColor: '#FFD700', borderWidth: 4 },
         textFields: [
             { key: 'name', label: 'Your Name', y: 20, fontSize: 28, fontWeight: '800', color: '#FFD700', align: 'center' },
-            { key: 'message', label: 'Your Slogan', y: 358, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
+            { key: 'message', label: 'Your Slogan', y: 260, fontSize: 14, fontWeight: '400', color: '#FFFFFF', align: 'center' },
         ],
     },
 
@@ -163,19 +177,21 @@ export const TEMPLATES = [
         name: 'Presidential',
         category: 'political',
         layout: 'left',
+        width: W,
+        height: H,
         backgroundColor: '#0A1824',
         accentColor: '#F7921E',
-        Image: require("../assets/images/happydiwali2.jpg"),
+        Image: require("../assets/images/image-2.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         headerColor: '#1B3A56',   // used as left bar colour
         footerColor: '#0D2235',
         pattern: 'diagonal',
 
-        photoFrame: { x: 12, y: 100, width: 148, height: 360, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
+        photoFrame: { x: 16, y: 54, width: 110, height: 192, borderRadius: 12, borderColor: '#F7921E', borderWidth: 3 },
         textFields: [
             // Text sits to the RIGHT of the photo
-            { key: 'name', label: 'Leader Name', x: 174, y: 100, fieldWidth: 212, fontSize: 22, fontWeight: '900', color: '#FFFFFF', align: 'left' },
-            { key: 'message', label: 'Your Vision →', x: 174, y: 152, fieldWidth: 212, fontSize: 13, fontWeight: '400', color: '#F7921E', align: 'left' },
+            { key: 'name', label: 'Leader Name', x: 140, y: 92, fieldWidth: 145, fontSize: 20, fontWeight: '900', color: '#FFFFFF', align: 'left' },
+            { key: 'message', label: 'Your Vision →', x: 140, y: 132, fieldWidth: 145, fontSize: 12, fontWeight: '400', color: '#F7921E', align: 'left' },
         ],
     },
 
@@ -184,18 +200,20 @@ export const TEMPLATES = [
         name: 'People Power',
         category: 'political',
         layout: 'top',
+        width: W,
+        height: H,
         backgroundColor: '#1A0005',
-        Image: require("../assets/images/happydiwali4.jpg"),
+        Image: require("../assets/images/image-4.jpg"),
         Video:"https://www.w3schools.com/html/movie.mp4",
         accentColor: '#FFD700',
         headerColor: '#5C0015',
         footerColor: '#8B0000',
         pattern: 'diagonal',
         // ── Small circle top-RIGHT, big name text top-left ─────────
-        photoFrame: { x: 0, y: 22, width: 120, height: 120, borderRadius: 60, borderColor: '#FFD700', borderWidth: 3 },
+        photoFrame: { x: 12, y: 18, width: 90, height: 90, borderRadius: 45, borderColor: '#FFD700', borderWidth: 3 },
         textFields: [
-            { key: 'name', label: 'Your Name', x: 14, y: 30, fieldWidth: 236, fontSize: 26, fontWeight: '900', color: '#FFD700', align: 'left' },
-            { key: 'message', label: 'Your Slogan', x: 14, y: 80, fieldWidth: 236, fontSize: 13, fontWeight: '400', color: '#FFFFFF', align: 'left' },
+            { key: 'name', label: 'Your Name', x: 112, y: 34, fieldWidth: 170, fontSize: 22, fontWeight: '900', color: '#FFD700', align: 'left' },
+            { key: 'message', label: 'Your Slogan', x: 112, y: 72, fieldWidth: 170, fontSize: 12, fontWeight: '400', color: '#FFFFFF', align: 'left' },
         ],
     },
 

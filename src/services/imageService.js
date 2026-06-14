@@ -118,13 +118,15 @@ export const shareImage = async (uri, message) => {
             type,
             title: i18n.t('alerts.shareSheetTitle'),
             message: message || i18n.t('alerts.shareSheetMessage'),
-            failOnCancel: false,
+            failOnCancel: true,
         });
+        return true;
     } catch (error) {
         if (error?.message !== 'User did not share') {
             Alert.alert(i18n.t('alerts.shareFailedTitle'), i18n.t('alerts.shareFailedMsg'));
             console.error('Share error:', error);
         }
+        return false;
     }
 };
 
@@ -142,8 +144,9 @@ export const shareToWhatsApp = async (uri, message = '') => {
             url: shareUrl,
             type,
             message,
-            failOnCancel: false,
+            failOnCancel: true,
         });
+        return true;
     } catch (error) {
         const rawMessage = String(error?.message || '');
         const lowerMessage = rawMessage.toLowerCase();
@@ -157,12 +160,13 @@ export const shareToWhatsApp = async (uri, message = '') => {
                 i18n.t('alerts.shareFailedTitle'),
                 i18n.t('alerts.shareFailedMsg'),
             );
-            return;
+            return false;
         }
 
         if (rawMessage !== 'User did not share') {
             Alert.alert(i18n.t('alerts.shareFailedTitle'), i18n.t('alerts.shareFailedMsg'));
             console.error('WhatsApp share error:', error);
         }
+        return false;
     }
 };

@@ -110,6 +110,8 @@ const posterSlice = createSlice({
             state.nameScale = 1.0;
             state.messagePosition = { x: 0, y: 0 };
             state.messageScale = 1.0;
+            state.nameFontSize = null;
+            state.messageFontSize = null;
         },
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
@@ -176,10 +178,28 @@ const posterSlice = createSlice({
             state.selectedTags.push(tag);
         },
         cycleDesignLayout(state) {
-            state.designLayoutIndex = ((state.designLayoutIndex || 0) + 1) % 3;
+            const nextIndex = ((state.designLayoutIndex || 0) + 1) % 4;
+            state.designLayoutIndex = nextIndex;
             state.photoPosition = { x: 0, y: 0 };
             state.namePosition = { x: 0, y: 0 };
             state.messagePosition = { x: 0, y: 0 };
+            if (nextIndex === 0) {
+                state.nameFontSize = null;
+                state.messageFontSize = null;
+            }
+        },
+        setDesignLayoutIndex(state, { payload }) {
+            const nextIndex = Number(payload);
+            state.designLayoutIndex = Number.isFinite(nextIndex)
+                ? Math.max(0, Math.min(3, Math.round(nextIndex)))
+                : 0;
+            state.photoPosition = { x: 0, y: 0 };
+            state.namePosition = { x: 0, y: 0 };
+            state.messagePosition = { x: 0, y: 0 };
+            if (state.designLayoutIndex === 0) {
+                state.nameFontSize = null;
+                state.messageFontSize = null;
+            }
         },
         setPhotoPosition(state, { payload }) { state.photoPosition = payload; },
         setPhotoScale(state, { payload }) { state.photoScale = payload; },
@@ -322,7 +342,7 @@ export const {
     setSelectedTemplate, setUserPhoto, setUserName, setUserMessage,
     setUserPhotoAnimation,
     setPremiumStatus, hydratePremiumProfile, setPremiumProfileField, setPremiumProfileActiveSection,
-    setSpecialCategoryContext, setSelectedTags, toggleSelectedTag, cycleDesignLayout,
+    setSpecialCategoryContext, setSelectedTags, toggleSelectedTag, cycleDesignLayout, setDesignLayoutIndex,
     setPhotoPosition, setPhotoScale,
     setNameColor, setMessageColor,
     setNameFontSize, setMessageFontSize,

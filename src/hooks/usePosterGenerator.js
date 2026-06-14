@@ -45,12 +45,14 @@ const usePosterGenerator = () => {
         setIsSaving(true);
         try {
             const uri = await capturePoster();
-            if (!uri) return;
+            if (!uri) return false;
             const filePath = await saveToGallery(uri);
             dispatch(addSavedPoster({ uri: filePath }));
             Alert.alert(t('alerts.savedTitle'), t('alerts.savedMsg'));
+            return true;
         } catch (error) {
             console.error('savePoster error:', error);
+            return false;
         } finally {
             setIsSaving(false);
         }
@@ -63,10 +65,11 @@ const usePosterGenerator = () => {
         setIsSharing(true);
         try {
             const uri = await capturePoster();
-            if (!uri) return;
-            await shareImage(uri, message);
+            if (!uri) return false;
+            return await shareImage(uri, message);
         } catch (error) {
             console.error('sharePoster error:', error);
+            return false;
         } finally {
             setIsSharing(false);
         }
@@ -79,10 +82,11 @@ const usePosterGenerator = () => {
         setIsSharing(true);
         try {
             const uri = await capturePoster();
-            if (!uri) return;
-            await shareToWhatsApp(uri, message);
+            if (!uri) return false;
+            return await shareToWhatsApp(uri, message);
         } catch (error) {
             console.error('sharePosterToWhatsApp error:', error);
+            return false;
         } finally {
             setIsSharing(false);
         }

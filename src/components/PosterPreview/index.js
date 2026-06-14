@@ -151,13 +151,11 @@ const makeFallbackMessageField = canvasSize => ({
 });
 
 const getDesignLayout = (index = 0, canvasSize = POSTER_SIZE) => {
+    if (!index) {
+        return null;
+    }
+
     const layouts = [
-        {
-            photo: { x: canvasSize.width * 0.5, y: canvasSize.height * 0.12, anchor: 'center' },
-            nameY: canvasSize.height * 0.60,
-            messageY: canvasSize.height * 0.70,
-            align: 'center',
-        },
         {
             photo: { x: canvasSize.width * 0.09, y: canvasSize.height * 0.57, anchor: 'left' },
             nameY: canvasSize.height * 0.57,
@@ -170,9 +168,15 @@ const getDesignLayout = (index = 0, canvasSize = POSTER_SIZE) => {
             messageY: canvasSize.height * 0.66,
             align: 'left',
         },
+        {
+            photo: { x: canvasSize.width * 0.5, y: canvasSize.height * 0.12, anchor: 'center' },
+            nameY: canvasSize.height * 0.60,
+            messageY: canvasSize.height * 0.70,
+            align: 'center',
+        },
     ];
 
-    return layouts[Math.abs(index || 0) % layouts.length];
+    return layouts[(Math.abs(index) - 1) % layouts.length];
 };
 
 const applyDesignToFrame = ({ frameStyle, layout, canvasSize }) => {
@@ -190,15 +194,21 @@ const applyDesignToFrame = ({ frameStyle, layout, canvasSize }) => {
     };
 };
 
-const applyDesignToTextField = ({ field, y, align, canvasSize }) => ({
-    ...field,
-    y: Math.round(y ?? field.y),
-    x: align === 'center' ? 20 : field.x ?? 20,
-    fieldWidth: align === 'center'
-        ? canvasSize.width - 40
-        : field.fieldWidth ?? canvasSize.width - 40,
-    align,
-});
+const applyDesignToTextField = ({ field, y, align, canvasSize }) => {
+    if (!align) {
+        return field;
+    }
+
+    return {
+        ...field,
+        y: Math.round(y ?? field.y),
+        x: align === 'center' ? 20 : field.x ?? 20,
+        fieldWidth: align === 'center'
+            ? canvasSize.width - 40
+            : field.fieldWidth ?? canvasSize.width - 40,
+        align,
+    };
+};
 
 // ─── Background patterns ──────────────────────────────────────────
 
@@ -1017,14 +1027,14 @@ const PosterPreview = ({
     // Center the name field on the poster so it's always visible and draggable
     const centeredNameField = applyDesignToTextField({
         field: nameField,
-        y: activeDesignLayout.nameY,
-        align: activeDesignLayout.align,
+        y: activeDesignLayout?.nameY,
+        align: activeDesignLayout?.align,
         canvasSize,
     });
     const designedMessageField = applyDesignToTextField({
         field: messageField,
-        y: activeDesignLayout.messageY,
-        align: activeDesignLayout.align,
+        y: activeDesignLayout?.messageY,
+        align: activeDesignLayout?.align,
         canvasSize,
     });
 
@@ -1040,7 +1050,7 @@ const PosterPreview = ({
         fontWeight: nameFontWeight,
         fontStyle: nameFontStyle,
         color: p.nameColor ?? '#FFFFFF',
-        textAlign: p.textAlign ?? activeDesignLayout.align ?? 'center',
+        textAlign: activeDesignLayout?.align ?? nameField.align ?? p.textAlign ?? 'center',
         ...shadowStyle,
     };
 
@@ -1049,7 +1059,7 @@ const PosterPreview = ({
         fontWeight: msgFontWeight,
         fontStyle: msgFontStyle,
         color: p.messageColor ?? '#FFFFFF',
-        textAlign: p.textAlign ?? activeDesignLayout.align ?? 'center',
+        textAlign: activeDesignLayout?.align ?? messageField.align ?? p.textAlign ?? 'center',
         ...shadowStyle,
     };
 
@@ -1065,12 +1075,15 @@ const PosterPreview = ({
             ? (p.userName || '')
             : (p.userMessage || '');
         const layerFontSize = Number.isFinite(Number(layer?.fontSize)) ? Number(layer.fontSize) : 18;
+        const isTemplateDesign = !activeDesignLayout;
         const textStyle = {
             fontSize: editableRole === 'name' ? (p.nameFontSize ?? layerFontSize) : (p.messageFontSize ?? layerFontSize),
             fontWeight: editableRole === 'name' ? nameFontWeight : msgFontWeight,
             fontStyle: editableRole === 'name' ? nameFontStyle : msgFontStyle,
             color: editableRole === 'name' ? (p.nameColor ?? '#FFFFFF') : (p.messageColor ?? '#FFFFFF'),
-            textAlign: field.x !== undefined ? (layer?.align || 'left') : p.textAlign,
+            textAlign: isTemplateDesign
+                ? (layer?.align || field.align || 'left')
+                : (activeDesignLayout?.align ?? p.textAlign ?? layer?.align ?? 'left'),
             fontFamily: layer?.fontFamily,
             letterSpacing: Number.isFinite(Number(layer?.letterSpacing)) ? Number(layer.letterSpacing) : undefined,
             lineHeight: Number.isFinite(Number(layer?.lineHeight)) ? Number(layer.lineHeight) : undefined,
@@ -1083,8 +1096,8 @@ const PosterPreview = ({
         if (editableRole === 'name') {
             const centeredField = applyDesignToTextField({
                 field,
-                y: activeDesignLayout.nameY,
-                align: activeDesignLayout.align,
+                y: activeDesignLayout?.nameY,
+                align: activeDesignLayout?.align,
                 canvasSize,
             });
             return interactive
@@ -1110,8 +1123,8 @@ const PosterPreview = ({
             ? <DraggableMessageText
                 field={applyDesignToTextField({
                     field,
-                    y: activeDesignLayout.messageY,
-                    align: activeDesignLayout.align,
+                    y: activeDesignLayout?.messageY,
+                    align: activeDesignLayout?.align,
                     canvasSize,
                 })}
                 text={text}
@@ -1123,7 +1136,12 @@ const PosterPreview = ({
                 allowPinchScale={allowPinchScale}
                 interactionScale={interactionScale} />
             : <StaticMessageText
-                field={field}
+                field={applyDesignToTextField({
+                    field,
+                    y: activeDesignLayout?.messageY,
+                    align: activeDesignLayout?.align,
+                    canvasSize,
+                })}
                 text={text}
                 textStyle={textStyle}
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}

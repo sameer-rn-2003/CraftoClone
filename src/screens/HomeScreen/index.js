@@ -9,6 +9,7 @@ import {
     Image,
     Modal,
     Pressable,
+    RefreshControl,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -478,9 +479,22 @@ const PANCHAYAT_ENTITIES = [
     { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
 ];
 const CREATE_POSTER_PRESETS = [
-    { id: 'sunrise', name: 'Sunrise Quote', color: '#F97316', source: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200' },
-    { id: 'office', name: 'Business Blue', color: '#2563EB', source: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1200' },
-    { id: 'village', name: 'Village Ground', color: '#16A34A', source: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200' },
+    { id: 'image-1', name: 'Image 1', color: '#F97316', source: require('../../assets/images/image-1.jpg') },
+    { id: 'image-2', name: 'Image 2', color: '#2563EB', source: require('../../assets/images/image-2.jpg') },
+    { id: 'image-3', name: 'Image 3', color: '#16A34A', source: require('../../assets/images/image-3.jpg') },
+    { id: 'image-4', name: 'Image 4', color: '#DC2626', source: require('../../assets/images/image-4.jpg') },
+    { id: 'image-5', name: 'Image 5', color: '#8B5CF6', source: require('../../assets/images/image-5.jpg') },
+    { id: 'image-6', name: 'Image 6', color: '#0EA5E9', source: require('../../assets/images/image-6.jpg') },
+    { id: 'image-7', name: 'Image 7', color: '#F59E0B', source: require('../../assets/images/image-7.jpg') },
+    { id: 'image-8', name: 'Image 8', color: '#EC4899', source: require('../../assets/images/image-8.jpg') },
+    { id: 'image-9', name: 'Image 9', color: '#14B8A6', source: require('../../assets/images/image-9.jpg') },
+    { id: 'image-10', name: 'Image 10', color: '#6366F1', source: require('../../assets/images/image-10.jpg') },
+    { id: 'image-11', name: 'Image 11', color: '#84CC16', source: require('../../assets/images/image-11.jpg') },
+    { id: 'image-12', name: 'Image 12', color: '#EF4444', source: require('../../assets/images/image-12.jpg') },
+    { id: 'image-13', name: 'Image 13', color: '#06B6D4', source: require('../../assets/images/image-13.jpg') },
+    { id: 'image-14', name: 'Image 14', color: '#A855F7', source: require('../../assets/images/image-14.jpg') },
+    { id: 'image-16', name: 'Image 16', color: '#F59E0B', source: require('../../assets/images/image-16.jpg') },
+    { id: 'image-17', name: 'Image 17', color: '#EAB308', source: require('../../assets/images/image-17.jpg') },
 ];
 const TEMPLATE_SOCIAL_PLATFORMS = [
     { key: 'facebook', icon: 'facebook' },
@@ -696,6 +710,8 @@ const getSpecialCategoryType = item => {
     return SPECIAL_CATEGORY_TYPES[normalized] || null;
 };
 
+const CUSTOM_POSTER_SIZE = 300;
+
 const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
     id: `custom_${Date.now()}`,
     name,
@@ -703,9 +719,51 @@ const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
     mediaType: 'IMAGE',
     source,
     thumbnail: source,
+    width: CUSTOM_POSTER_SIZE,
+    height: CUSTOM_POSTER_SIZE,
+    canvasWidth: CUSTOM_POSTER_SIZE,
+    canvasHeight: CUSTOM_POSTER_SIZE,
     accentColor: '#0D62DF',
     backgroundColor: '#DDE5EC',
+    footerColor: 'transparent',
+    photoFrame: {
+        x: 90,
+        y: 64,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderColor: '#FFFFFF',
+        borderWidth: 3,
+    },
+    textFields: [
+        {
+            key: 'name',
+            label: 'Your Name',
+            x: 20,
+            y: 205,
+            fieldWidth: 260,
+            fontSize: 20,
+            fontWeight: '800',
+            color: '#FFFFFF',
+            align: 'center',
+        },
+        {
+            key: 'message',
+            label: 'Your Message',
+            x: 24,
+            y: 235,
+            fieldWidth: 252,
+            fontSize: 13,
+            fontWeight: '500',
+            color: '#FFFFFF',
+            align: 'center',
+        },
+    ],
 });
+
+const getImageSource = source => (
+    typeof source === 'string' ? { uri: source } : source
+);
 
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -737,6 +795,7 @@ const HomeScreen = ({ navigation }) => {
     const [hasMore, setHasMore] = useState(true);
     const [isInitialLoading, setIsInitialLoading] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
     const [isCreateModalVisible, setCreateModalVisible] = useState(false);
@@ -1157,6 +1216,43 @@ const HomeScreen = ({ navigation }) => {
         });
     }, [activeCategory, categoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
 
+    const refreshFeed = useCallback(async () => {
+        if (isRefreshing) return;
+
+        setIsRefreshing(true);
+        try {
+            if (activeTab === 'trending') {
+                await fetchTrendingTemplates({ pageNumber: 1 });
+                return;
+            }
+
+            if (activeCategory === FAVORITES_CHIP.id) {
+                await fetchFavoriteTemplates({ pageNumber: 1 });
+                await loadFavorites();
+                return;
+            }
+
+            await fetchTemplates({
+                pageNumber: 1,
+                searchText: debouncedSearch,
+                categoryId: categoryIdSelected,
+            });
+            await loadFavorites();
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [
+        activeCategory,
+        activeTab,
+        categoryIdSelected,
+        debouncedSearch,
+        fetchFavoriteTemplates,
+        fetchTemplates,
+        fetchTrendingTemplates,
+        isRefreshing,
+        loadFavorites,
+    ]);
+
     const whatsappCaption = useMemo(() => {
         const text = (userMessage || '').trim();
         const name = (userName || '').trim();
@@ -1371,27 +1467,36 @@ const HomeScreen = ({ navigation }) => {
         [dispatch],
     );
 
+    const updateTemplateMetric = useCallback((templateId, key) => {
+        const normalizedId = String(templateId ?? '');
+        const incrementMetric = template => (
+            String(template?.id ?? '') === normalizedId
+                ? { ...template, [key]: (Number(template?.[key]) || 0) + 1 }
+                : template
+        );
+
+        setTemplates(prev => prev.map(incrementMetric));
+        setTrendingTemplates(prev => prev.map(incrementMetric));
+    }, []);
+
     const handleShareToWhatsApp = useCallback(
         async item => {
             if (isActionInProgress) return;
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
                 try {
-                    await sharePosterToWhatsApp(whatsappCaption || undefined);
+                    const didShare = await sharePosterToWhatsApp(whatsappCaption || undefined);
+                    if (!didShare) return;
 
-                    // optimistic UI update
-                    setTemplates(prev => prev.map(t => t.id === item.id ? { ...t, share_count: (Number(t.share_count) || 0) + 1 } : t));
-                    setTrendingTemplates(prev => prev.map(t => t.id === item.id ? { ...t, share_count: (Number(t.share_count) || 0) + 1 } : t));
-
-                    // track
                     try { await trackTemplateActionApi(String(item.id), { action: 'share', platform: 'whatsapp' }); } catch (e) { /* ignore */ }
+                    updateTemplateMetric(item.id, 'share_count');
                 } catch (e) {
                     // share cancelled or failed
                     throw e;
                 }
             });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, whatsappCaption, withPremiumAccess],
+        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, updateTemplateMetric, whatsappCaption, withPremiumAccess],
     );
 
     const handleDownload = useCallback(
@@ -1400,20 +1505,17 @@ const HomeScreen = ({ navigation }) => {
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
                 try {
-                    await savePoster();
+                    const didSave = await savePoster();
+                    if (!didSave) return;
 
-                    // optimistic UI update
-                    setTemplates(prev => prev.map(t => t.id === item.id ? { ...t, download_count: (Number(t.download_count) || 0) + 1 } : t));
-                    setTrendingTemplates(prev => prev.map(t => t.id === item.id ? { ...t, download_count: (Number(t.download_count) || 0) + 1 } : t));
-
-                    // track
                     try { await trackTemplateActionApi(String(item.id), { action: 'download' }); } catch (e) { /* ignore */ }
+                    updateTemplateMetric(item.id, 'download_count');
                 } catch (e) {
                     throw e;
                 }
             });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, savePoster, withPremiumAccess],
+        [isActionInProgress, prepareTemplateForMediaAction, savePoster, updateTemplateMetric, withPremiumAccess],
     );
 
     const stopCardPress = useCallback(event => {
@@ -1465,12 +1567,13 @@ const HomeScreen = ({ navigation }) => {
             setFavoriteLoadingMap(prev => ({ ...prev, [templateId]: false }));
         }
     }, [activeCategory, favoriteLoadingMap, favoriteMap]);
-    console.log("reelsData", reelsData);
     const getItemLayout = useCallback((data, index) => ({
         length: ITEM_HEIGHT,
         offset: ITEM_HEIGHT * index,
         index,
     }), []);
+    console.log("reelsData", reelsData);
+
     return (
         <View style={styles.screen}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerBackground} />
@@ -1557,6 +1660,14 @@ const HomeScreen = ({ navigation }) => {
             {activeTab === 'trending' ? (
                 <FlatList
                     data={trendingTemplates}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isRefreshing}
+                            onRefresh={refreshFeed}
+                            tintColor={COLORS.primary}
+                            colors={[COLORS.primary]}
+                        />
+                    }
                     onEndReached={() => { if (trendingHasMore && !isTrendingLoading) fetchTrendingTemplates({ pageNumber: trendingPage + 1 }); }}
                     onEndReachedThreshold={0.5}
                     ListFooterComponent={
@@ -1666,6 +1777,14 @@ const HomeScreen = ({ navigation }) => {
                     <FlatList
                         ref={flatListRef}
                         data={reelsData}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefreshing}
+                                onRefresh={refreshFeed}
+                                tintColor={COLORS.primary}
+                                colors={[COLORS.primary]}
+                            />
+                        }
                         onEndReached={loadMore}
                         onEndReachedThreshold={0.5}
                         ListFooterComponent={
@@ -1968,7 +2087,9 @@ const HomeScreen = ({ navigation }) => {
                                         key={preset.id}
                                         style={styles.createPresetCard}
                                         onPress={() => handleCreatePresetSelect(preset)}>
-                                        <Image source={{ uri: preset.source }} style={styles.createPresetImage} resizeMode="cover" />
+                                        <View style={styles.createPresetImageWrap}>
+                                            <Image source={getImageSource(preset.source)} style={styles.createPresetImage} resizeMode="contain" />
+                                        </View>
                                         <View style={[styles.createPresetAccent, { backgroundColor: preset.color }]} />
                                         <Text style={styles.createPresetName} numberOfLines={1}>{preset.name}</Text>
                                     </Pressable>
@@ -2578,22 +2699,30 @@ const styles = StyleSheet.create({
     createPresetGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: widthPixel(10),
+        gap: widthPixel(5),
         paddingBottom: heightPixel(8),
     },
     createPresetCard: {
-        width: '31%',
-        minWidth: widthPixel(92),
+        width: '49%',
+        flexGrow: 0,
+        flexShrink: 0,
         borderRadius: widthPixel(12),
         overflow: 'hidden',
         backgroundColor: '#F3F6FA',
         borderWidth: widthPixel(1),
         borderColor: '#E1E7EF',
     },
+    createPresetImageWrap: {
+        width: '100%',
+        aspectRatio: 2,
+        borderTopLeftRadius: widthPixel(12),
+        borderTopRightRadius: widthPixel(12),
+        overflow: 'hidden',
+        backgroundColor: '#DDE5EC',
+    },
     createPresetImage: {
         width: '100%',
-        aspectRatio: 0.72,
-        backgroundColor: '#DDE5EC',
+        height: heightPixel(180),
     },
     createPresetAccent: {
         position: 'absolute',

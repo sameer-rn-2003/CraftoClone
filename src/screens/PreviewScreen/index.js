@@ -104,7 +104,11 @@ const PreviewScreen = ({ navigation, route }) => {
                 premiumProfile: posterState.premiumProfile,
             });
 
-            const res = await mediaGenerationService.startMediaGeneration({ template_id: selectedTemplate.id, context: renderContext });
+            const res = await mediaGenerationService.startMediaGeneration({
+                template_id: selectedTemplate.id,
+                type: isVideoTemplate ? 'VIDEO' : 'IMAGE',
+                user_data: renderContext,
+            });
             const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
             if (!jobId) throw new Error('No job id returned by server');
 
@@ -115,7 +119,7 @@ const PreviewScreen = ({ navigation, route }) => {
                 onProgress: s => setGenerationMessage(s?.status || s?.state || JSON.stringify(s)),
             });
 
-            const url = status?.url || status?.result_url || status?.download_url;
+            const url = status?.url || status?.result_url || status?.download_url || status?.output_url;
             if (!url) throw new Error('No output URL from render');
 
             setGenerationMessage('Downloading generated media...');
@@ -132,7 +136,7 @@ const PreviewScreen = ({ navigation, route }) => {
             setIsGenerating(false);
             setGenerationMessage('');
         }
-    }, [selectedTemplate, posterState]);
+    }, [isVideoTemplate, selectedTemplate, posterState]);
 
     return (
         <SafeAreaView style={styles.safeArea}>

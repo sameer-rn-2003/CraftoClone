@@ -8,7 +8,7 @@ const getDownloadDir = () => {
 };
 
 export const startMediaGeneration = async (payload) => {
-    // payload should include templateId and render config
+    // payload should include template_id, type, and user_data/context render values.
     const res = await generateMediaApi(payload);
     return res.data?.data ?? res.data;
 };
@@ -28,13 +28,13 @@ export const pollMediaStatus = async (jobId, opts = {}) => {
                 try { onProgress(status); } catch (e) { /* ignore */ }
             }
 
-            const state = status?.status ?? status?.state ?? (status?.job && status.job.state);
+            const state = String(status?.status ?? status?.state ?? (status?.job && status.job.state) ?? '').toUpperCase();
 
-            if (state === 'completed' || state === 'done' || status?.url) {
+            if (state === 'COMPLETED' || state === 'DONE' || status?.url || status?.result_url || status?.download_url || status?.output_url) {
                 return status;
             }
 
-            if (state === 'failed' || state === 'error') {
+            if (state === 'FAILED' || state === 'ERROR') {
                 throw new Error('Media generation failed');
             }
         } catch (err) {

@@ -6,16 +6,16 @@ import {
     getTemplateVideoSource,
 } from '../../utils/templateMedia';
 import { POSTER_SIZE } from '../../utils/constants';
-import { getTemplateBackgroundCrop } from '../../utils/templateConfig';
+import { getTemplateBackgroundCrop, getTemplateCanvasSize } from '../../utils/templateConfig';
 
-const getBackgroundCropStyle = crop => {
+const getBackgroundCropStyle = (crop, canvasSize = POSTER_SIZE) => {
     if (!crop?.mediaWidth || !crop?.mediaHeight) {
         return null;
     }
 
     const baseScale = Math.max(
-        POSTER_SIZE.width / crop.mediaWidth,
-        POSTER_SIZE.height / crop.mediaHeight,
+        canvasSize.width / crop.mediaWidth,
+        canvasSize.height / crop.mediaHeight,
     );
     const renderScale = baseScale * (crop.scale ?? 1);
 
@@ -41,7 +41,8 @@ const TemplateMedia = ({
     const imageSource = getTemplateImageSource(template);
     const videoSource = getTemplateVideoSource(template);
     const backgroundCrop = getTemplateBackgroundCrop(template);
-    const croppedImageStyle = getBackgroundCropStyle(backgroundCrop);
+    const canvasSize = getTemplateCanvasSize(template);
+    const croppedImageStyle = getBackgroundCropStyle(backgroundCrop, canvasSize);
     const shouldRenderImage = !videoSource || (useImageFallbackForVideo && imageSource);
 
     if (shouldRenderImage && imageSource) {

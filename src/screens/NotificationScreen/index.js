@@ -34,9 +34,11 @@ const NotificationScreen = ({ navigation }) => {
             setNotifications(prev => (isFirst ? formatted : [...prev, ...formatted]));
             setPage(pageNumber);
             setHasMore(Number.isFinite(total) ? total > pageNumber * 30 : formatted.length === 30);
+            return formatted;
         } catch (e) {
             console.log('Notifications fetch error', e);
             if (isFirst) setNotifications([]);
+            return [];
         } finally {
             if (isFirst) setLoading(false);
             setRefreshing(false);
@@ -44,13 +46,11 @@ const NotificationScreen = ({ navigation }) => {
     }, []);
 
     useEffect(() => {
-        fetchNotifications({ pageNumber: 1 });
-
         // mark all read on mount and clear badge
         (async () => {
-            try {
-                await markAllNotificationsReadApi();
-            } catch (e) { /* ignore */ }
+            const rows = await fetchNotifications({ pageNumber: 1 });
+            const ids = rows.map(item => item.id).filter(Boolean);
+            try { if (ids.length) await markAllNotificationsReadApi(ids); } catch (e) { /* ignore */ }
             dispatch(setUnreadNotificationCount(0));
         })();
     }, [fetchNotifications, dispatch]);
@@ -71,7 +71,7 @@ const NotificationScreen = ({ navigation }) => {
                 await markNotificationReadApi(notificationId);
                 setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
             } catch (e) { console.log('mark read error', e); }
-    }, [dispatch]);
+    }, []);
 
     const renderItem = ({ item, index }) => (
         <Pressable key={item.id} style={[styles.card, index === 0 && styles.cardFirst]} onPress={() => handleMarkRead(item.id)}>
@@ -95,7 +95,12 @@ const NotificationScreen = ({ navigation }) => {
                     <MaterialCommunityIcons name="arrow-left" style={styles.backIcon} />
                 </Pressable>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <Pressable style={styles.backBtn} onPress={async () => { await markAllNotificationsReadApi(); dispatch(setUnreadNotificationCount(0)); setNotifications(prev => prev.map(n => ({ ...n, read: true }))); }}>
+                <Pressable style={styles.backBtn} onPress={async () => {
+                    const ids = notifications.map(item => item.id).filter(Boolean);
+                    try { if (ids.length) await markAllNotificationsReadApi(ids); } catch (e) { console.log('mark all read error', e); }
+                    dispatch(setUnreadNotificationCount(0));
+                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                }}>
                     <Text style={{ color: COLORS.primary }}>Mark all read</Text>
                 </Pressable>
             </View>

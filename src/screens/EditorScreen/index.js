@@ -38,7 +38,7 @@ import {
     setPremiumProfileActiveSection,
     setUserPhotoAnimation,
     setUserPhoto,
-    cycleDesignLayout,
+    setDesignLayoutIndex,
     toggleSelectedTag,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
@@ -1302,14 +1302,21 @@ const EditorScreen = ({ navigation, route }) => {
                         onPress={() => setIsTemplateMuted(prev => !prev)}
                         style={s.mediaAudioToggle}
                     />
-                    <Pressable
-                        style={s.changeDesignBtn}
-                        onPress={() => dispatch(cycleDesignLayout())}>
-                        <MaterialCommunityIcons name="view-dashboard-edit-outline" style={s.changeDesignIcon} />
-                        <Text style={s.changeDesignText}>
-                            {t('editor.changeDesign', { index: (p.designLayoutIndex || 0) + 1 })}
-                        </Text>
-                    </Pressable>
+                    {/* <View style={s.designSwitcher}>
+                        {[0, 1, 2, 3].map(index => {
+                            const isActiveDesign = (p.designLayoutIndex || 0) === index;
+                            return (
+                                <Pressable
+                                    key={index}
+                                    style={[s.designSwitchBtn, isActiveDesign && s.designSwitchBtnActive]}
+                                    onPress={() => dispatch(setDesignLayoutIndex(index))}>
+                                    <Text style={[s.designSwitchText, isActiveDesign && s.designSwitchTextActive]}>
+                                        {index + 1}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View> */}
                 </View>
             </View>
 
@@ -1503,29 +1510,39 @@ const s = StyleSheet.create({
         bottom: 10,
         zIndex: 20,
     },
-    changeDesignBtn: {
+    designSwitcher: {
         position: 'absolute',
         top: 50,
         left: 0,
         zIndex: 25,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 7,
+        gap: 4,
+        paddingHorizontal: 5,
+        paddingVertical: 5,
         borderRadius: BORDER_RADIUS.full,
         backgroundColor: 'rgba(17,24,39,0.78)',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.22)',
     },
-    changeDesignIcon: {
-        fontSize: 15,
-        color: EDITOR_COLORS.white,
+    designSwitchBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.12)',
     },
-    changeDesignText: {
+    designSwitchBtnActive: {
+        backgroundColor: EDITOR_COLORS.white,
+    },
+    designSwitchText: {
         fontSize: FONTS.sizes.xs,
         color: EDITOR_COLORS.white,
         fontWeight: FONTS.weights.bold,
+    },
+    designSwitchTextActive: {
+        color: EDITOR_COLORS.primary,
     },
 
     // Tab bar
