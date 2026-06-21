@@ -287,64 +287,64 @@ const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMet
     const shortTravelY = Math.max(canvasSize.height * 0.18, 36);
 
     switch (animationId) {
-        case 'slide_left_center':
-            return { from: { translateX: -travelX }, to: { translateX: 0 } };
-        case 'slide_right_center':
-            return { from: { translateX: travelX }, to: { translateX: 0 } };
-        case 'slide_top_center':
-            return { from: { translateY: -travelY }, to: { translateY: 0 } };
-        case 'slide_bottom_center':
-            return { from: { translateY: travelY }, to: { translateY: 0 } };
-        case 'slide_top_left':
-            return { from: { translateX: -diagonalX, translateY: -diagonalY }, to: { translateX: 0, translateY: 0 } };
+        // case 'slide_left_center':
+        //     return { from: { translateX: -travelX }, to: { translateX: 0 } };
+        // case 'slide_right_center':
+        //     return { from: { translateX: travelX }, to: { translateX: 0 } };
+        // case 'slide_top_center':
+        //     return { from: { translateY: -travelY }, to: { translateY: 0 } };
+        // case 'slide_bottom_center':
+        //     return { from: { translateY: travelY }, to: { translateY: 0 } };
+        // case 'slide_top_left':
+        //     return { from: { translateX: -diagonalX, translateY: -diagonalY }, to: { translateX: 0, translateY: 0 } };
         case 'slide_top_right':
             return { from: { translateX: diagonalX, translateY: -diagonalY }, to: { translateX: 0, translateY: 0 } };
-        case 'slide_bottom_left':
-            return { from: { translateX: -diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
-        case 'slide_bottom_right':
-            return { from: { translateX: diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
-        case 'bounce_left':
-            return { from: { translateX: -travelX }, to: { translateX: 0 }, easing: 'bounce' };
-        case 'bounce_right':
-            return { from: { translateX: travelX }, to: { translateX: 0 }, easing: 'bounce' };
-        case 'bounce_top':
-            return { from: { translateY: -travelY }, to: { translateY: 0 }, easing: 'bounce' };
-        case 'bounce_bottom':
-            return { from: { translateY: travelY }, to: { translateY: 0 }, easing: 'bounce' };
-        case 'zoom_in_soft':
-            return { from: { scale: 0.72, opacity: 0.35 }, to: { scale: 1, opacity: 1 } };
-        case 'zoom_out_soft':
-            return { from: { scale: 1.18, opacity: 0.45 }, to: { scale: 1, opacity: 1 } };
-        case 'pulse_soft':
-            return { from: { scale: 0.94 }, to: { scale: 1.04 }, loop: 'alternate' };
-        case 'pulse_big':
-            return { from: { scale: 0.88 }, to: { scale: 1.12 }, loop: 'alternate' };
-        case 'fade_in':
-            return { from: { opacity: 0.1 }, to: { opacity: 1 } };
+        // case 'slide_bottom_left':
+        //     return { from: { translateX: -diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
+        // case 'slide_bottom_right':
+        //     return { from: { translateX: diagonalX, translateY: diagonalY }, to: { translateX: 0, translateY: 0 } };
+        // case 'bounce_left':
+        //     return { from: { translateX: -travelX }, to: { translateX: 0 }, easing: 'bounce' };
+        // case 'bounce_right':
+        //     return { from: { translateX: travelX }, to: { translateX: 0 }, easing: 'bounce' };
+        // case 'bounce_top':
+        //     return { from: { translateY: -travelY }, to: { translateY: 0 }, easing: 'bounce' };
+        // case 'bounce_bottom':
+        //     return { from: { translateY: travelY }, to: { translateY: 0 }, easing: 'bounce' };
+        // case 'zoom_in_soft':
+        //     return { from: { scale: 0.72, opacity: 0.35 }, to: { scale: 1, opacity: 1 } };
+        // case 'zoom_out_soft':
+        //     return { from: { scale: 1.18, opacity: 0.45 }, to: { scale: 1, opacity: 1 } };
+        // case 'pulse_soft':
+        //     return { from: { scale: 0.94 }, to: { scale: 1.04 }, loop: 'alternate' };
+        // case 'pulse_big':
+        //     return { from: { scale: 0.88 }, to: { scale: 1.12 }, loop: 'alternate' };
+        // case 'fade_in':
+        //     return { from: { opacity: 0.1 }, to: { opacity: 1 } };
         case 'fade_up':
             return { from: { translateY: shortTravelY, opacity: 0.2 }, to: { translateY: 0, opacity: 1 } };
-        case 'fade_down':
-            return { from: { translateY: -shortTravelY, opacity: 0.2 }, to: { translateY: 0, opacity: 1 } };
+        // case 'fade_down':
+        //     return { from: { translateY: -shortTravelY, opacity: 0.2 }, to: { translateY: 0, opacity: 1 } };
         case 'rotate_soft_left':
             return { from: { rotate: '-12deg', scale: 0.95 }, to: { rotate: '0deg', scale: 1 } };
-        case 'rotate_soft_right':
-            return { from: { rotate: '12deg', scale: 0.95 }, to: { rotate: '0deg', scale: 1 } };
-        case 'flip_x_soft':
-            return { from: { rotateX: '70deg', opacity: 0.4 }, to: { rotateX: '0deg', opacity: 1 } };
-        case 'flip_y_soft':
-            return { from: { rotateY: '70deg', opacity: 0.4 }, to: { rotateY: '0deg', opacity: 1 } };
-        case 'float_left_right':
-            return { from: { translateX: -shortTravelX }, to: { translateX: shortTravelX }, loop: 'alternateSlow' };
+        // case 'rotate_soft_right':
+        //     return { from: { rotate: '12deg', scale: 0.95 }, to: { rotate: '0deg', scale: 1 } };
+        // case 'flip_x_soft':
+        //     return { from: { rotateX: '70deg', opacity: 0.4 }, to: { rotateX: '0deg', opacity: 1 } };
+        // case 'flip_y_soft':
+        //     return { from: { rotateY: '70deg', opacity: 0.4 }, to: { rotateY: '0deg', opacity: 1 } };
+        // case 'float_left_right':
+        //     return { from: { translateX: -shortTravelX }, to: { translateX: shortTravelX }, loop: 'alternateSlow' };
         case 'float_up_down':
             return { from: { translateY: -shortTravelY }, to: { translateY: shortTravelY }, loop: 'alternateSlow' };
-        case 'wiggle_soft':
-            return { from: { rotate: '-5deg' }, to: { rotate: '5deg' }, loop: 'alternateFast' };
+        // case 'wiggle_soft':
+        //     return { from: { rotate: '-5deg' }, to: { rotate: '5deg' }, loop: 'alternateFast' };
         case 'pop_in':
             return { from: { scale: 0.55, opacity: 0.25 }, to: { scale: 1, opacity: 1 }, easing: 'bounce' };
-        case 'drift_top_left':
-            return { from: { translateX: -shortTravelX, translateY: -shortTravelY, scale: 0.96 }, to: { translateX: shortTravelX * 0.45, translateY: shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
-        case 'drift_bottom_right':
-            return { from: { translateX: shortTravelX, translateY: shortTravelY, scale: 0.96 }, to: { translateX: -shortTravelX * 0.45, translateY: -shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
+        // case 'drift_top_left':
+        //     return { from: { translateX: -shortTravelX, translateY: -shortTravelY, scale: 0.96 }, to: { translateX: shortTravelX * 0.45, translateY: shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
+        // case 'drift_bottom_right':
+        //     return { from: { translateX: shortTravelX, translateY: shortTravelY, scale: 0.96 }, to: { translateX: -shortTravelX * 0.45, translateY: -shortTravelY * 0.45, scale: 1.03 }, loop: 'alternateSlow' };
         case 'none':
         default:
             return null;

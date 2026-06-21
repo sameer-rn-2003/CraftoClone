@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -29,6 +30,7 @@ const COLORS = {
 const LoginScreen = ({ navigation }) => {
     const { t } = useTranslation();
     const [phone, setPhone] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
     const toastTimer = useRef(null);
 
@@ -47,6 +49,8 @@ const LoginScreen = ({ navigation }) => {
     }, []);
 
     const handleSendOtp = async() => {
+        if (isSubmitting) return;
+
         const digits = phone.replace(/\D/g, '');
         if (!digits) {
             showToast(t('auth.login.errors.enterMobile'), 'error');
@@ -57,7 +61,8 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         try {
-    let res = await requestOtp(digits);
+    setIsSubmitting(true);
+    await requestOtp(digits);
     showToast('OTP sent successfully', 'success');
     navigation.navigate('OtpVerification', { phone: digits });
   } catch (error) {
@@ -65,6 +70,8 @@ const LoginScreen = ({ navigation }) => {
       error?.response?.data?.message || 'Something went wrong',
       'error'
     );
+  } finally {
+    setIsSubmitting(false);
   }
     };
     return (
@@ -125,9 +132,14 @@ const LoginScreen = ({ navigation }) => {
                     </View>
 
                     <Pressable
-                        style={styles.otpButton}
-                        onPress={handleSendOtp}>
-                        <Text style={styles.otpText}>{t('auth.login.sendOtp')}</Text>
+                        style={[styles.otpButton, isSubmitting && styles.buttonDisabled]}
+                        onPress={handleSendOtp}
+                        disabled={isSubmitting}>
+                        {isSubmitting ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                            <Text style={styles.otpText}>{t('auth.login.sendOtp')}</Text>
+                        )}
                     </Pressable>
                 </View>
 
@@ -314,6 +326,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: widthPixel(10),
         elevation: 6,
+    },
+    buttonDisabled: {
+        opacity: 0.72,
     },
     otpText: {
         fontSize: widthPixel(14),

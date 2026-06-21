@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -11,7 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import Toast from '../../components/Toast';
-import { verifyOtp } from '../../apiService/authApi';
+import { requestOtp, verifyOtp } from '../../apiService/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
@@ -34,6 +35,8 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     const phone = route?.params?.phone || '';
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
     const [seconds, setSeconds] = useState(48);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
     const toastTimer = useRef(null);
     const inputs = useRef([...Array(OTP_LENGTH)].map(() => React.createRef()));
@@ -84,6 +87,8 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     };
 
  const handleVerify = async () => {
+  if (isVerifying) return;
+
   if (otp.some(d => !d)) {
     showToast(t('auth.otp.errors.enterCompleteCode'), 'error');
     return;
@@ -92,6 +97,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
   const finalOtp = otp.join('');
 
   try {
+    setIsVerifying(true);
     const res = await verifyOtp({
       phone_number: `+91${phone}`,
       otp: finalOtp,
@@ -109,16 +115,31 @@ const OtpVerificationScreen = ({ navigation, route }) => {
       error?.response?.data?.message || 'Invalid OTP',
       'error'
     );
+  } finally {
+    setIsVerifying(false);
   }
 };
 
-    const handleResend = () => {
+    const handleResend = async () => {
+        if (isResending) return;
         if (seconds > 0) {
             showToast(t('auth.otp.errors.waitBeforeResend'), 'error');
             return;
         }
-        setSeconds(48);
-        showToast(t('auth.otp.success.resent'), 'success');
+
+        try {
+            setIsResending(true);
+            await requestOtp(phone);
+            setSeconds(48);
+            showToast(t('auth.otp.success.resent'), 'success');
+        } catch (error) {
+            showToast(
+                error?.response?.data?.message || 'Could not resend OTP',
+                'error',
+            );
+        } finally {
+            setIsResending(false);
+        }
     };
 
     const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -191,14 +212,27 @@ const OtpVerificationScreen = ({ navigation, route }) => {
                         <Text style={styles.timerUnit}>{t('auth.otp.sec')}</Text>
                     </View>
 
-                    <Pressable style={styles.verifyButton} onPress={handleVerify}>
-                        <Text style={styles.verifyText}>{t('auth.otp.verifyNow')}</Text>
+                    <Pressable
+                        style={[styles.verifyButton, isVerifying && styles.buttonDisabled]}
+                        onPress={handleVerify}
+                        disabled={isVerifying}>
+                        {isVerifying ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                            <Text style={styles.verifyText}>{t('auth.otp.verifyNow')}</Text>
+                        )}
                     </Pressable>
 
                     <View style={styles.resendRow}>
                         <Text style={styles.resendText}>{t('auth.otp.didntReceive')}</Text>
-                        <Pressable onPress={handleResend}>
-                            <Text style={styles.resendLink}> {t('auth.otp.resendOtp')}</Text>
+                        <Pressable
+                            onPress={handleResend}
+                            disabled={isResending}>
+                            {isResending ? (
+                                <ActivityIndicator color={COLORS.primary} size="small" />
+                            ) : (
+                                <Text style={styles.resendLink}> {t('auth.otp.resendOtp')}</Text>
+                            )}
                         </Pressable>
                     </View>
                 </View>
@@ -384,6 +418,9 @@ const styles = StyleSheet.create({
         shadowRadius: widthPixel(10),
         elevation: 6,
         marginBottom: heightPixel(20),
+    },
+    buttonDisabled: {
+        opacity: 0.72,
     },
     verifyText: {
         fontSize: widthPixel(14),

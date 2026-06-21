@@ -1,11 +1,61 @@
 import RNFS from 'react-native-fs';
-import { Platform, Alert } from 'react-native';
+import { Platform, Alert, PermissionsAndroid } from 'react-native';
 import { generateMediaApi, getMediaStatusApi } from '../apiService/mediaApi';
 import i18n from '../i18n';
 
 const getDownloadDir = () => {
-    return Platform.OS === 'android' ? RNFS.PicturesDirectoryPath : RNFS.DocumentDirectoryPath;
+    return Platform.OS === 'android' ? RNFS.DownloadDirectoryPath : RNFS.DocumentDirectoryPath;
 };
+
+const requestDownloadPermission = async () => {
+    if (Platform.OS !== 'android') return true;
+    if (Platform.Version >= 33) return true;
+
+    try {
+        const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            {
+                title: i18n.t('alerts.storagePermissionTitle'),
+                message: i18n.t('alerts.storagePermissionMsg'),
+                buttonPositive: i18n.t('alerts.allow'),
+                buttonNegative: i18n.t('alerts.deny'),
+            },
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (e) {
+        console.warn('Download permission error:', e);
+        return false;
+    }
+};
+
+export const getGeneratedMediaUrl = status => (
+    status?.media_url
+    || status?.mediaUrl
+    || status?.url
+    || status?.result_url
+    || status?.resultUrl
+    || status?.download_url
+    || status?.downloadUrl
+    || status?.output_url
+    || status?.outputUrl
+);
+
+const getFileExtension = (url, fallback = 'mp4') => {
+    const cleanPath = String(url || '').split('?')[0].split('#')[0];
+    const extension = cleanPath.split('.').pop();
+
+    if (extension && /^[a-z0-9]{2,5}$/i.test(extension)) {
+        return extension.toLowerCase();
+    }
+
+    return fallback;
+};
+
+const sanitizeFileName = value =>
+    String(value || '')
+        .trim()
+        .replace(/[^a-z0-9_-]+/gi, '_')
+        .replace(/^_+|_+$/g, '');
 
 export const startMediaGeneration = async (payload) => {
     // payload should include template_id, type, and user_data/context render values.
@@ -20,6 +70,7 @@ export const pollMediaStatus = async (jobId, opts = {}) => {
     let currentInterval = interval;
 
     while (attempt < maxAttempts) {
+        let state = '';
         try {
             const res = await getMediaStatusApi(jobId);
             const status = res.data?.data ?? res.data;
@@ -28,17 +79,20 @@ export const pollMediaStatus = async (jobId, opts = {}) => {
                 try { onProgress(status); } catch (e) { /* ignore */ }
             }
 
-            const state = String(status?.status ?? status?.state ?? (status?.job && status.job.state) ?? '').toUpperCase();
+            state = String(status?.status ?? status?.state ?? (status?.job && status.job.state) ?? '').toUpperCase();
+            const url = getGeneratedMediaUrl(status);
 
-            if (state === 'COMPLETED' || state === 'DONE' || status?.url || status?.result_url || status?.download_url || status?.output_url) {
+            if (state === 'COMPLETED' || state === 'DONE' || url) {
                 return status;
             }
 
             if (state === 'FAILED' || state === 'ERROR') {
-                throw new Error('Media generation failed');
+                throw new Error(status?.error_msg || status?.errorMsg || 'Media generation failed');
             }
         } catch (err) {
-            // swallow and continue until maxAttempts
+            if (state === 'FAILED' || state === 'ERROR') {
+                throw err;
+            }
             console.warn('pollMediaStatus error:', err?.message || err);
         }
 
@@ -51,17 +105,24 @@ export const pollMediaStatus = async (jobId, opts = {}) => {
     throw new Error('Media generation timed out');
 };
 
-export const downloadGeneratedMedia = async (url, filenameHint = '') => {
+export const downloadGeneratedMedia = async (url, filenameHint = '', mediaType = 'VIDEO') => {
     if (!url) throw new Error('url required');
 
-    const dir = `${getDownloadDir()}/CraftoClone`;
-    const exists = await RNFS.exists(dir);
-    if (!exists) {
-        await RNFS.mkdir(dir);
+    const hasPermission = await requestDownloadPermission();
+    if (!hasPermission) {
+        Alert.alert(i18n.t('alerts.permissionDeniedTitle'), i18n.t('alerts.permissionDeniedMsg'));
+        throw new Error('Storage permission denied');
     }
 
-    const extension = (url.split('?')[0].split('.').pop() || 'mp4').split('/').pop();
-    const filename = filenameHint ? `${filenameHint}.${extension}` : `crafto_media_${Date.now()}.${extension}`;
+    const dir = `${getDownloadDir()}/CraftKaro`;
+    const exists = await RNFS.exists(dir);
+    if (!exists) {
+        await RNFS.mkdir(dir, { NSURLIsExcludedFromBackupKey: true });
+    }
+
+    const extension = getFileExtension(url, String(mediaType).toUpperCase() === 'IMAGE' ? 'jpg' : 'mp4');
+    const safeHint = sanitizeFileName(filenameHint);
+    const filename = safeHint ? `${safeHint}.${extension}` : `craftkaro_media_${Date.now()}.${extension}`;
     const destPath = `${dir}/${filename}`;
 
     try {
@@ -76,7 +137,10 @@ export const downloadGeneratedMedia = async (url, filenameHint = '') => {
         throw new Error(`Download failed: ${downloadResult.statusCode}`);
     } catch (err) {
         console.error('downloadGeneratedMedia error', err);
-        Alert.alert(i18n.t('alerts.downloadFailedTitle'), i18n.t('alerts.downloadFailedMsg'));
+        Alert.alert(
+            i18n.t('alerts.downloadFailedTitle', { defaultValue: 'Download Failed' }),
+            i18n.t('alerts.downloadFailedMsg', { defaultValue: 'Could not download the generated media. Please try again.' }),
+        );
         throw err;
     }
 };
@@ -84,5 +148,6 @@ export const downloadGeneratedMedia = async (url, filenameHint = '') => {
 export default {
     startMediaGeneration,
     pollMediaStatus,
+    getGeneratedMediaUrl,
     downloadGeneratedMedia,
 };

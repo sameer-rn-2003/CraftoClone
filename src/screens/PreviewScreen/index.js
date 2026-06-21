@@ -12,7 +12,9 @@ import {
     View,
     ActivityIndicator,
     Dimensions,
+    DeviceEventEmitter,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector } from 'react-redux';
 import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +23,9 @@ import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview, { getPosterCompositionSize } from '../../components/PosterPreview';
 import MediaAudioToggle from '../../components/MediaAudioToggle';
 import AppButton from '../../components/AppButton';
-import { getTemplateCanvasSize } from '../../utils/templateConfig';
-import { buildTemplateRenderContext } from '../../utils/templateConfig';
+import { getTemplateCanvasSize, buildTemplateRenderConfig, buildTemplateRenderContext } from '../../utils/templateConfig';
 import mediaGenerationService from '../../services/mediaGenerationService';
+import { shareImage } from '../../services/imageService';
 import { trackTemplateActionApi } from '../../apiService/trackingApi';
 import {
     COLORS,
@@ -34,13 +36,14 @@ import {
 } from '../../utils/constants';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const HOME_METRIC_EVENTS_KEY = 'home_metric_events';
+const HOME_METRIC_EVENT_NAME = 'home_metric_event';
 
 const PreviewScreen = ({ navigation, route }) => {
     const posterState = useSelector(s => s.poster);
-    const { selectedTemplate, userName, isPremium } = posterState;
+    const { selectedTemplate, userName } = posterState;
     const { t } = useTranslation();
-    const { posterRef, savePoster, sharePoster, sharePosterToWhatsApp, isSaving, isSharing } =
-        usePosterGenerator();
+    const { posterRef } = usePosterGenerator();
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
     const compositionSize = useMemo(
         () => getPosterCompositionSize(selectedTemplate, posterState),
@@ -62,17 +65,110 @@ const PreviewScreen = ({ navigation, route }) => {
     // correct action buttons (Download-only for VIDEO, Save+Share for IMAGE).
     const isVideoTemplate = selectedTemplate?.mediaType === 'VIDEO';
 
+    const accentColor = selectedTemplate?.accentColor || COLORS.primary;
+
+    const queueHomeMetricUpdate = useCallback(async action => {
+        if (!selectedTemplate?.id) return;
+
+        try {
+            const raw = await AsyncStorage.getItem(HOME_METRIC_EVENTS_KEY);
+            const events = raw ? JSON.parse(raw) : [];
+            const nextEvents = Array.isArray(events) ? events : [];
+            const event = {
+                eventId: `${selectedTemplate.id}_${action}_${Date.now()}`,
+                templateId: String(selectedTemplate.id),
+                key: action === 'share' ? 'share_count' : 'download_count',
+                createdAt: Date.now(),
+            };
+            nextEvents.push(event);
+            await AsyncStorage.setItem(HOME_METRIC_EVENTS_KEY, JSON.stringify(nextEvents));
+            DeviceEventEmitter.emit(HOME_METRIC_EVENT_NAME, event);
+        } catch (e) {
+            console.warn('Unable to queue home metric update:', e?.message || e);
+        }
+    }, [selectedTemplate?.id]);
+
+    const generateMediaFile = useCallback(async () => {
+        if (!selectedTemplate) return;
+        const mediaType = isVideoTemplate ? 'VIDEO' : 'IMAGE';
+
+        const renderContext = buildTemplateRenderContext({
+            template: selectedTemplate,
+            userPhoto: posterState.userPhoto,
+            userName: posterState.userName,
+            userMessage: posterState.userMessage,
+            premiumProfile: posterState.premiumProfile,
+        });
+        const renderConfig = buildTemplateRenderConfig({
+            template: selectedTemplate,
+            posterState,
+            userData: renderContext,
+        });
+
+        setGenerationMessage(`Submitting ${mediaType.toLowerCase()} render...`);
+        const res = await mediaGenerationService.startMediaGeneration({
+            template_id: selectedTemplate.id,
+            type: mediaType,
+            user_data: renderContext,
+            render_config: renderConfig,
+        });
+        const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
+        if (!jobId) throw new Error('No job id returned by server');
+
+        setGenerationMessage(`Rendering ${mediaType.toLowerCase()}...`);
+        const status = await mediaGenerationService.pollMediaStatus(jobId, {
+            interval: 2000,
+            maxAttempts: 120,
+            onProgress: s => {
+                const state = s?.status || s?.state;
+                if (state) setGenerationMessage(`Rendering ${mediaType.toLowerCase()}: ${state}`);
+            },
+        });
+
+        const url = mediaGenerationService.getGeneratedMediaUrl(status);
+        if (!url) throw new Error('No output URL from render');
+
+        setGenerationMessage(`Saving ${mediaType.toLowerCase()}...`);
+        return mediaGenerationService.downloadGeneratedMedia(
+            url,
+            `craftkaro_${mediaType.toLowerCase()}_${selectedTemplate.id}_${Date.now()}`,
+            mediaType,
+        );
+    }, [isVideoTemplate, posterState, selectedTemplate]);
+
     const handleSave = useCallback(async () => {
-        await savePoster();
-    }, [savePoster]);
+        try {
+            setIsGenerating(true);
+            const filePath = await generateMediaFile();
+            Alert.alert('Saved', `${isVideoTemplate ? 'Video' : 'Image'} saved to ${filePath}`);
+            try { await trackTemplateActionApi(String(selectedTemplate.id), { action: 'download' }); } catch (e) { /* ignore */ }
+            await queueHomeMetricUpdate('download');
+        } catch (e) {
+            console.error('Media save error', e);
+            Alert.alert('Render failed', String(e?.message || e));
+        } finally {
+            setIsGenerating(false);
+            setGenerationMessage('');
+        }
+    }, [generateMediaFile, isVideoTemplate, queueHomeMetricUpdate, selectedTemplate]);
 
     const handleShare = useCallback(async () => {
-        if (isPremium) {
-            await sharePoster();
-            return;
+        try {
+            setIsGenerating(true);
+            const filePath = await generateMediaFile();
+            const didShare = await shareImage(filePath, `Check out my ${isVideoTemplate ? 'video' : 'image'} made with CraftKaro!`);
+            if (didShare) {
+                try { await trackTemplateActionApi(String(selectedTemplate.id), { action: 'share' }); } catch (e) { /* ignore */ }
+                await queueHomeMetricUpdate('share');
+            }
+        } catch (e) {
+            console.error('Media share error', e);
+            Alert.alert('Render failed', String(e?.message || e));
+        } finally {
+            setIsGenerating(false);
+            setGenerationMessage('');
         }
-        await sharePosterToWhatsApp();
-    }, [isPremium, sharePoster, sharePosterToWhatsApp]);
+    }, [generateMediaFile, isVideoTemplate, queueHomeMetricUpdate, selectedTemplate]);
 
     const didAutoAction = useRef(false);
     useEffect(() => {
@@ -87,56 +183,6 @@ const PreviewScreen = ({ navigation, route }) => {
             handleSave();
         }
     }, [route, handleShare, handleSave]);
-
-    const accentColor = selectedTemplate?.accentColor || COLORS.primary;
-
-    const handleGenerateHDVideo = useCallback(async () => {
-        if (!selectedTemplate) return;
-        try {
-            setIsGenerating(true);
-            setGenerationMessage('Submitting render job...');
-
-            const renderContext = buildTemplateRenderContext({
-                template: selectedTemplate,
-                userPhoto: posterState.userPhoto,
-                userName: posterState.userName,
-                userMessage: posterState.userMessage,
-                premiumProfile: posterState.premiumProfile,
-            });
-
-            const res = await mediaGenerationService.startMediaGeneration({
-                template_id: selectedTemplate.id,
-                type: isVideoTemplate ? 'VIDEO' : 'IMAGE',
-                user_data: renderContext,
-            });
-            const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
-            if (!jobId) throw new Error('No job id returned by server');
-
-            setGenerationMessage('Rendering on server...');
-            const status = await mediaGenerationService.pollMediaStatus(jobId, {
-                interval: 2000,
-                maxAttempts: 120,
-                onProgress: s => setGenerationMessage(s?.status || s?.state || JSON.stringify(s)),
-            });
-
-            const url = status?.url || status?.result_url || status?.download_url || status?.output_url;
-            if (!url) throw new Error('No output URL from render');
-
-            setGenerationMessage('Downloading generated media...');
-            const filePath = await mediaGenerationService.downloadGeneratedMedia(url, `crafto_${selectedTemplate.id}_${Date.now()}`);
-
-            Alert.alert('Saved', `File saved to ${filePath}`);
-
-            try { await trackTemplateActionApi(String(selectedTemplate.id), { action: 'download' }); } catch (e) { /* ignore */ }
-
-        } catch (e) {
-            console.error('Video generation error', e);
-            Alert.alert('Render failed', String(e?.message || e));
-        } finally {
-            setIsGenerating(false);
-            setGenerationMessage('');
-        }
-    }, [isVideoTemplate, selectedTemplate, posterState]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -215,20 +261,14 @@ const PreviewScreen = ({ navigation, route }) => {
                     />
                 </View>
 
-                {/* ── Action buttons ─────────────────────────────────────────
-                    FIX 2:
-                    • VIDEO template → single full-width Download button
-                    • IMAGE template → Save + Share side by side (original layout)
-                ─────────────────────────────────────────────────────────── */}
                 <View style={styles.actions}>
                     {isVideoTemplate ? (
-                        /* ── VIDEO: Download + Generate HD option ── */
-                        <View style={{ width: '100%' }}>
-                            {/* <Pressable
-                                style={[styles.actionBtn, styles.downloadBtn, isSaving && styles.btnDisabled]}
+                        <>
+                            <Pressable
+                                style={[styles.actionBtn, styles.downloadBtn, isGenerating && styles.btnDisabled]}
                                 onPress={handleSave}
-                                disabled={isSaving || isSharing}>
-                                {isSaving ? (
+                                disabled={isGenerating}>
+                                {isGenerating ? (
                                     <ActivityIndicator color={COLORS.white} size="small" />
                                 ) : (
                                     <>
@@ -238,38 +278,41 @@ const PreviewScreen = ({ navigation, route }) => {
                                                 {t('preview.actions.download', { defaultValue: 'Download' })}
                                             </Text>
                                             <Text style={styles.actionSub}>
-                                                {t('preview.actions.downloadSub', { defaultValue: 'Save video to gallery' })}
+                                                {t('preview.actions.downloadSub', { defaultValue: 'to Downloads' })}
                                             </Text>
                                         </View>
                                     </>
                                 )}
-                            </Pressable> */}
+                            </Pressable>
 
                             <Pressable
-                                style={[styles.actionBtn, { marginTop: 12, backgroundColor: '#3B82F6' }, isGenerating && styles.btnDisabled]}
-                                onPress={handleGenerateHDVideo}
-                                disabled={isGenerating || isSaving || isSharing}>
+                                style={[styles.actionBtn, styles.shareBtn, isGenerating && styles.btnDisabled]}
+                                onPress={handleShare}
+                                disabled={isGenerating}>
                                 {isGenerating ? (
                                     <ActivityIndicator color={COLORS.white} size="small" />
                                 ) : (
                                     <>
-                                        {/* <MaterialCommunityIcons name="render" style={styles.actionIcon} /> */}
+                                        <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
                                         <View>
-                                            <Text style={styles.actionLabel}>Generate HD Video</Text>
-                                            <Text style={styles.actionSub}>High-quality server render (may take longer)</Text>
+                                            <Text style={styles.actionLabel}>
+                                                {t('preview.actions.share')}
+                                            </Text>
+                                            <Text style={styles.actionSub}>
+                                                {t('preview.actions.shareSub')}
+                                            </Text>
                                         </View>
                                     </>
                                 )}
                             </Pressable>
-                        </View>
+                        </>
                     ) : (
-                        /* ── IMAGE: Save + Share ── */
                         <>
                             <Pressable
-                                style={[styles.actionBtn, { backgroundColor: '#5B6CFF' }, isSaving && styles.btnDisabled]}
+                                style={[styles.actionBtn, styles.saveBtn, isGenerating && styles.btnDisabled]}
                                 onPress={handleSave}
-                                disabled={isSaving || isSharing}>
-                                {isSaving ? (
+                                disabled={isGenerating}>
+                                {isGenerating ? (
                                     <ActivityIndicator color={COLORS.white} size="small" />
                                 ) : (
                                     <>
@@ -283,22 +326,20 @@ const PreviewScreen = ({ navigation, route }) => {
                             </Pressable>
 
                             <Pressable
-                                style={[styles.actionBtn, styles.shareBtn, isSharing && styles.btnDisabled]}
+                                style={[styles.actionBtn, styles.shareBtn, isGenerating && styles.btnDisabled]}
                                 onPress={handleShare}
-                                disabled={isSaving || isSharing}>
-                                {isSharing ? (
+                                disabled={isGenerating}>
+                                {isGenerating ? (
                                     <ActivityIndicator color={COLORS.white} size="small" />
                                 ) : (
                                     <>
                                         <MaterialCommunityIcons name="share-variant-outline" style={styles.actionIcon} />
                                         <View>
                                             <Text style={styles.actionLabel}>
-                                                {isPremium ? t('preview.actions.share') : t('home.actions.shareWhatsApp')}
+                                                {t('preview.actions.share')}
                                             </Text>
                                             <Text style={styles.actionSub}>
-                                                {isPremium
-                                                    ? t('preview.actions.shareSub')
-                                                    : t('preview.actions.shareWhatsAppSub')}
+                                                {t('preview.actions.shareSub')}
                                             </Text>
                                         </View>
                                     </>
@@ -307,6 +348,10 @@ const PreviewScreen = ({ navigation, route }) => {
                         </>
                     )}
                 </View>
+
+                {isGenerating && generationMessage ? (
+                    <Text style={styles.generationMessage}>{generationMessage}</Text>
+                ) : null}
 
                 {/* ── Secondary row ────────────────── */}
                 <View style={styles.editRow}>
@@ -424,6 +469,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#5B6CFF',
         flex: 1,
     },
+    saveBtn: { backgroundColor: '#5B6CFF' },
     shareBtn: { backgroundColor: '#5B6CFF' },
     btnDisabled: { opacity: 0.55 },
     actionIcon: { fontSize: 24, color: COLORS.white },
@@ -435,6 +481,13 @@ const styles = StyleSheet.create({
     actionSub: {
         fontSize: FONTS.sizes.xs,
         color: COLORS.white + 'BB',
+    },
+    generationMessage: {
+        marginTop: SPACING.sm,
+        paddingHorizontal: SPACING.base,
+        fontSize: FONTS.sizes.sm,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
     },
 
     // Edit row

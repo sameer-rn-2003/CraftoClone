@@ -5,6 +5,7 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
+    DeviceEventEmitter,
     FlatList,
     Image,
     Modal,
@@ -40,9 +41,11 @@ import {
 } from '../../utils/photoFrameLayout';
 import {
     buildTemplateRenderContext,
+    buildTemplateRenderConfig,
     dedupeTemplates,
     getTemplateCanvasSize,
     isConfigDrivenTemplate,
+    normalizeTemplateMediaType,
     normalizeTemplateApiItem,
 } from '../../utils/templateConfig';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
@@ -60,6 +63,8 @@ import { getTemplatesApi } from '../../apiService/templateApi';
 import { getTrendingTemplatesApi } from '../../apiService/trendingApi';
 import { getUnreadNotificationCountApi } from '../../apiService/notificationApi';
 import { trackTemplateActionApi } from '../../apiService/trackingApi';
+import mediaGenerationService from '../../services/mediaGenerationService';
+import { shareImage } from '../../services/imageService';
 import {
     addFavoriteApi,
     getFavoritesApi,
@@ -455,6 +460,8 @@ const MAX_CATEGORY_LINES = 2;
 const CATEGORY_PREVIEW_HEIGHT = CHIP_HEIGHT * MAX_CATEGORY_LINES + CHIP_GAP + heightPixel(24);
 const CATEGORY_PREVIEW_LIMIT = 4;
 const TEMPLATE_PAGE_SIZE = 30;
+const HOME_METRIC_EVENTS_KEY = 'home_metric_events';
+const HOME_METRIC_EVENT_NAME = 'home_metric_event';
 const FAVORITES_CHIP = {
     id: 'favorites',
     label: 'Favorites',
@@ -767,6 +774,7 @@ const getImageSource = source => (
 
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
+    const posterState = useSelector(state => state.poster);
     const userPhoto = useSelector(state => state.poster.userPhoto);
     const userName = useSelector(state => state.poster.userName);
     const userMessage = useSelector(state => state.poster.userMessage);
@@ -775,7 +783,7 @@ const HomeScreen = ({ navigation }) => {
     const designLayoutIndex = useSelector(state => state.poster.designLayoutIndex);
     const specialCategoryContext = useSelector(state => state.poster.specialCategoryContext);
     const { t } = useTranslation();
-    const { posterRef, savePoster, sharePosterToWhatsApp, isSaving, isSharing } = usePosterGenerator();
+    const { posterRef } = usePosterGenerator();
     const { pickImage, loading: isPickingProfileImage } = useImagePicker();
     const [activeTab, setActiveTab] = useState('home');
     const [activeCategory, setActiveCategoryUi] = useState('all');
@@ -786,7 +794,9 @@ const HomeScreen = ({ navigation }) => {
     const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
     const [favoriteMap, setFavoriteMap] = useState({});
     const [favoriteLoadingMap, setFavoriteLoadingMap] = useState({});
-    const isActionInProgress = isSaving || isSharing;
+    const [isMediaActionLoading, setMediaActionLoading] = useState(false);
+    const [mediaActionTarget, setMediaActionTarget] = useState(null);
+    const isActionInProgress = isMediaActionLoading;
 
     const [templates, setTemplates] = useState([]);
     const [page, setPage] = useState(1);
@@ -815,6 +825,7 @@ const HomeScreen = ({ navigation }) => {
 
     const requestIdRef = useRef(0);
     const pendingPremiumActionRef = useRef(null);
+    const appliedMetricEventsRef = useRef(new Set());
 
     const viewabilityConfig = useRef({
         itemVisiblePercentThreshold: 70,
@@ -1467,6 +1478,44 @@ const HomeScreen = ({ navigation }) => {
         [dispatch],
     );
 
+    const generateTemplateMediaFile = useCallback(async item => {
+        const mediaType = normalizeTemplateMediaType(item);
+        const renderContext = buildTemplateRenderContext({
+            template: item,
+            userPhoto: posterState.userPhoto,
+            userName: posterState.userName,
+            userMessage: posterState.userMessage,
+            premiumProfile: posterState.premiumProfile,
+        });
+        const renderConfig = buildTemplateRenderConfig({
+            template: item,
+            posterState,
+            userData: renderContext,
+        });
+
+        const res = await mediaGenerationService.startMediaGeneration({
+            template_id: item.id,
+            type: mediaType,
+            user_data: renderContext,
+            render_config: renderConfig,
+        });
+        const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
+        if (!jobId) throw new Error('No job id returned by server');
+
+        const status = await mediaGenerationService.pollMediaStatus(jobId, {
+            interval: 2000,
+            maxAttempts: 120,
+        });
+        const url = mediaGenerationService.getGeneratedMediaUrl(status);
+        if (!url) throw new Error('No output URL from render');
+
+        return mediaGenerationService.downloadGeneratedMedia(
+            url,
+            `craftkaro_${mediaType.toLowerCase()}_${item.id}_${Date.now()}`,
+            mediaType,
+        );
+    }, [posterState]);
+
     const updateTemplateMetric = useCallback((templateId, key) => {
         const normalizedId = String(templateId ?? '');
         const incrementMetric = template => (
@@ -1479,24 +1528,72 @@ const HomeScreen = ({ navigation }) => {
         setTrendingTemplates(prev => prev.map(incrementMetric));
     }, []);
 
+    const applyMetricEvent = useCallback(event => {
+        if (!event?.templateId || !event?.key) return;
+        const eventId = event?.eventId ? String(event.eventId) : null;
+        if (eventId && appliedMetricEventsRef.current.has(eventId)) return;
+
+        updateTemplateMetric(event.templateId, event.key);
+        if (eventId) {
+            appliedMetricEventsRef.current.add(eventId);
+        }
+    }, [updateTemplateMetric]);
+
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener(HOME_METRIC_EVENT_NAME, applyMetricEvent);
+        return () => subscription.remove();
+    }, [applyMetricEvent]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', async () => {
+            try {
+                const raw = await AsyncStorage.getItem(HOME_METRIC_EVENTS_KEY);
+                if (!raw) return;
+
+                const events = JSON.parse(raw);
+                if (!Array.isArray(events) || !events.length) {
+                    await AsyncStorage.removeItem(HOME_METRIC_EVENTS_KEY);
+                    return;
+                }
+
+                events.forEach(applyMetricEvent);
+                await AsyncStorage.removeItem(HOME_METRIC_EVENTS_KEY);
+            } catch (e) {
+                console.warn('Unable to apply pending metric updates:', e?.message || e);
+            }
+        });
+
+        return unsubscribe;
+    }, [applyMetricEvent, navigation]);
+
     const handleShareToWhatsApp = useCallback(
         async item => {
             if (isActionInProgress) return;
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
+                setMediaActionLoading(true);
+                setMediaActionTarget({ templateId: String(item.id), action: 'share' });
                 try {
-                    const didShare = await sharePosterToWhatsApp(whatsappCaption || undefined);
+                    const mediaType = normalizeTemplateMediaType(item);
+                    const filePath = await generateTemplateMediaFile(item);
+                    const didShare = await shareImage(
+                        filePath,
+                        whatsappCaption || `Check out my ${mediaType === 'VIDEO' ? 'video' : 'image'} made with CraftKaro!`,
+                    );
                     if (!didShare) return;
 
-                    try { await trackTemplateActionApi(String(item.id), { action: 'share', platform: 'whatsapp' }); } catch (e) { /* ignore */ }
+                    try { await trackTemplateActionApi(String(item.id), { action: 'share' }); } catch (e) { /* ignore */ }
                     updateTemplateMetric(item.id, 'share_count');
                 } catch (e) {
-                    // share cancelled or failed
-                    throw e;
+                    console.error('Media share error', e);
+                    Alert.alert('Render failed', String(e?.message || e));
+                } finally {
+                    setMediaActionTarget(null);
+                    setMediaActionLoading(false);
                 }
             });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, sharePosterToWhatsApp, updateTemplateMetric, whatsappCaption, withPremiumAccess],
+        [generateTemplateMediaFile, isActionInProgress, prepareTemplateForMediaAction, updateTemplateMetric, whatsappCaption, withPremiumAccess],
     );
 
     const handleDownload = useCallback(
@@ -1504,19 +1601,30 @@ const HomeScreen = ({ navigation }) => {
             if (isActionInProgress) return;
             withPremiumAccess(item, async () => {
                 await prepareTemplateForMediaAction(item);
+                setMediaActionLoading(true);
+                setMediaActionTarget({ templateId: String(item.id), action: 'download' });
                 try {
-                    const didSave = await savePoster();
-                    if (!didSave) return;
+                    const filePath = await generateTemplateMediaFile(item);
+                    Alert.alert('Saved', `Media saved to ${filePath}`);
 
                     try { await trackTemplateActionApi(String(item.id), { action: 'download' }); } catch (e) { /* ignore */ }
                     updateTemplateMetric(item.id, 'download_count');
                 } catch (e) {
-                    throw e;
+                    console.error('Media download error', e);
+                    Alert.alert('Render failed', String(e?.message || e));
+                } finally {
+                    setMediaActionTarget(null);
+                    setMediaActionLoading(false);
                 }
             });
         },
-        [isActionInProgress, prepareTemplateForMediaAction, savePoster, updateTemplateMetric, withPremiumAccess],
+        [generateTemplateMediaFile, isActionInProgress, prepareTemplateForMediaAction, updateTemplateMetric, withPremiumAccess],
     );
+
+    const isMetricActionLoading = useCallback((item, action) => (
+        mediaActionTarget?.action === action
+        && mediaActionTarget?.templateId === String(item?.id ?? '')
+    ), [mediaActionTarget]);
 
     const stopCardPress = useCallback(event => {
         event?.stopPropagation?.();
@@ -1732,7 +1840,11 @@ const HomeScreen = ({ navigation }) => {
                                                 onPress={event => { event.stopPropagation?.(); handleDownload(item); }}
                                                 hitSlop={8}
                                                 disabled={isActionInProgress}>
-                                                <MaterialCommunityIcons name="download-outline" style={styles.metricActionIcon} />
+                                                {isMetricActionLoading(item, 'download') ? (
+                                                    <ActivityIndicator size="small" color="#222A34" />
+                                                ) : (
+                                                    <MaterialCommunityIcons name="download-outline" style={styles.metricActionIcon} />
+                                                )}
                                                 <Text style={styles.metricCount}>{item.download_count ?? 0}</Text>
                                             </Pressable>
 
@@ -1742,7 +1854,11 @@ const HomeScreen = ({ navigation }) => {
                                                 onPress={event => { event.stopPropagation?.(); handleShareToWhatsApp(item); }}
                                                 hitSlop={8}
                                                 disabled={isActionInProgress}>
-                                                <MaterialCommunityIcons name="share-outline" style={styles.metricActionIcon} />
+                                                {isMetricActionLoading(item, 'share') ? (
+                                                    <ActivityIndicator size="small" color="#222A34" />
+                                                ) : (
+                                                    <MaterialCommunityIcons name="share-outline" style={styles.metricActionIcon} />
+                                                )}
                                                 <Text style={styles.metricCount}>{item.share_count ?? 0}</Text>
                                             </Pressable>
 
@@ -1863,10 +1979,14 @@ const HomeScreen = ({ navigation }) => {
                                                     }}
                                                     hitSlop={8}
                                                     disabled={isActionInProgress}>
-                                                    <MaterialCommunityIcons
-                                                        name="download-outline"
-                                                        style={styles.metricActionIcon}
-                                                    />
+                                                    {isMetricActionLoading(item, 'download') ? (
+                                                        <ActivityIndicator size="small" color="#222A34" />
+                                                    ) : (
+                                                        <MaterialCommunityIcons
+                                                            name="download-outline"
+                                                            style={styles.metricActionIcon}
+                                                        />
+                                                    )}
                                                     <Text style={styles.metricCount}>{item.download_count ?? 0}</Text>
                                                 </Pressable>
 
@@ -1879,10 +1999,14 @@ const HomeScreen = ({ navigation }) => {
                                                     }}
                                                     hitSlop={8}
                                                     disabled={isActionInProgress}>
-                                                    <MaterialCommunityIcons
-                                                        name="share-outline"
-                                                        style={styles.metricActionIcon}
-                                                    />
+                                                    {isMetricActionLoading(item, 'share') ? (
+                                                        <ActivityIndicator size="small" color="#222A34" />
+                                                    ) : (
+                                                        <MaterialCommunityIcons
+                                                            name="share-outline"
+                                                            style={styles.metricActionIcon}
+                                                        />
+                                                    )}
                                                     <Text style={styles.metricCount}>{item.share_count ?? 0}</Text>
                                                 </Pressable>
 

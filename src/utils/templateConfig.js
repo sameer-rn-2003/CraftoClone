@@ -288,6 +288,28 @@ export const getTemplateBackgroundCrop = template => normalizeBackgroundCrop(
     ?? template?.config?.background_crop,
 );
 
+const getTemplateVideoSource = template => pickFirstValue(
+    template?.source,
+    template?.Video,
+    template?.video,
+    template?.video_url,
+    template?.videoUrl,
+    template?.template_url,
+    template?.templateUrl,
+    template?.url,
+);
+
+const getTemplateImageSource = template => pickFirstValue(
+    template?.source,
+    template?.Image,
+    template?.image,
+    template?.image_url,
+    template?.imageUrl,
+    template?.thumbnail,
+    template?.thumbnail_url,
+    template?.thumbnailUrl,
+);
+
 export const buildTemplateRenderContext = ({
     template,
     userPhoto,
@@ -303,9 +325,10 @@ export const buildTemplateRenderContext = ({
     const mediaType = normalizeTemplateMediaType(template);
     const businessLogo = premiumProfile?.business?.businessLogo;
     const personalLogo = premiumProfile?.personal?.organizationLogo;
-    const backgroundFallback = mediaType === 'IMAGE'
-        ? pickFirstValue(template?.source, template?.thumbnail)
-        : pickFirstValue(template?.thumbnail, getValueByKey(template, 'background_image'));
+    const backgroundFallback = mediaType === 'VIDEO'
+        ? getTemplateVideoSource(template)
+        : getTemplateImageSource(template);
+    const configuredBackground = getValueByKey(template, 'background_image');
 
     return {
         user_photo: userPhoto,
@@ -319,7 +342,10 @@ export const buildTemplateRenderContext = ({
         frame_png: pickFirstValue(framePng, getValueByKey(template, 'frame_png')),
         background_image: pickFirstValue(
             backgroundImage,
-            getValueByKey(template, 'background_image'),
+            mediaType === 'VIDEO' && VIDEO_SOURCE_PATTERN.test(String(configuredBackground || ''))
+                ? configuredBackground
+                : undefined,
+            mediaType === 'IMAGE' ? configuredBackground : undefined,
             backgroundFallback,
         ),
         logo_url: pickFirstValue(
@@ -330,6 +356,229 @@ export const buildTemplateRenderContext = ({
         ),
         headline: pickFirstValue(headline, userName),
         subtext: pickFirstValue(subtext, userMessage),
+    };
+};
+
+const scaleFrameToCanvas = (frame, canvasSize) => {
+    if (!frame) return null;
+
+    const sourceSize = getTemplateCanvasSize({
+        width: canvasSize?.sourceWidth,
+        height: canvasSize?.sourceHeight,
+    });
+    const targetWidth = canvasSize?.width || sourceSize.width;
+    const targetHeight = canvasSize?.height || sourceSize.height;
+    const scaleX = targetWidth / sourceSize.width;
+    const scaleY = targetHeight / sourceSize.height;
+
+    return {
+        x: getNumericValue(frame.x, 0) * scaleX,
+        y: getNumericValue(frame.y, 0) * scaleY,
+        width: getNumericValue(frame.width, 0) * scaleX,
+        height: getNumericValue(frame.height, 0) * scaleY,
+        borderRadius: getNumericValue(frame.borderRadius ?? frame.radius, 0) * Math.min(scaleX, scaleY),
+        borderColor: frame.borderColor ?? '#FFFFFF',
+        borderWidth: getNumericValue(frame.borderWidth, 0) * Math.min(scaleX, scaleY),
+        shape: frame.shape,
+    };
+};
+
+const buildDefaultTemplateLayers = ({ template, canvas, photoFrame, textFields, mediaType }) => {
+    const backgroundSource = pickFirstValue(
+        template?.source,
+        template?.Video,
+        template?.video,
+        template?.video_url,
+        template?.videoUrl,
+        template?.Image,
+        template?.image,
+        template?.image_url,
+        template?.imageUrl,
+        template?.thumbnail,
+    );
+
+    const layers = [];
+
+    if (backgroundSource) {
+        layers.push({
+            id: mediaType === 'VIDEO' ? 'bg_video' : 'bg',
+            type: mediaType === 'VIDEO' ? 'video' : 'image',
+            x: 0,
+            y: 0,
+            width: canvas.width,
+            height: canvas.height,
+            src: '{{background_image}}',
+            opacity: 1,
+            zIndex: 0,
+        });
+    }
+
+    if (photoFrame) {
+        layers.push({
+            id: 'user_photo',
+            type: 'image',
+            x: photoFrame.x,
+            y: photoFrame.y,
+            width: photoFrame.width,
+            height: photoFrame.height,
+            src: '{{user_photo}}',
+            borderRadius: photoFrame.borderRadius,
+            borderColor: photoFrame.borderColor,
+            borderWidth: photoFrame.borderWidth,
+            zIndex: 2,
+        });
+    }
+
+    Object.entries(textFields).forEach(([key, field], index) => {
+        if (!field?.visible) return;
+        layers.push({
+            id: key === 'name' ? 'headline' : 'subtext',
+            type: 'text',
+            x: field.position.x,
+            y: field.position.y,
+            width: field.width,
+            text: key === 'name' ? '{{headline}}' : '{{subtext}}',
+            fontSize: field.fontSize,
+            fontFamily: field.fontFamily,
+            fontWeight: field.fontWeight,
+            color: field.color,
+            align: field.align,
+            zIndex: 3 + index,
+        });
+    });
+
+    return layers;
+};
+
+export const buildTemplateRenderConfig = ({
+    template,
+    posterState = {},
+    userData = {},
+} = {}) => {
+    const mediaType = normalizeTemplateMediaType(template);
+    const canvas = getTemplateCanvasSize(template);
+    const sourceCanvas = {
+        ...canvas,
+        sourceWidth: getNumericValue(template?.width ?? template?.config?.width, canvas.width),
+        sourceHeight: getNumericValue(template?.height ?? template?.config?.height, canvas.height),
+    };
+    const photoFrame = scaleFrameToCanvas(getTemplatePhotoFrame(template), sourceCanvas);
+    const rawTextFields = Array.isArray(template?.textFields) ? template.textFields : [];
+
+    const textFields = rawTextFields.reduce((accumulator, field) => {
+        const key = field?.key === 'message' ? 'message' : 'name';
+        const userOffset = key === 'name'
+            ? posterState.namePosition
+            : posterState.messagePosition;
+        const userScale = key === 'name'
+            ? posterState.nameScale
+            : posterState.messageScale;
+        const fontSizeOverride = key === 'name'
+            ? posterState.nameFontSize
+            : posterState.messageFontSize;
+        const colorOverride = key === 'name'
+            ? posterState.nameColor
+            : posterState.messageColor;
+
+        accumulator[key] = {
+            visible: key === 'name' ? posterState.showName !== false : posterState.showMessage !== false,
+            content: key === 'name' ? userData.headline : userData.subtext,
+            position: {
+                x: getNumericValue(field.x, 16),
+                y: getNumericValue(field.y, 0),
+            },
+            userOffset: userOffset ?? { x: 0, y: 0 },
+            userScale: userScale ?? 1,
+            width: getNumericValue(field.fieldWidth ?? field.width, canvas.width - getNumericValue(field.x, 16) * 2),
+            fontSize: getNumericValue(fontSizeOverride ?? field.fontSize, key === 'name' ? 28 : 14),
+            fontFamily: field.fontFamily ?? 'System',
+            fontWeight: field.fontWeight ?? (key === 'name' ? 'bold' : 'normal'),
+            color: colorOverride ?? field.color ?? '#FFFFFF',
+            align: posterState.textAlign ?? field.align ?? 'center',
+            bold: key === 'name' ? posterState.nameBold !== false : posterState.messageBold === true,
+            italic: key === 'name' ? posterState.nameItalic === true : posterState.messageItalic === true,
+            shadow: posterState.textShadow === true,
+        };
+        return accumulator;
+    }, {});
+
+    const nextPhotoFrame = photoFrame ? {
+        ...photoFrame,
+        userPosition: posterState.photoPosition ?? { x: 0, y: 0 },
+        userScale: posterState.photoScale ?? 1,
+        shape: posterState.photoShape === 'template' ? photoFrame.shape : posterState.photoShape,
+        animation: {
+            id: posterState.userPhotoAnimation || 'none',
+        },
+    } : null;
+
+    const configLayers = getTemplateLayers(template);
+    const templateLayers = configLayers.length
+        ? configLayers
+        : buildDefaultTemplateLayers({
+            template,
+            canvas,
+            photoFrame: nextPhotoFrame,
+            textFields,
+            mediaType,
+        });
+
+    return {
+        template: {
+            id: template?.id,
+            name: template?.name,
+            category: template?.category,
+            mediaType,
+            version: template?.version ?? '1.0',
+            canvas,
+            accentColor: posterState.accentColorOverride ?? template?.accentColor,
+            backgroundColor: template?.backgroundColor,
+            footerColor: template?.footerColor,
+        },
+        media: {
+            type: mediaType,
+            backgroundSource: userData.background_image,
+            thumbnailSource: template?.thumbnail,
+            frameOverlaySource: userData.frame_png,
+            backgroundCrop: template?.backgroundCrop ?? null,
+        },
+        userContent: {
+            photo: posterState.userPhoto,
+            name: posterState.userName,
+            message: posterState.userMessage,
+            isPremium: posterState.isPremium === true,
+        },
+        photoFrame: nextPhotoFrame,
+        textFields: {
+            ...textFields,
+            global: {
+                textAlign: posterState.textAlign ?? 'center',
+                textShadow: posterState.textShadow === true,
+            },
+        },
+        premiumProfile: posterState.premiumProfile,
+        premiumBands: posterState.premiumBands,
+        stickers: posterState.stickers ?? [],
+        backgroundOverlay: {
+            enabled: !!posterState.bgOverlayColor,
+            color: posterState.bgOverlayColor,
+            opacity: posterState.bgOverlayOpacity ?? 0.3,
+        },
+        designLayout: {
+            index: posterState.designLayoutIndex ?? 0,
+        },
+        specialCategory: posterState.specialCategoryContext,
+        selectedTags: posterState.selectedTags ?? [],
+        templateVariables: userData,
+        templateLayers,
+        output: {
+            format: mediaType === 'VIDEO' ? 'MP4' : 'JPEG',
+            quality: 'high',
+            width: canvas.width,
+            height: canvas.height,
+            fps: mediaType === 'VIDEO' ? 30 : undefined,
+            includeAnimation: mediaType === 'VIDEO',
+        },
     };
 };
 

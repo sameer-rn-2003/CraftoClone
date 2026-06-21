@@ -4,6 +4,7 @@ const normalizeGenerationPayload = (data = {}) => ({
     template_id: data.template_id ?? data.templateId,
     type: data.type ?? data.mediaType ?? 'IMAGE',
     user_data: data.user_data ?? data.context ?? {},
+    render_config: data.render_config ?? data.renderConfig ?? {},
 });
 
 export const generateImageApi = (data) => {

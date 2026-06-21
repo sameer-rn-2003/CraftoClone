@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -42,6 +43,7 @@ const UserSetupScreen = ({ navigation }) => {
     const { pickImage, loading } = useImagePicker();
     const [name, setName] = useState('');
     const [imageUri, setImageUri] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
     const toastTimer = useRef(null);
 
@@ -73,6 +75,8 @@ const UserSetupScreen = ({ navigation }) => {
     };
 
  const handleSave = async () => {
+    if (isSaving) return;
+
     if (!imageUri) {
         showToast(t('userSetup.errors.selectImage'), 'error');
         return;
@@ -83,6 +87,7 @@ const UserSetupScreen = ({ navigation }) => {
     }
 
     try {
+        setIsSaving(true);
         // 1. Get presigned URL
         const fileName = `profile_${Date.now()}.jpg`;
 
@@ -132,6 +137,8 @@ console.log('Profile update response:', updateRes.data);
     } catch (error) {
         console.log('Profile save error', error);
         showToast('Something went wrong', 'error');
+    } finally {
+        setIsSaving(false);
     }
 };
 
@@ -185,8 +192,15 @@ console.log('Profile update response:', updateRes.data);
                     onChangeText={setName}
                 />
 
-                <Pressable style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveText}>{t('userSetup.continue')}</Text>
+                <Pressable
+                    style={[styles.saveButton, isSaving && styles.buttonDisabled]}
+                    onPress={handleSave}
+                    disabled={isSaving}>
+                    {isSaving ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                        <Text style={styles.saveText}>{t('userSetup.continue')}</Text>
+                    )}
                 </Pressable>
 
                 <Toast visible={toast.visible} message={toast.message} type={toast.type} />
@@ -269,6 +283,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: widthPixel(10),
         elevation: 6,
+    },
+    buttonDisabled: {
+        opacity: 0.72,
     },
     saveText: {
         fontSize: widthPixel(14),
