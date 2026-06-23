@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -131,9 +130,9 @@ const AppNavigator = () => {
 
     // 🔁 Navigation based on state
     return (
-        <NavigationContainer>
+        <>
             {isLoggedIn ? <AppStack /> : <AuthStack />}
-        </NavigationContainer>
+        </>
     );
 };
 
