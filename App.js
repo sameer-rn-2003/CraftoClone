@@ -11,7 +11,9 @@ import store from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import NotificationBanner from './src/components/NotificationBanner';
 import './src/i18n';
-import { subscribeToFcmTokenRefresh, syncFcmToken } from './src/services/fcmService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from 'react-native-config';
+import { subscribeToFcmTokenRefresh, syncFcmToken, getStoredRegisteredFcmToken } from './src/services/fcmService';
 import {
     setupForegroundListener,
     setNavigationRef,
@@ -19,6 +21,28 @@ import {
 } from './src/services/notificationHandler';
 
 const navigationRef = createNavigationContainerRef();
+
+const logAllTokens = async () => {
+    try {
+        const [accessToken, refreshToken, fcmToken, userProfile] = await Promise.all([
+            AsyncStorage.getItem('access_token'),
+            AsyncStorage.getItem('refresh_token'),
+            getStoredRegisteredFcmToken(),
+            AsyncStorage.getItem('user_profile'),
+        ]);
+
+        console.log('=== ALL TOKENS ===');
+        console.log('[JWT] access_token:', accessToken ?? 'NOT SET');
+        console.log('[JWT] refresh_token:', refreshToken ?? 'NOT SET');
+        console.log('[Firebase] fcm_token:', fcmToken ?? 'NOT SET');
+        console.log('[API] x-api-key:', Config?.API_KEY ?? 'NOT SET');
+        console.log('[API] base_url:', Config?.BASE_URL ?? 'NOT SET');
+        console.log('[User] profile:', userProfile ?? 'NOT SET');
+        console.log('==================');
+    } catch (error) {
+        console.warn('[logAllTokens] Failed to read tokens:', error?.message || error);
+    }
+};
 
 const FcmTokenManager = () => {
     const isLoggedIn = useSelector(state => state.poster.isLoggedIn);
@@ -47,6 +71,7 @@ const App = () => {
 
     useEffect(() => {
         setNavigationRef(navigationRef);
+        logAllTokens();
 
         const unsubscribe = setupForegroundListener();
 

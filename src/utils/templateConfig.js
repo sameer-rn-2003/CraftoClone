@@ -509,6 +509,7 @@ export const buildTemplateRenderConfig = ({
         shape: posterState.photoShape === 'template' ? photoFrame.shape : posterState.photoShape,
         animation: {
             id: posterState.userPhotoAnimation || 'none',
+            config: {},
         },
     } : null;
 
@@ -564,6 +565,12 @@ export const buildTemplateRenderConfig = ({
             color: posterState.bgOverlayColor,
             opacity: posterState.bgOverlayOpacity ?? 0.3,
         },
+        animation: mediaType === 'VIDEO'
+            ? (template?.config_json?.animation ?? template?.animation ?? [
+                { id: 'fade_up', from: { translateY: 346, opacity: 0.2 }, to: { translateY: 0, opacity: 1 }, loop: false, duration: 1400, easing: 'ease' },
+                { id: 'pop_in', from: { scale: 0.55, opacity: 0.25 }, to: { scale: 1, opacity: 1 }, loop: false, duration: 1400, easing: 'ease' },
+            ])
+            : undefined,
         designLayout: {
             index: posterState.designLayoutIndex ?? 0,
         },
@@ -577,6 +584,7 @@ export const buildTemplateRenderConfig = ({
             width: canvas.width,
             height: canvas.height,
             fps: mediaType === 'VIDEO' ? 30 : undefined,
+            duration: mediaType === 'VIDEO' ? (template?.duration ?? template?.config_json?.duration ?? 10) : undefined,
             includeAnimation: mediaType === 'VIDEO',
         },
     };

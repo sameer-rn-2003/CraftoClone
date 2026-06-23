@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Pressable,
     SafeAreaView,
     FlatList,
@@ -86,6 +87,26 @@ const NotificationScreen = ({ navigation }) => {
         </Pressable>
     );
 
+    const renderEmpty = () => {
+        if (loading) {
+            return (
+                <View style={styles.emptyContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={styles.emptyText}>Loading notifications...</Text>
+                </View>
+            );
+        }
+        return (
+            <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="bell-off-outline" style={styles.emptyIcon} />
+                <Text style={styles.emptyTitle}>No notifications</Text>
+                <Text style={styles.emptySubtitle}>You're all caught up!</Text>
+            </View>
+        );
+    };
+
+    const hasUnread = notifications.some(n => !n.read);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
@@ -95,13 +116,17 @@ const NotificationScreen = ({ navigation }) => {
                     <MaterialCommunityIcons name="arrow-left" style={styles.backIcon} />
                 </Pressable>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <Pressable style={styles.backBtn} onPress={async () => {
-                    const ids = notifications.map(item => item.id).filter(Boolean);
-                    try { if (ids.length) await markAllNotificationsReadApi(ids); } catch (e) { console.log('mark all read error', e); }
-                    dispatch(setUnreadNotificationCount(0));
-                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                }}>
-                    <Text style={{ color: COLORS.primary }}>Mark all read</Text>
+                <Pressable
+                    style={[styles.markAllBtn, !hasUnread && styles.markAllBtnDisabled]}
+                    disabled={!hasUnread}
+                    onPress={async () => {
+                        const ids = notifications.map(item => item.id).filter(Boolean);
+                        try { if (ids.length) await markAllNotificationsReadApi(ids); } catch (e) { console.log('mark all read error', e); }
+                        dispatch(setUnreadNotificationCount(0));
+                        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                    }}>
+                    <MaterialCommunityIcons name="check-all" style={[styles.markAllIcon, !hasUnread && styles.markAllIconDisabled]} />
+                    <Text style={[styles.markAllText, !hasUnread && styles.markAllTextDisabled]}>Mark all read</Text>
                 </Pressable>
             </View>
 
@@ -109,7 +134,8 @@ const NotificationScreen = ({ navigation }) => {
                 data={notifications}
                 renderItem={renderItem}
                 keyExtractor={item => String(item.id)}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[styles.listContent, !notifications.length && styles.listContentEmpty]}
+                ListEmptyComponent={renderEmpty}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
@@ -148,12 +174,62 @@ const styles = StyleSheet.create({
         fontWeight: FONTS.weights.bold,
         color: COLORS.text,
     },
+    markAllBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: SPACING.sm,
+        borderRadius: BORDER_RADIUS.full,
+        gap: SPACING.xs,
+    },
+    markAllBtnDisabled: {
+        backgroundColor: COLORS.border,
+    },
+    markAllIcon: {
+        fontSize: 16,
+        color: COLORS.white,
+    },
+    markAllIconDisabled: {
+        color: COLORS.textMuted,
+    },
+    markAllText: {
+        fontSize: FONTS.sizes.sm,
+        fontWeight: FONTS.weights.semiBold,
+        color: COLORS.white,
+    },
+    markAllTextDisabled: {
+        color: COLORS.textMuted,
+    },
     list: {
         flex: 1,
     },
     listContent: {
         padding: SPACING.base,
         paddingBottom: SPACING.xxl,
+    },
+    listContentEmpty: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: SPACING.xxxl,
+    },
+    emptyIcon: {
+        fontSize: 56,
+        color: COLORS.border,
+        marginBottom: SPACING.base,
+    },
+    emptyTitle: {
+        fontSize: FONTS.sizes.lg,
+        fontWeight: FONTS.weights.semiBold,
+        color: COLORS.text,
+        marginBottom: SPACING.xs,
+    },
+    emptySubtitle: {
+        fontSize: FONTS.sizes.md,
+        color: COLORS.textMuted,
     },
     card: {
         flexDirection: 'row',
