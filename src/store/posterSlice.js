@@ -51,6 +51,7 @@ const initialState = {
     photoPosition: { x: 0, y: 0 },
     photoScale: 1.0,      // 0.5 → 2.0
     userPhotoAnimation: 'none',
+    backgroundVideoDuration: null,
 
     // ── Text customization ──────────────────────────────────
     nameColor: null,         // null = use template default
@@ -112,6 +113,7 @@ const posterSlice = createSlice({
             state.messageScale = 1.0;
             state.nameFontSize = null;
             state.messageFontSize = null;
+            state.backgroundVideoDuration = null;
         },
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
@@ -119,6 +121,7 @@ const posterSlice = createSlice({
             state.photoScale = 1.0;
         },
         setUserPhotoAnimation(state, { payload }) { state.userPhotoAnimation = payload || 'none'; },
+        setBackgroundVideoDuration(state, { payload }) { state.backgroundVideoDuration = payload || null; },
         setUserName(state, { payload }) { state.userName = payload; },
         setUserMessage(state, { payload }) { state.userMessage = payload; },
         setPremiumStatus(state, { payload }) { state.isPremium = payload; },
@@ -275,7 +278,7 @@ const posterSlice = createSlice({
             state.photoPosition = { x: 0, y: 0 };
             state.photoScale = 1.0;
             state.userPhotoAnimation = 'none';
-            state.nameColor = null;
+            state.backgroundVideoDuration = null;            state.nameColor = null;
             state.messageColor = null;
             state.nameFontSize = null;
             state.messageFontSize = null;
@@ -340,7 +343,7 @@ const posterSlice = createSlice({
 
 export const {
     setSelectedTemplate, setUserPhoto, setUserName, setUserMessage,
-    setUserPhotoAnimation,
+    setUserPhotoAnimation, setBackgroundVideoDuration,
     setPremiumStatus, hydratePremiumProfile, setPremiumProfileField, setPremiumProfileActiveSection,
     setSpecialCategoryContext, setSelectedTags, toggleSelectedTag, cycleDesignLayout, setDesignLayoutIndex,
     setPhotoPosition, setPhotoScale,

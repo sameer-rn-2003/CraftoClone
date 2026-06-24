@@ -1,4 +1,5 @@
 import { POSTER_SIZE } from './constants';
+import { PHOTO_ANIMATION_DEFAULTS } from './photoAnimationOptions';
 
 const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
 const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
@@ -128,12 +129,13 @@ export const normalizeTemplateMediaType = template => {
 };
 
 export const getTemplateCanvasSize = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
     const width = getNumericValue(
-        template?.config?.width ?? template?.width ?? template?.canvasWidth,
+        configJson?.width ?? template?.config?.width ?? template?.width ?? template?.canvasWidth,
         POSTER_SIZE.width,
     );
     const height = getNumericValue(
-        template?.config?.height ?? template?.height ?? template?.canvasHeight,
+        configJson?.height ?? template?.config?.height ?? template?.height ?? template?.canvasHeight,
         POSTER_SIZE.height,
     );
 
@@ -143,17 +145,20 @@ export const getTemplateCanvasSize = template => {
     };
 };
 
-export const getTemplateLayers = template =>
-    Array.isArray(template?.config?.layers) ? template.config.layers.filter(Boolean) : [];
+export const getTemplateLayers = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    return Array.isArray(configJson?.layers) ? configJson.layers.filter(Boolean) : [];
+};
 
 export const isConfigDrivenTemplate = template => getTemplateLayers(template).length > 0;
 
 export const getTemplateVariableDefaults = template => {
-    if (!Array.isArray(template?.config?.variables)) {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    if (!Array.isArray(configJson?.variables)) {
         return {};
     }
 
-    return template.config.variables.reduce((accumulator, variable) => {
+    return configJson.variables.reduce((accumulator, variable) => {
         if (!variable?.key) return accumulator;
         accumulator[variable.key] = variable.default ?? '';
         return accumulator;
@@ -179,7 +184,7 @@ export const resolveTemplateValue = (value, template, context = {}) => {
     ) ?? '';
 };
 
-const normalizePhotoFrame = frame => {
+const normalizePhotoFrame = (frame, canvasSize) => {
     if (!frame) return null;
 
     const width = getNumericValue(frame.width, 0);
@@ -202,16 +207,22 @@ const normalizePhotoFrame = frame => {
     let x = getNumericValue(frame.x, 0);
     let y = getNumericValue(frame.y, 0);
 
-    // Older admin circle templates were saved using center coordinates.
-    if (shape === 'circle') {
-        if (x + width > POSTER_SIZE.width) {
+    const targetWidth = canvasSize?.width || POSTER_SIZE.width;
+    const targetHeight = canvasSize?.height || POSTER_SIZE.height;
+
+    // Only apply legacy center-coordinate adjustment for old admin templates
+    // that used POSTER_SIZE (400×560). New templates with 1080×1920 have correct
+    // top-left coordinates from the admin panel.
+    const isLegacyCanvas = targetWidth <= POSTER_SIZE.width && targetHeight <= POSTER_SIZE.height;
+    if (shape === 'circle' && isLegacyCanvas) {
+        if (x + width > targetWidth) {
             x -= width / 2;
         }
-        if (y + height > POSTER_SIZE.height) {
+        if (y + height > targetHeight) {
             y -= height / 2;
         }
 
-        const maxCircleX = Math.max(0, POSTER_SIZE.width - width - LEGACY_CIRCLE_SAFE_INSET);
+        const maxCircleX = Math.max(0, targetWidth - width - LEGACY_CIRCLE_SAFE_INSET);
         x = Math.min(x, maxCircleX);
     }
 
@@ -255,11 +266,15 @@ const normalizeBackgroundCrop = crop => {
 };
 
 export const getTemplatePhotoFrame = template => {
+    const canvasSize = getTemplateCanvasSize(template);
     const explicitPhotoFrame = normalizePhotoFrame(
         template?.photoFrame
         ?? template?.photo_frame
         ?? template?.config?.photoFrame
-        ?? template?.config?.photo_frame,
+        ?? template?.config?.photo_frame
+        ?? template?.config_json?.photoFrame
+        ?? template?.config_json?.photo_frame,
+        canvasSize,
     );
     if (explicitPhotoFrame) {
         return explicitPhotoFrame;
@@ -278,7 +293,7 @@ export const getTemplatePhotoFrame = template => {
         borderRadius: photoLayer.borderRadius,
         borderWidth: photoLayer.borderWidth,
         borderColor: photoLayer.borderColor,
-    });
+    }, canvasSize);
 };
 
 export const getTemplateBackgroundCrop = template => normalizeBackgroundCrop(
@@ -287,6 +302,29 @@ export const getTemplateBackgroundCrop = template => normalizeBackgroundCrop(
     ?? template?.config?.backgroundCrop
     ?? template?.config?.background_crop,
 );
+
+export const getTemplateTextFields = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    if (configJson?.textFields && typeof configJson.textFields === 'object') {
+        return configJson.textFields;
+    }
+    return template?.textFields ?? {};
+};
+
+export const getTemplateBackgroundOverlay = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    return configJson?.backgroundOverlay ?? template?.backgroundOverlay ?? null;
+};
+
+export const getTemplateAnimation = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    return configJson?.animation ?? [];
+};
+
+export const getTemplateOutput = template => {
+    const configJson = template?.config_json ?? template?.config ?? null;
+    return configJson?.output ?? null;
+};
 
 const getTemplateVideoSource = template => pickFirstValue(
     template?.source,
@@ -311,51 +349,14 @@ const getTemplateImageSource = template => pickFirstValue(
 );
 
 export const buildTemplateRenderContext = ({
-    template,
-    userPhoto,
-    userName,
-    userMessage,
-    framePng,
-    backgroundImage,
-    logoUrl,
     headline,
     subtext,
-    premiumProfile,
+    userName,
+    userMessage,
 } = {}) => {
-    const mediaType = normalizeTemplateMediaType(template);
-    const businessLogo = premiumProfile?.business?.businessLogo;
-    const personalLogo = premiumProfile?.personal?.organizationLogo;
-    const backgroundFallback = mediaType === 'VIDEO'
-        ? getTemplateVideoSource(template)
-        : getTemplateImageSource(template);
-    const configuredBackground = getValueByKey(template, 'background_image');
-
     return {
-        user_photo: userPhoto,
-        user_name: userName,
-        username: userName,
-        name: userName,
-        user_message: userMessage,
-        message: userMessage,
-        tagline: userMessage,
-        caption: userMessage,
-        frame_png: pickFirstValue(framePng, getValueByKey(template, 'frame_png')),
-        background_image: pickFirstValue(
-            backgroundImage,
-            mediaType === 'VIDEO' && VIDEO_SOURCE_PATTERN.test(String(configuredBackground || ''))
-                ? configuredBackground
-                : undefined,
-            mediaType === 'IMAGE' ? configuredBackground : undefined,
-            backgroundFallback,
-        ),
-        logo_url: pickFirstValue(
-            logoUrl,
-            businessLogo,
-            personalLogo,
-            getValueByKey(template, 'logo_url'),
-        ),
-        headline: pickFirstValue(headline, userName),
-        subtext: pickFirstValue(subtext, userMessage),
+        headline: headline || userName || '',
+        subtext: subtext || userMessage || '',
     };
 };
 
@@ -455,45 +456,82 @@ export const buildTemplateRenderConfig = ({
     posterState = {},
     userData = {},
 } = {}) => {
-    const mediaType = normalizeTemplateMediaType(template);
+    const configJson = template?.config_json ?? template?.config ?? null;
     const canvas = getTemplateCanvasSize(template);
     const sourceCanvas = {
         ...canvas,
-        sourceWidth: getNumericValue(template?.width ?? template?.config?.width, canvas.width),
-        sourceHeight: getNumericValue(template?.height ?? template?.config?.height, canvas.height),
+        sourceWidth: getNumericValue(
+            configJson?.width ?? template?.config?.width ?? template?.width,
+            canvas.width,
+        ),
+        sourceHeight: getNumericValue(
+            configJson?.height ?? template?.config?.height ?? template?.height,
+            canvas.height,
+        ),
     };
-    const photoFrame = scaleFrameToCanvas(getTemplatePhotoFrame(template), sourceCanvas);
-    const rawTextFields = Array.isArray(template?.textFields) ? template.textFields : [];
 
-    const textFields = rawTextFields.reduce((accumulator, field) => {
+    const photoFrameData = scaleFrameToCanvas(getTemplatePhotoFrame(template), sourceCanvas);
+    const userAnimId = posterState.userPhotoAnimation || 'none';
+    const templatePhotoFrameAnim = configJson?.photoFrame?.animation ?? configJson?.photo_frame?.animation;
+    const resolvedAnimId = userAnimId !== 'none' ? userAnimId : (templatePhotoFrameAnim?.id ?? 'none');
+
+    const photoFrameAnimation = resolvedAnimId !== 'none'
+        ? { id: resolvedAnimId }
+        : { id: 'none' };
+
+    const nextPhotoFrame = photoFrameData ? {
+        x: photoFrameData.x,
+        y: photoFrameData.y,
+        width: photoFrameData.width,
+        height: photoFrameData.height,
+        shape: posterState.photoShape === 'template' ? photoFrameData.shape : posterState.photoShape,
+        borderColor: photoFrameData.borderColor,
+        borderWidth: photoFrameData.borderWidth,
+        animation: photoFrameAnimation,
+    } : undefined;
+
+    const configTextFields = getTemplateTextFields(template);
+    const normalizedConfigFields = [];
+    if (configTextFields && typeof configTextFields === 'object' && !Array.isArray(configTextFields)) {
+        Object.entries(configTextFields).forEach(([key, field]) => {
+            if (field && typeof field === 'object') {
+                normalizedConfigFields.push({
+                    key,
+                    x: field.position?.x ?? field.x ?? 16,
+                    y: field.position?.y ?? field.y ?? 0,
+                    fieldWidth: field.width ?? field.fieldWidth,
+                    fontSize: field.fontSize,
+                    fontFamily: field.fontFamily,
+                    fontWeight: field.fontWeight,
+                    color: field.color,
+                    align: field.align,
+                    visible: field.visible !== false,
+                });
+            }
+        });
+    }
+    const rawTextFields = Array.isArray(template?.textFields) ? template.textFields : [];
+    const allTextFields = normalizedConfigFields.length > 0 ? normalizedConfigFields : rawTextFields;
+
+    const textFields = allTextFields.reduce((accumulator, field) => {
         const key = field?.key === 'message' ? 'message' : 'name';
-        const userOffset = key === 'name'
-            ? posterState.namePosition
-            : posterState.messagePosition;
-        const userScale = key === 'name'
-            ? posterState.nameScale
-            : posterState.messageScale;
-        const fontSizeOverride = key === 'name'
-            ? posterState.nameFontSize
-            : posterState.messageFontSize;
-        const colorOverride = key === 'name'
-            ? posterState.nameColor
-            : posterState.messageColor;
+        const userOffset = key === 'name' ? posterState.namePosition : posterState.messagePosition;
+        const userScale = key === 'name' ? posterState.nameScale : posterState.messageScale;
+        const fontSizeOverride = key === 'name' ? posterState.nameFontSize : posterState.messageFontSize;
+        const colorOverride = key === 'name' ? posterState.nameColor : posterState.messageColor;
 
         accumulator[key] = {
             visible: key === 'name' ? posterState.showName !== false : posterState.showMessage !== false,
             content: key === 'name' ? userData.headline : userData.subtext,
             position: {
-                x: getNumericValue(field.x, 16),
-                y: getNumericValue(field.y, 0),
+                x: getNumericValue(field.x, 16) + (userOffset?.x ?? 0),
+                y: getNumericValue(field.y, 0) + (userOffset?.y ?? 0),
             },
-            userOffset: userOffset ?? { x: 0, y: 0 },
-            userScale: userScale ?? 1,
             width: getNumericValue(field.fieldWidth ?? field.width, canvas.width - getNumericValue(field.x, 16) * 2),
-            fontSize: getNumericValue(fontSizeOverride ?? field.fontSize, key === 'name' ? 28 : 14),
-            fontFamily: field.fontFamily ?? 'System',
+            fontSize: getNumericValue(fontSizeOverride ?? field.fontSize, key === 'name' ? 64 : 36),
+            fontFamily: field.fontFamily ?? (key === 'name' ? 'Poppins' : 'Inter'),
             fontWeight: field.fontWeight ?? (key === 'name' ? 'bold' : 'normal'),
-            color: colorOverride ?? field.color ?? '#FFFFFF',
+            color: colorOverride ?? field.color ?? (key === 'name' ? '#FFFFFF' : '#EEEEEE'),
             align: posterState.textAlign ?? field.align ?? 'center',
             bold: key === 'name' ? posterState.nameBold !== false : posterState.messageBold === true,
             italic: key === 'name' ? posterState.nameItalic === true : posterState.messageItalic === true,
@@ -502,90 +540,140 @@ export const buildTemplateRenderConfig = ({
         return accumulator;
     }, {});
 
-    const nextPhotoFrame = photoFrame ? {
-        ...photoFrame,
-        userPosition: posterState.photoPosition ?? { x: 0, y: 0 },
-        userScale: posterState.photoScale ?? 1,
-        shape: posterState.photoShape === 'template' ? photoFrame.shape : posterState.photoShape,
-        animation: {
-            id: posterState.userPhotoAnimation || 'none',
-            config: {},
-        },
-    } : null;
+    const bgOverlay = getTemplateBackgroundOverlay(template);
+    const backgroundOverlay = posterState.bgOverlayColor
+        ? { enabled: true, color: posterState.bgOverlayColor, opacity: posterState.bgOverlayOpacity }
+        : bgOverlay
+            ? { enabled: bgOverlay.enabled !== false, color: bgOverlay.color ?? 'rgba(0,0,0,0.3)', opacity: getNumericValue(bgOverlay.opacity, 0.3) }
+            : undefined;
 
-    const configLayers = getTemplateLayers(template);
-    const templateLayers = configLayers.length
-        ? configLayers
-        : buildDefaultTemplateLayers({
-            template,
-            canvas,
-            photoFrame: nextPhotoFrame,
-            textFields,
-            mediaType,
+    const premiumProfile = posterState.premiumProfile ?? {};
+    const isPremium = posterState.isPremium === true;
+    const business = premiumProfile.business ?? {};
+    const personal = premiumProfile.personal ?? {};
+
+    const activeSocialHandles = business.socialHandles || personal.socialHandles || {};
+    const SOCIAL_PLATFORMS = [
+        { key: 'facebook', icon: 'facebook' },
+        { key: 'instagram', icon: 'instagram' },
+        { key: 'twitter', icon: 'twitter' },
+        { key: 'snapchat', icon: 'snapchat' },
+        { key: 'other', icon: 'link' },
+    ];
+    const socialHandlesArray = SOCIAL_PLATFORMS
+        .filter(p => activeSocialHandles[p.key]?.trim())
+        .map(p => ({
+            platform: p.key,
+            value: `@${activeSocialHandles[p.key]}`,
+            icon: p.icon,
+        }));
+
+    const premiumBands = isPremium ? {
+        topBandHeight: 70,
+        bottomBandHeight: 85,
+        showTopBand: true,
+        showBottomBand: true,
+        topBand: {
+            title: posterState.userName || '',
+            subtitle: business.businessName || personal.organizationName || '',
+        },
+        bottomBand: {
+            contactFields: [
+                {
+                    type: 'mobile',
+                    label: 'Mobile',
+                    value: business.contactMobileNumber || personal.mobileNumber || '',
+                    icon: 'phone',
+                },
+                {
+                    type: 'address',
+                    label: 'Address',
+                    value: business.contactAddress || personal.address || '',
+                    icon: 'map-marker',
+                },
+            ],
+            socialHandles: socialHandlesArray,
+        },
+    } : undefined;
+
+    const templateOutput = getTemplateOutput(template);
+    const bgSource = pickFirstValue(
+        template?.source,
+        template?.Video,
+        template?.video,
+        template?.video_url,
+        template?.videoUrl,
+    );
+    const isVideoBackground = bgSource && /\.mp4|\.mov|m4v|\.webm|\.avi|\.mkv/i.test(bgSource);
+    const rawDuration = isVideoBackground && posterState.backgroundVideoDuration
+        ? posterState.backgroundVideoDuration
+        : getNumericValue(templateOutput?.duration, 10);
+    const outputDuration = Math.min(rawDuration, 30);
+
+    const animations = [];
+    if (resolvedAnimId && resolvedAnimId !== 'none') {
+        const templateAnimations = configJson?.animation || [];
+        const matchedTemplateAnim = templateAnimations.find(a => a?.id === resolvedAnimId);
+        const userExplicitlyChose = userAnimId !== 'none';
+        const defaultAnim = PHOTO_ANIMATION_DEFAULTS[resolvedAnimId];
+        const baseAnim = matchedTemplateAnim ?? (userExplicitlyChose ? defaultAnim : templatePhotoFrameAnim) ?? defaultAnim;
+        animations.push({
+            id: resolvedAnimId,
+            from: baseAnim?.from ?? { translateY: 60, opacity: 0 },
+            to: baseAnim?.to ?? { translateY: 0, opacity: 1 },
+            loop: baseAnim?.loop ?? false,
+            duration: getNumericValue(baseAnim?.duration, 1200),
+            easing: baseAnim?.easing ?? 'ease',
         });
+    }
+
+    const output = {
+        format: templateOutput?.format ?? (animations.length > 0 ? 'MP4' : 'JPEG'),
+        quality: templateOutput?.quality ?? 'high',
+        fps: getNumericValue(templateOutput?.fps, 30),
+        duration: outputDuration,
+        includeAnimation: templateOutput?.includeAnimation ?? animations.length > 0,
+    };
 
     return {
         template: {
-            id: template?.id,
-            name: template?.name,
-            category: template?.category,
-            mediaType,
-            version: template?.version ?? '1.0',
-            canvas,
-            accentColor: posterState.accentColorOverride ?? template?.accentColor,
-            backgroundColor: template?.backgroundColor,
-            footerColor: template?.footerColor,
+            canvas: { width: canvas.width, height: canvas.height },
+            accentColor: posterState.accentColorOverride ?? template?.accentColor ?? configJson?.accentColor ?? '#CCCCCC',
+            backgroundColor: configJson?.background ?? template?.backgroundColor ?? '#000000',
         },
         media: {
-            type: mediaType,
-            backgroundSource: userData.background_image,
-            thumbnailSource: template?.thumbnail,
-            frameOverlaySource: userData.frame_png,
-            backgroundCrop: template?.backgroundCrop ?? null,
+            backgroundSource: pickFirstValue(
+                template?.source,
+                template?.image_url,
+                template?.imageUrl,
+                template?.video_url,
+                template?.videoUrl,
+            ),
+            frameOverlaySource: pickFirstValue(
+                configJson?.frameOverlaySource,
+                configJson?.frame_overlay_source,
+            ),
         },
         userContent: {
             photo: posterState.userPhoto,
             name: posterState.userName,
             message: posterState.userMessage,
-            isPremium: posterState.isPremium === true,
+            isPremium,
         },
         photoFrame: nextPhotoFrame,
-        textFields: {
-            ...textFields,
-            global: {
-                textAlign: posterState.textAlign ?? 'center',
-                textShadow: posterState.textShadow === true,
-            },
-        },
-        premiumProfile: posterState.premiumProfile,
-        premiumBands: posterState.premiumBands,
+        textFields: Object.keys(textFields).length > 0 ? textFields : undefined,
+        backgroundOverlay,
+        premiumBands,
         stickers: posterState.stickers ?? [],
-        backgroundOverlay: {
-            enabled: !!posterState.bgOverlayColor,
-            color: posterState.bgOverlayColor,
-            opacity: posterState.bgOverlayOpacity ?? 0.3,
-        },
-        animation: mediaType === 'VIDEO'
-            ? (template?.config_json?.animation ?? template?.animation ?? [
-                { id: 'fade_up', from: { translateY: 346, opacity: 0.2 }, to: { translateY: 0, opacity: 1 }, loop: false, duration: 1400, easing: 'ease' },
-                { id: 'pop_in', from: { scale: 0.55, opacity: 0.25 }, to: { scale: 1, opacity: 1 }, loop: false, duration: 1400, easing: 'ease' },
-            ])
-            : undefined,
-        designLayout: {
-            index: posterState.designLayoutIndex ?? 0,
-        },
-        specialCategory: posterState.specialCategoryContext,
-        selectedTags: posterState.selectedTags ?? [],
-        templateVariables: userData,
-        templateLayers,
-        output: {
-            format: mediaType === 'VIDEO' ? 'MP4' : 'JPEG',
-            quality: 'high',
-            width: canvas.width,
-            height: canvas.height,
-            fps: mediaType === 'VIDEO' ? 30 : undefined,
-            duration: mediaType === 'VIDEO' ? (template?.duration ?? template?.config_json?.duration ?? 10) : undefined,
-            includeAnimation: mediaType === 'VIDEO',
+        animation: animations.length > 0 ? animations : undefined,
+        output,
+        templateVariables: {
+            name: posterState.userName || '',
+            message: business.businessDescription || posterState.userMessage || '',
+            mobile: business.contactMobileNumber || personal.mobileNumber || '',
+            address: business.contactAddress || personal.address || '',
+            organization: business.businessName || personal.organizationName || '',
+            instagram: business.socialHandles?.instagram || personal.socialHandles?.instagram || '',
         },
     };
 };
@@ -633,10 +721,13 @@ export const normalizeTemplateApiItem = item => {
         source,
         thumbnail,
         config,
+        config_json: config,
         photoFrame: getTemplatePhotoFrame({
             ...item,
             config,
         }),
+        textFields: config?.textFields ?? item?.textFields ?? [],
+        backgroundOverlay: config?.backgroundOverlay ?? item?.backgroundOverlay ?? null,
         backgroundCrop: getTemplateBackgroundCrop({
             ...item,
             config,

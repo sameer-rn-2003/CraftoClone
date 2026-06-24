@@ -2,6 +2,8 @@
 // General-purpose utility functions
 
 import { CATEGORIES } from './constants';
+import { getPresignedUrl } from '../apiService/uploadImage';
+import RNFS from 'react-native-fs';
 
 /**
  * Filter templates by category id
@@ -57,19 +59,50 @@ export const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const base64ToUint8Array = (base64) => {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+};
+
 export const uploadToS3 = async (uploadUrl, fileUri, contentType) => {
-  const response = await fetch(fileUri);
-  const blob = await response.blob();
+  let base64Data;
+  if (fileUri.startsWith('file://')) {
+    const filePath = fileUri.replace('file://', '');
+    base64Data = await RNFS.readFile(filePath, 'base64');
+  } else {
+    base64Data = await RNFS.readFile(fileUri, 'base64');
+  }
+
+  const bytes = base64ToUint8Array(base64Data);
 
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': contentType,
     },
-    body: blob,
+    body: bytes.buffer,
   });
 
   if (!uploadRes.ok) {
     throw new Error('S3 upload failed');
   }
+};
+
+export const uploadUserPhotoToS3 = async (fileUri) => {
+    if (!fileUri) return null;
+    if (fileUri.startsWith('http')) return fileUri;
+
+    const fileName = `user_photo_${Date.now()}.jpg`;
+    const presignRes = await getPresignedUrl({
+        fileName,
+        category: 'generated',
+        contentType: 'image/jpeg',
+    });
+    const { presignedUrl, cdnUrl } = presignRes.data.data;
+    await uploadToS3(presignedUrl, fileUri, 'image/jpeg');
+    return cdnUrl;
 };

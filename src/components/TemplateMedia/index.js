@@ -37,6 +37,7 @@ const TemplateMedia = ({
     useImageFallbackForVideo = false,
     fallback,
     onAudioAvailabilityChange,
+    onVideoLoad,
 }) => {
     const imageSource = getTemplateImageSource(template);
     const videoSource = getTemplateVideoSource(template);
@@ -69,6 +70,9 @@ const TemplateMedia = ({
                         ? data.audioTracks.length > 0
                         : true;
                     onAudioAvailabilityChange?.(hasAudio);
+                    if (data?.duration) {
+                        onVideoLoad?.(data.duration);
+                    }
                 }}
                 repeat
                 resizeMode={resizeMode}

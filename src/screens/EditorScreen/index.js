@@ -31,7 +31,6 @@ import {
     setNameBold, setNameItalic,
     setMessageBold, setMessageItalic,
     setTextAlign, setTextShadow, setShowName, setShowMessage,
-    setPhotoShape,
     hydratePremiumProfile,
     addSticker, removeSticker,
     setPhotoScale, setPremiumProfileField,
@@ -86,14 +85,6 @@ const COLOUR_PALETTE = [
 ];
 
 
-const PHOTO_SHAPES = [
-    { id: 'template', labelKey: 'editor.style.photoShape.default', icon: '⬡' },
-    { id: 'circle', labelKey: 'editor.style.photoShape.circle', icon: '●' },
-    { id: 'rounded', labelKey: 'editor.style.photoShape.rounded', icon: '▣' },
-    { id: 'square', labelKey: 'editor.style.photoShape.square', icon: '■' },
-];
-
-
 const STICKER_ROWS = [
     ['party-popper', 'star-four-points', 'fire', 'heart', 'lightning-bolt', 'meditation', 'sparkles', 'hand-heart'],
     ['trophy', 'crown', 'diamond-stone', 'target', 'rocket-launch', 'arm-flex', 'palette', 'music-note'],
@@ -113,7 +104,6 @@ const TABS = [
     { id: 'photo', icon: 'camera-outline', labelKey: 'editor.tabs.photo' },
     { id: 'text', icon: 'format-text', labelKey: 'editor.tabs.text' },
     { id: 'details', icon: 'card-account-details-outline', labelKey: 'editor.tabs.details' },
-    { id: 'style', icon: 'palette-outline', labelKey: 'editor.tabs.style' },
 ];
 
 // ─── Small reusable atoms ─────────────────────────────────────────
@@ -558,41 +548,6 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
     );
 });
 
-const StyleTab = ({ p, dispatch, isPremium, onUnlockPremium }) => {
-    const { t } = useTranslation();
-    const locked = !isPremium;
-
-    return (
-        <ScrollView showsVerticalScrollIndicator={false}>
-            <SectionLabel>{t('editor.style.photoFrame')}</SectionLabel>
-            <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                <View style={[s.shapeRow, locked && s.lockedSection]}>
-                    {PHOTO_SHAPES.map(sh => (
-                        <Pressable
-                            key={sh.id}
-                            onPress={() => dispatch(setPhotoShape(sh.id))}
-                            style={[s.shapeBtn, p.photoShape === sh.id && s.shapeBtnActive]}>
-                            <Text style={s.shapeIcon}>{sh.icon}</Text>
-                            <Text style={[s.shapeLabel, p.photoShape === sh.id && s.shapeLabelActive]}>
-                                {t(sh.labelKey)}
-                            </Text>
-                        </Pressable>
-                    ))}
-                </View>
-            </LockedInputWrapper>
-
-            {locked && (
-                <Pressable style={s.lockedHintRow} onPress={onUnlockPremium}>
-                    <MaterialCommunityIcons name="crown-circle-outline" style={s.lockedHintIcon} />
-                    <Text style={s.lockedHintText}>Style controls are premium. Tap to unlock.</Text>
-                </Pressable>
-            )}
-
-            <View style={{ height: SPACING.xxl }} />
-        </ScrollView>
-    );
-};
-
 const SpecialTagsPanel = ({ p, dispatch }) => {
     const { t } = useTranslation();
     const type = p.specialCategoryContext?.type;
@@ -630,7 +585,6 @@ const SOCIAL_FIELDS = [
     { key: 'instagram', labelKey: 'Instagram', icon: 'instagram', placeholderKey: '@username' },
     { key: 'twitter', labelKey: 'Twitter / X', icon: 'twitter', placeholderKey: '@username' },
     { key: 'snapchat', labelKey: 'Snapchat', icon: 'snapchat', placeholderKey: '@username' },
-    { key: 'other', labelKey: 'Other', icon: 'at', placeholderKey: '@username' },
 ];
 
 const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave }) => {
@@ -652,8 +606,8 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
 
     const MAX_BOTTOM_DETAILS = 4;
     const BOTTOM_BAND_FIELDS = {
-        personal: ['mobileNumber', 'address', 'socialHandle'],
-        business: ['contactMobileNumber', 'contactAddress', 'contactSocialHandle', 'websiteLink'],
+        personal: ['mobileNumber', 'address'],
+        business: ['contactMobileNumber', 'contactAddress'],
     };
 
     const countBottomDetails = (section) => {
@@ -791,13 +745,6 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             placeholder={t('editor.premium.addressPlaceholder')}
 
                         />
-                        <AppTextInput
-                            label={t('editor.premium.socialHandle')}
-                            value={personal.socialHandle}
-                            onChangeText={v => updateField('personal', 'socialHandle', v)}
-                            placeholder={t('editor.premium.socialPlaceholder')}
-
-                        />
 
                         {renderSocialHandleInputs('personal', personal)}
 
@@ -809,19 +756,6 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             placeholder={t('editor.premium.organizationPlaceholder')}
 
                         />
-                        <Pressable
-                            style={s.logoPickerBtn}
-                            onPress={() => handlePickLogo('personal', 'organizationLogo')}>
-                            <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
-                            <Text style={s.logoPickerText}>
-                                {personal.organizationLogo
-                                    ? t('editor.premium.changeOrganizationLogo')
-                                    : t('editor.premium.uploadOrganizationLogo')}
-                            </Text>
-                        </Pressable>
-                        {personal.organizationLogo ? (
-                            <Image source={{ uri: personal.organizationLogo }} style={s.logoPreview} />
-                        ) : null}
                     </View>
                 </LockedInputWrapper>
             ) : (
@@ -845,21 +779,6 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
 
                         />
 
-                        <SectionLabel>{t('editor.premium.businessLogo')}</SectionLabel>
-                        <Pressable
-                            style={s.logoPickerBtn}
-                            onPress={() => handlePickLogo('business', 'businessLogo')}>
-                            <MaterialCommunityIcons name="image-outline" style={s.logoPickerIcon} />
-                            <Text style={s.logoPickerText}>
-                                {business.businessLogo
-                                    ? t('editor.premium.changeBusinessLogo')
-                                    : t('editor.premium.uploadBusinessLogo')}
-                            </Text>
-                        </Pressable>
-                        {business.businessLogo ? (
-                            <Image source={{ uri: business.businessLogo }} style={s.logoPreview} />
-                        ) : null}
-
                         <SectionLabel>{t('editor.premium.contactDetails')}</SectionLabel>
                         <AppTextInput
                             label={t('editor.premium.mobileNumber')}
@@ -876,23 +795,8 @@ const PremiumDetailsTab = ({ p, dispatch, onPickLogo, onUnlockPremium, onSave })
                             placeholder={t('editor.premium.addressPlaceholder')}
 
                         />
-                        <AppTextInput
-                            label={t('editor.premium.socialHandle')}
-                            value={business.contactSocialHandle}
-                            onChangeText={v => updateField('business', 'contactSocialHandle', v)}
-                            placeholder={t('editor.premium.socialPlaceholder')}
-
-                        />
 
                         {renderSocialHandleInputs('business', business)}
-
-                        <AppTextInput
-                            label={t('editor.premium.websiteLink')}
-                            value={business.websiteLink}
-                            onChangeText={v => updateField('business', 'websiteLink', v)}
-                            placeholder={t('editor.premium.websitePlaceholder')}
-
-                        />
                     </View>
                 </LockedInputWrapper>
             )}
@@ -1221,12 +1125,6 @@ const EditorScreen = ({ navigation, route }) => {
                 onUnlockPremium={openSubscriptionModal}
                 onSave={handlePremiumDetailsSave}
             />;
-            case 'style': return <StyleTab
-                p={p}
-                dispatch={dispatch}
-                isPremium={p.isPremium}
-                onUnlockPremium={openSubscriptionModal}
-            />;
             case 'stickers': return <StickersTab stickers={p.stickers} dispatch={dispatch} />;
             default: return null;
         }
@@ -1338,7 +1236,7 @@ const EditorScreen = ({ navigation, route }) => {
                                     {t(tab.labelKey)}
                                 </Text>
                                 {isActive && <View style={s.tabIndicator} />}
-                                {!p.isPremium && (tab.id === 'details' || tab.id === 'style') && (
+                                {!p.isPremium && tab.id === 'details' && (
                                     <MaterialCommunityIcons name="crown-circle-outline" style={s.tabLockIcon} />
                                 )}
                             </Pressable>

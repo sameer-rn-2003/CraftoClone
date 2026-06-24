@@ -31,5 +31,43 @@ export const PHOTO_ANIMATION_OPTIONS = [
     // { id: 'drift_bottom_right', label: 'Drift Bottom Right' },
 ];
 
+export const PHOTO_ANIMATION_DEFAULTS = {
+    slide_top_right: {
+        from: { translateX: 200, translateY: -400 },
+        to: { translateX: 0, translateY: 0 },
+        loop: false,
+        duration: 1400,
+        easing: 'ease',
+    },
+    fade_up: {
+        from: { translateY: 200, opacity: 0.2 },
+        to: { translateY: 0, opacity: 1 },
+        loop: false,
+        duration: 1400,
+        easing: 'ease',
+    },
+    rotate_soft_left: {
+        from: { rotate: '-12deg', scale: 0.95 },
+        to: { rotate: '0deg', scale: 1 },
+        loop: false,
+        duration: 1400,
+        easing: 'ease',
+    },
+    float_up_down: {
+        from: { translateY: -60 },
+        to: { translateY: 60 },
+        loop: 'alternateSlow',
+        duration: 2000,
+        easing: 'ease',
+    },
+    pop_in: {
+        from: { scale: 0.55, opacity: 0.25 },
+        to: { scale: 1, opacity: 1 },
+        loop: false,
+        duration: 1400,
+        easing: 'bounce',
+    },
+};
+
 export const getPhotoAnimationLabel = animationId =>
     PHOTO_ANIMATION_OPTIONS.find(option => option.id === animationId)?.label ?? 'None';

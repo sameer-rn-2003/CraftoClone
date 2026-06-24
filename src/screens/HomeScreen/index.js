@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Dimensions,
     DeviceEventEmitter,
     FlatList,
@@ -44,13 +45,16 @@ import {
     buildTemplateRenderConfig,
     dedupeTemplates,
     getTemplateCanvasSize,
+    getTemplateTextFields,
     isConfigDrivenTemplate,
     normalizeTemplateMediaType,
     normalizeTemplateApiItem,
 } from '../../utils/templateConfig';
+import { uploadUserPhotoToS3 } from '../../utils/helpers';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview, {
     getPremiumDetailsForPoster,
+    usePhotoAnimationStyle,
 } from '../../components/PosterPreview';
 import TemplateMedia from '../../components/TemplateMedia';
 import ConfiguredTemplateLayers from '../../components/ConfiguredTemplateLayers';
@@ -58,7 +62,7 @@ import MediaAudioToggle from '../../components/MediaAudioToggle';
 import CustomBottomNavigation from '../../components/CustomBottomNavigation';
 import { getTemplateImageSource, getTemplateVideoSource } from '../../utils/templateMedia';
 import useImagePicker from '../../hooks/useImagePicker';
-import { getCategories } from '../../apiService/categoriesApi';
+import { getCategories, getSubcategories } from '../../apiService/categoriesApi';
 import { getTemplatesApi } from '../../apiService/templateApi';
 import { getTrendingTemplatesApi } from '../../apiService/trendingApi';
 import { getUnreadNotificationCountApi } from '../../apiService/notificationApi';
@@ -473,18 +477,21 @@ const SPECIAL_CATEGORY_TYPES = {
     'panchayat chunav': 'panchayat',
     panchayat: 'panchayat',
 };
-const POLITICAL_PARTIES = [
-    { id: 'bjp', name: 'BJP', color: '#F97316' },
-    { id: 'congress', name: 'Congress', color: '#22C55E' },
-    { id: 'aap', name: 'AAP', color: '#2563EB' },
-    { id: 'samajwadi', name: 'Samajwadi Party', color: '#DC2626' },
-];
-const PANCHAYAT_ENTITIES = [
-    { id: 'sarpanch', name: 'Sarpanch Candidate', color: '#0EA5E9' },
-    { id: 'ward', name: 'Ward Member', color: '#8B5CF6' },
-    { id: 'gram', name: 'Gram Panchayat', color: '#16A34A' },
-    { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
-];
+
+const FALLBACK_SUBCATEGORIES = {
+    political: [
+        { id: 'bjp', name: 'BJP', color: '#F97316' },
+        { id: 'congress', name: 'Congress', color: '#22C55E' },
+        { id: 'aap', name: 'AAP', color: '#2563EB' },
+        { id: 'samajwadi', name: 'Samajwadi Party', color: '#DC2626' },
+    ],
+    panchayat: [
+        { id: 'sarpanch', name: 'Sarpanch Candidate', color: '#0EA5E9' },
+        { id: 'ward', name: 'Ward Member', color: '#8B5CF6' },
+        { id: 'gram', name: 'Gram Panchayat', color: '#16A34A' },
+        { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
+    ],
+};
 const CREATE_POSTER_PRESETS = [
     { id: 'image-1', name: 'Image 1', color: '#F97316', source: require('../../assets/images/image-1.jpg') },
     { id: 'image-2', name: 'Image 2', color: '#2563EB', source: require('../../assets/images/image-2.jpg') },
@@ -585,6 +592,53 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
     const shouldRenderFallbackBadge = userPhoto && !photoFrameStyle;
     const isVideoTemplate = useMemo(() => !!getTemplateVideoSource(template), [template]);
 
+    // Extract photo frame animation from config_json.photoFrame.animation
+    const configAnimation = useMemo(() => {
+        const configJson = template?.config_json ?? template?.config ?? null;
+        return configJson?.photoFrame?.animation ?? null;
+    }, [template]);
+
+    const animationId = configAnimation?.id || 'none';
+
+    // Frame metrics for animation (from template config, unscaled)
+    const animFrameMetrics = useMemo(() => ({
+        width: template?.photoFrame?.width || configAnimation?.width || 0,
+        height: template?.photoFrame?.height || configAnimation?.height || 0,
+    }), [template?.photoFrame?.width, template?.photoFrame?.height, configAnimation?.width, configAnimation?.height]);
+
+    // Animation style — only plays when shouldPlay is true
+    const photoAnimationStyle = usePhotoAnimationStyle({
+        animationId: shouldPlay ? animationId : 'none',
+        canvasSize,
+        frameMetrics: animFrameMetrics,
+        enablePhotoAnimation: true,
+        configAnimation: shouldPlay ? configAnimation : null,
+    });
+
+    // Extract content animation from config_json.contentAnimation or textFields.*.animation
+    const contentAnimationConfig = useMemo(() => {
+        const configJson = template?.config_json ?? template?.config ?? null;
+        if (configJson?.contentAnimation) return configJson.contentAnimation;
+        const textFields = configJson?.textFields;
+        if (textFields && typeof textFields === 'object') {
+            for (const field of Object.values(textFields)) {
+                if (field?.animation) return field.animation;
+            }
+        }
+        return null;
+    }, [template]);
+
+    const contentAnimationId = contentAnimationConfig?.id || 'none';
+
+    // Content animation style — only plays when shouldPlay is true
+    const contentAnimationStyle = usePhotoAnimationStyle({
+        animationId: shouldPlay ? contentAnimationId : 'none',
+        canvasSize,
+        frameMetrics: { width: canvasSize.width * 0.8, height: 60 },
+        enablePhotoAnimation: true,
+        configAnimation: shouldPlay ? contentAnimationConfig : null,
+    });
+
     const socialItems = useMemo(() => {
         if (!premiumDetails?.socials) return [];
         return premiumDetails.socials.slice(0, 3);
@@ -602,9 +656,6 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
             {premiumDetails ? (
                 <>
                     <View style={[styles.reelPremiumTop, { height: topBandHeight }]}>
-                        {premiumDetails.logo ? (
-                            <Image source={{ uri: premiumDetails.logo }} style={styles.reelPremiumLogo} />
-                        ) : null}
                         <View style={styles.reelPremiumTitleWrap}>
                             {premiumDetails.name ? (
                                 <Text style={styles.reelPremiumName} numberOfLines={1}>{premiumDetails.name}</Text>
@@ -691,16 +742,22 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 : photoShape === 'rounded' ? 24
                                     : templateRadius;
                         return userPhoto ? (
-                            <View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }]} pointerEvents="none">
+                            <Animated.View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }, {
+                                opacity: photoAnimationStyle.opacity,
+                                transform: photoAnimationStyle.transform,
+                            }]} pointerEvents="none">
                                 <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
-                            </View>
+                            </Animated.View>
                         ) : null;
                     }}
                 />
             ) : userPhoto && photoFrameStyle ? (
-                <View style={[styles.userPhotoFrame, photoFrameStyle]} pointerEvents="none">
+                <Animated.View style={[styles.userPhotoFrame, photoFrameStyle, {
+                    opacity: photoAnimationStyle.opacity,
+                    transform: photoAnimationStyle.transform,
+                }]} pointerEvents="none">
                     <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
-                </View>
+                </Animated.View>
             ) : null}
 
             {shouldRenderFallbackBadge && fallbackBadgeStyle ? (
@@ -708,6 +765,66 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                     <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
                 </View>
             ) : null}
+
+            {/* ── Text fields for non-config templates ── */}
+            {!hasConfigLayers && (() => {
+                const configTextFields = getTemplateTextFields(template);
+                if (!configTextFields || typeof configTextFields !== 'object' || Array.isArray(configTextFields)) {
+                    return null;
+                }
+                const resolvedName = renderContext?.headline || renderContext?.name || userName || '';
+                const resolvedMessage = renderContext?.subtext || renderContext?.message || userMessage || '';
+                const scaleX = posterLayout?.scaleX ?? 1;
+                const scaleY = posterLayout?.scaleY ?? 1;
+                const offsetX = posterLayout?.offsetX ?? 0;
+                const offsetY = posterLayout?.offsetY ?? 0;
+                return (
+                    <>
+                        {configTextFields.name && resolvedName ? (
+                            <Animated.Text
+                                pointerEvents="none"
+                                style={{
+                                    position: 'absolute',
+                                    left: (configTextFields.name.position?.x ?? 16) * scaleX + offsetX,
+                                    top: (configTextFields.name.position?.y ?? 0) * scaleY + offsetY,
+                                    width: (configTextFields.name.width ?? 267) * scaleX,
+                                    color: configTextFields.name.color ?? '#FFFFFF',
+                                    fontSize: (configTextFields.name.fontSize ?? 28) * Math.min(scaleX, scaleY),
+                                    fontFamily: configTextFields.name.fontFamily,
+                                    fontWeight: configTextFields.name.fontWeight ?? (configTextFields.name.bold ? 'bold' : 'normal'),
+                                    textAlign: configTextFields.name.align ?? 'center',
+                                    opacity: configTextFields.name.visible === false ? 0 : (contentAnimationStyle?.opacity ?? 1),
+                                    transform: contentAnimationStyle?.transform || [],
+                                }}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit>
+                                {resolvedName}
+                            </Animated.Text>
+                        ) : null}
+                        {configTextFields.message && resolvedMessage ? (
+                            <Animated.Text
+                                pointerEvents="none"
+                                style={{
+                                    position: 'absolute',
+                                    left: (configTextFields.message.position?.x ?? 16) * scaleX + offsetX,
+                                    top: (configTextFields.message.position?.y ?? 0) * scaleY + offsetY,
+                                    width: (configTextFields.message.width ?? 267) * scaleX,
+                                    color: configTextFields.message.color ?? '#EEEEEE',
+                                    fontSize: (configTextFields.message.fontSize ?? 18) * Math.min(scaleX, scaleY),
+                                    fontFamily: configTextFields.message.fontFamily,
+                                    fontWeight: configTextFields.message.fontWeight ?? 'normal',
+                                    textAlign: configTextFields.message.align ?? 'center',
+                                    opacity: configTextFields.message.visible === false ? 0 : (contentAnimationStyle?.opacity ?? 1),
+                                    transform: contentAnimationStyle?.transform || [],
+                                }}
+                                numberOfLines={2}
+                                adjustsFontSizeToFit>
+                                {resolvedMessage}
+                            </Animated.Text>
+                        ) : null}
+                    </>
+                );
+            })()}
         </View>
     );
 };
@@ -812,6 +929,9 @@ const HomeScreen = ({ navigation }) => {
     const [createSearch, setCreateSearch] = useState('');
     const [specialPickerType, setSpecialPickerType] = useState(null);
     const [pendingSpecialCategory, setPendingSpecialCategory] = useState(null);
+    const [subcategoryChoices, setSubcategoryChoices] = useState([]);
+    const [subcategoryLoading, setSubcategoryLoading] = useState(false);
+    const [subcategoryIdSelected, setSubcategoryIdSelected] = useState(null);
     const [subscriptionPlans, setSubscriptionPlans] = useState([]);
     const [subscriptionPlansLoading, setSubscriptionPlansLoading] = useState(false);
     const [submittingPlanId, setSubmittingPlanId] = useState(null);
@@ -927,7 +1047,7 @@ const HomeScreen = ({ navigation }) => {
         navigation?.navigate?.('SettingsScreen');
     }, [navigation]);
 
-    const fetchTemplates = useCallback(async ({ pageNumber = 1, searchText = '', categoryId = null } = {}) => {
+    const fetchTemplates = useCallback(async ({ pageNumber = 1, searchText = '', categoryId = null, subcategoryId = null } = {}) => {
         const requestId = ++requestIdRef.current;
         const isFirstPage = pageNumber === 1;
 
@@ -940,6 +1060,7 @@ const HomeScreen = ({ navigation }) => {
 
             const res = await getTemplatesApi({
                 category_id: categoryId,
+                subcategory_id: subcategoryId,
                 language: i18n.language || 'en',
                 search: searchText,
                 page: pageNumber,
@@ -1125,8 +1246,9 @@ const HomeScreen = ({ navigation }) => {
             pageNumber: 1,
             searchText: debouncedSearch,
             categoryId: categoryIdSelected,
+            subcategoryId: subcategoryIdSelected,
         });
-    }, [activeCategory, categoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates]);
+    }, [activeCategory, categoryIdSelected, subcategoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates]);
 
     const handleSearch = useCallback(text => {
         setSearch(text);
@@ -1224,8 +1346,9 @@ const HomeScreen = ({ navigation }) => {
             pageNumber: page + 1,
             searchText: debouncedSearch,
             categoryId: categoryIdSelected,
+            subcategoryId: subcategoryIdSelected,
         });
-    }, [activeCategory, categoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
+    }, [activeCategory, categoryIdSelected, subcategoryIdSelected, debouncedSearch, fetchFavoriteTemplates, fetchTemplates, hasLoadedOnce, hasMore, isInitialLoading, isLoadingMore, page, templates.length]);
 
     const refreshFeed = useCallback(async () => {
         if (isRefreshing) return;
@@ -1293,8 +1416,8 @@ const HomeScreen = ({ navigation }) => {
         return CREATE_POSTER_PRESETS.filter(item => item.name.toLowerCase().includes(query));
     }, [createSearch]);
     const specialPickerChoices = useMemo(
-        () => specialPickerType === 'panchayat' ? PANCHAYAT_ENTITIES : POLITICAL_PARTIES,
-        [specialPickerType],
+        () => subcategoryChoices,
+        [subcategoryChoices],
     );
     const specialChangeLabel = specialCategoryContext?.type === 'panchayat'
         ? t('home.actions.changePanchayat', { defaultValue: 'Change Panchayat' })
@@ -1402,14 +1525,34 @@ const HomeScreen = ({ navigation }) => {
         navigation?.navigate?.('TemplateScreen', { categoryId: 'all' });
     }, [dispatch, navigation]);
 
-    const handleCategoryPress = useCallback((item) => {
+    const handleCategoryPress = useCallback(async (item) => {
         const specialType = getSpecialCategoryType(item);
         if (specialType) {
             setPendingSpecialCategory(item);
             setSpecialPickerType(specialType);
+            setSubcategoryLoading(true);
+            try {
+                const catId = item?.categoryId;
+                const res = await getSubcategories(catId);
+                const apiData = res?.data?.data || [];
+                const formatted = apiData.map(sub => ({
+                    id: sub.id,
+                    name: sub.name,
+                    color: '#6366F1',
+                    description: sub.description || '',
+                    image_url: sub.image_url,
+                }));
+                setSubcategoryChoices(formatted.length > 0 ? formatted : (FALLBACK_SUBCATEGORIES[specialType] || []));
+            } catch (e) {
+                console.warn('Failed to fetch subcategories:', e?.message);
+                setSubcategoryChoices(FALLBACK_SUBCATEGORIES[specialType] || []);
+            } finally {
+                setSubcategoryLoading(false);
+            }
             return;
         }
 
+        setSubcategoryIdSelected(null);
         dispatch(setSpecialCategoryContext(null));
         setActiveTab('home');
         setActiveCategoryUi(item?.id);
@@ -1437,6 +1580,7 @@ const HomeScreen = ({ navigation }) => {
             name: choice.name,
             color: choice.color,
         }));
+        setSubcategoryIdSelected(choice.id);
         setActiveTab('home');
         setActiveCategoryUi(item?.id);
         const categoryId = item?.categoryId === 'all' || item?.id === FAVORITES_CHIP.id
@@ -1480,16 +1624,19 @@ const HomeScreen = ({ navigation }) => {
 
     const generateTemplateMediaFile = useCallback(async item => {
         const mediaType = normalizeTemplateMediaType(item);
+
+        const photoUrl = await uploadUserPhotoToS3(posterState.userPhoto);
+
         const renderContext = buildTemplateRenderContext({
             template: item,
-            userPhoto: posterState.userPhoto,
+            userPhoto: photoUrl,
             userName: posterState.userName,
             userMessage: posterState.userMessage,
             premiumProfile: posterState.premiumProfile,
         });
         const renderConfig = buildTemplateRenderConfig({
             template: item,
-            posterState,
+            posterState: { ...posterState, userPhoto: photoUrl },
             userData: renderContext,
         });
 
@@ -2256,12 +2403,21 @@ const HomeScreen = ({ navigation }) => {
                         </View>
 
                         <View style={styles.specialChoiceList}>
-                            {specialPickerChoices.map(choice => (
+                            {subcategoryLoading ? (
+                                <View style={{ padding: 20, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <Text style={{ marginTop: 8, color: COLORS.textSecondary }}>Loading...</Text>
+                                </View>
+                            ) : specialPickerChoices.map(choice => (
                                 <Pressable
                                     key={choice.id}
                                     style={styles.specialChoice}
                                     onPress={() => applySpecialCategorySelection(choice)}>
-                                    <View style={[styles.specialChoiceSwatch, { backgroundColor: choice.color }]} />
+                                    {choice.image_url ? (
+                                        <Image source={{ uri: choice.image_url }} style={[styles.specialChoiceSwatch, { backgroundColor: choice.color }]} />
+                                    ) : (
+                                        <View style={[styles.specialChoiceSwatch, { backgroundColor: choice.color }]} />
+                                    )}
                                     <Text style={styles.specialChoiceText}>{choice.name}</Text>
                                     <MaterialCommunityIcons name="chevron-right" style={styles.specialChoiceIcon} />
                                 </Pressable>

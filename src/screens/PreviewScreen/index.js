@@ -27,6 +27,7 @@ import { getTemplateCanvasSize, buildTemplateRenderConfig, buildTemplateRenderCo
 import mediaGenerationService from '../../services/mediaGenerationService';
 import { shareImage } from '../../services/imageService';
 import { trackTemplateActionApi } from '../../apiService/trackingApi';
+import { uploadUserPhotoToS3 } from '../../utils/helpers';
 import {
     COLORS,
     FONTS,
@@ -92,16 +93,18 @@ const PreviewScreen = ({ navigation, route }) => {
         if (!selectedTemplate) return;
         const mediaType = isVideoTemplate ? 'VIDEO' : 'IMAGE';
 
+        const photoUrl = await uploadUserPhotoToS3(posterState.userPhoto);
+
         const renderContext = buildTemplateRenderContext({
             template: selectedTemplate,
-            userPhoto: posterState.userPhoto,
+            userPhoto: photoUrl,
             userName: posterState.userName,
             userMessage: posterState.userMessage,
             premiumProfile: posterState.premiumProfile,
         });
         const renderConfig = buildTemplateRenderConfig({
             template: selectedTemplate,
-            posterState,
+            posterState: { ...posterState, userPhoto: photoUrl },
             userData: renderContext,
         });
 
@@ -162,8 +165,8 @@ const PreviewScreen = ({ navigation, route }) => {
                 await queueHomeMetricUpdate('share');
             }
         } catch (e) {
-            console.error('Media share error', e);
-            Alert.alert('Render failed', String(e?.message || e));
+            console.error('Media share errorr', e);
+            Alert.alert('Render failedd', String(e?.message || e));
         } finally {
             setIsGenerating(false);
             setGenerationMessage('');

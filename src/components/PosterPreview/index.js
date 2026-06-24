@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     Animated,
     Image,
@@ -18,6 +18,7 @@ import {
     setPhotoPosition,
     setPhotoScale,
     updateStickerPosition,
+    setBackgroundVideoDuration,
 } from '../../store/posterSlice';
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
 import {
@@ -31,6 +32,9 @@ import {
     buildTemplateRenderContext,
     getTemplateEditableTextRole,
     getTemplateCanvasSize,
+    getTemplateTextFields,
+    getTemplateBackgroundOverlay,
+    getTemplateAnimation,
     isConfigDrivenTemplate,
 } from '../../utils/templateConfig';
 
@@ -84,7 +88,6 @@ export const getPremiumDetailsForPoster = posterState => {
         type: 'business',
         name: source.businessName,
         description: source.businessDescription,
-        logo: source.businessLogo,
         mobile: source.contactMobileNumber,
         address: source.contactAddress,
         social: source.contactSocialHandle,
@@ -94,7 +97,6 @@ export const getPremiumDetailsForPoster = posterState => {
         type: 'personal',
         name: source.organizationName,
         description: '',
-        logo: source.organizationLogo,
         mobile: source.mobileNumber,
         address: source.address,
         social: source.socialHandle,
@@ -105,7 +107,6 @@ export const getPremiumDetailsForPoster = posterState => {
     const hasAnyDetails = [
         details.name,
         details.description,
-        details.logo,
         details.mobile,
         details.address,
         details.social,
@@ -276,7 +277,24 @@ const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
 
 // ─── Photo animation ──────────────────────────────────────────────
 
-const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMetrics = {}) => {
+const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMetrics = {}, configAnimation = null) => {
+    // If we have a config animation with from/to values, use them directly
+    if (configAnimation && configAnimation.from && configAnimation.to) {
+        return {
+            from: configAnimation.from,
+            to: configAnimation.to,
+            loop: configAnimation.loop === true ? 'alternateSlow' : configAnimation.loop === 'alternateSlow' ? 'alternateSlow' : false,
+            duration: configAnimation.duration || 1400,
+            easing: configAnimation.easing === 'spring' ? 'bounce' : 'ease',
+        };
+    }
+
+    // If config animation has an id and user hasn't selected a custom animation,
+    // use the config animation id
+    const effectiveAnimationId = (animationId === 'none' && configAnimation?.id)
+        ? configAnimation.id
+        : animationId;
+
     const frameWidth = Number(frameMetrics?.width) || 0;
     const frameHeight = Number(frameMetrics?.height) || 0;
     const travelX = Math.max(canvasSize.width * 0.9, frameWidth + canvasSize.width * 0.2);
@@ -286,7 +304,7 @@ const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMet
     const shortTravelX = Math.max(canvasSize.width * 0.18, 36);
     const shortTravelY = Math.max(canvasSize.height * 0.18, 36);
 
-    switch (animationId) {
+    switch (effectiveAnimationId) {
         // case 'slide_left_center':
         //     return { from: { translateX: -travelX }, to: { translateX: 0 } };
         // case 'slide_right_center':
@@ -351,11 +369,12 @@ const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMet
     }
 };
 
-const usePhotoAnimationStyle = ({
+export const usePhotoAnimationStyle = ({
     animationId = 'none',
     canvasSize,
     frameMetrics,
     enablePhotoAnimation = true,
+    configAnimation = null,
 }) => {
     const progress = useRef(new Animated.Value(1)).current;
     const canvasWidth = canvasSize?.width ?? POSTER_SIZE.width;
@@ -368,9 +387,10 @@ const usePhotoAnimationStyle = ({
                 animationId,
                 { width: canvasWidth, height: canvasHeight },
                 { width: frameWidth, height: frameHeight },
+                configAnimation,
             )
             : null),
-        [animationId, canvasWidth, canvasHeight, enablePhotoAnimation, frameWidth, frameHeight],
+        [animationId, canvasWidth, canvasHeight, enablePhotoAnimation, frameWidth, frameHeight, configAnimation],
     );
 
     useEffect(() => {
@@ -472,6 +492,7 @@ const DraggablePhoto = ({
     allowPinchScale = true,
     interactionScale = 1,
     resizeMode = 'cover',
+    configAnimation = null,
 }) => {
     const dispatch = useDispatch();
     const { photoPosition } = useSelector(s => s.poster);
@@ -577,6 +598,7 @@ const DraggablePhoto = ({
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
+        configAnimation,
     });
 
     return (
@@ -609,7 +631,7 @@ const DraggablePhoto = ({
     );
 };
 
-const StaticPhoto = ({
+export const StaticPhoto = ({
     photoFrame,
     frameStyle,
     photoUri,
@@ -620,6 +642,7 @@ const StaticPhoto = ({
     photoScale,
     enablePhotoAnimation = true,
     resizeMode = 'cover',
+    configAnimation = null,
 }) => {
     const frameBaseStyle = frameStyle
         ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
@@ -630,6 +653,7 @@ const StaticPhoto = ({
         canvasSize,
         frameMetrics: frameBaseStyle,
         enablePhotoAnimation,
+        configAnimation,
     });
 
     return (
@@ -752,6 +776,7 @@ const DraggableText = ({
     setScaleAction,
     allowPinchScale = true,
     interactionScale = 1,
+    contentAnimationStyle,
 }) => {
     const dispatch = useDispatch();
 
@@ -853,7 +878,9 @@ const DraggableText = ({
                 resolveTextBounds(field),
                 textStyle,
                 {
+                    opacity: contentAnimationStyle?.opacity ?? 1,
                     transform: [
+                        ...(contentAnimationStyle?.transform || []),
                         { scale: scaleAnim },
                         ...pan.getTranslateTransform(),
                     ],
@@ -867,14 +894,16 @@ const DraggableText = ({
     );
 };
 
-const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textScale }) => (
-    <Text
+const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textScale, contentAnimationStyle }) => (
+    <Animated.Text
         style={[
             styles.textField,
             resolveTextBounds(field),
             textStyle,
             {
+                opacity: contentAnimationStyle?.opacity ?? 1,
                 transform: [
+                    ...(contentAnimationStyle?.transform || []),
                     { scale: textScale },
                     { translateX: textPosition.x },
                     { translateY: textPosition.y },
@@ -884,7 +913,7 @@ const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textS
         numberOfLines={numberOfLines}
         adjustsFontSizeToFit>
         {text}
-    </Text>
+    </Animated.Text>
 );
 
 const DraggableNameText = props => <DraggableText {...props} numberOfLines={1} />;
@@ -905,7 +934,6 @@ export const PremiumPosterDetailsFrame = ({
     const topAlignment = variant === 1 ? 'flex-start' : variant === 2 ? 'flex-end' : 'center';
     const topDirection = variant === 2 ? 'row-reverse' : 'row';
     const textAlign = variant === 1 ? 'left' : variant === 2 ? 'right' : 'center';
-    const logoSize = Math.max(48, canvasSize.width * 0.065);
     const contactItems = [
         details.mobile ? { icon: 'phone-outline', text: details.mobile } : null,
         details.address ? { icon: 'map-marker-outline', text: details.address } : null,
@@ -921,13 +949,6 @@ export const PremiumPosterDetailsFrame = ({
                     styles.premiumTopContent,
                     { justifyContent: topAlignment, flexDirection: topDirection },
                 ]}>
-                    {details.logo ? (
-                        <Image
-                            source={{ uri: details.logo }}
-                            style={[styles.premiumLogo, { width: logoSize, height: logoSize }]}
-                            resizeMode="cover"
-                        />
-                    ) : null}
                     <View style={[styles.premiumTitleWrap, { alignItems: topAlignment }]}>
                         {details.name ? (
                             <Text style={[styles.premiumName, { textAlign }]} numberOfLines={1}>
@@ -983,6 +1004,10 @@ const PosterPreview = ({
     interactionScale = 1,
 }) => {
     const p = useSelector(s => s.poster);
+    const dispatch = useDispatch();
+    const onVideoLoad = useCallback((duration) => {
+        dispatch(setBackgroundVideoDuration(duration));
+    }, [dispatch]);
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
@@ -1004,12 +1029,40 @@ const PosterPreview = ({
         userMessage: p.userMessage,
     }), [displayPhotoUri, p.userMessage, p.userName, selectedTemplate]);
 
+    // Extract photo frame animation from config_json.photoFrame.animation
+    const photoFrameAnimationConfig = useMemo(() => {
+        const configJson = selectedTemplate?.config_json ?? selectedTemplate?.config ?? null;
+        return configJson?.photoFrame?.animation ?? null;
+    }, [selectedTemplate]);
+
+    // Extract content animation from config_json.contentAnimation or textFields.*.animation
+    const contentAnimationConfig = useMemo(() => {
+        const configJson = selectedTemplate?.config_json ?? selectedTemplate?.config ?? null;
+        if (configJson?.contentAnimation) return configJson.contentAnimation;
+        const textFields = configJson?.textFields;
+        if (textFields && typeof textFields === 'object') {
+            for (const field of Object.values(textFields)) {
+                if (field?.animation) return field.animation;
+            }
+        }
+        return null;
+    }, [selectedTemplate]);
+
+    const contentAnimationId = contentAnimationConfig?.id || 'none';
+
+    const contentAnimationStyle = usePhotoAnimationStyle({
+        animationId: 'none',
+        canvasSize,
+        frameMetrics: { width: canvasSize.width * 0.8, height: 60 },
+        enablePhotoAnimation: true,
+        configAnimation: contentAnimationConfig,
+    });
+
     if (!selectedTemplate) return null;
 
     const {
         backgroundColor, accentColor: templateAccent, headerColor,
-        footerColor, pattern, photoFrame, textFields,
-        layout = 'top',
+        footerColor, pattern, photoFrame, layout = 'top',
     } = selectedTemplate;
     const templateImage = getTemplateImageSource(selectedTemplate);
     const templateHasVideo = hasTemplateVideo(selectedTemplate);
@@ -1018,11 +1071,70 @@ const PosterPreview = ({
     const accentColor = p.accentColorOverride || templateAccent || COLORS.primary;
 
     // ── Text field resolution ────────────────────────────────────
-    // If the template has no textFields (most reel/video templates), we create
-    // sensible fallback positions so the user's name & message always appear
-    // on the canvas and remain draggable.
-    const nameField = textFields?.find(f => f.key === 'name') ?? makeFallbackNameField(canvasSize);
-    const messageField = textFields?.find(f => f.key === 'message') ?? makeFallbackMessageField(canvasSize);
+    // Support both formats:
+    // 1. config_json.textFields as object: { name: { position, width, fontSize, ... }, message: { ... } }
+    // 2. Legacy array: [{ key: 'name', x, y, ... }, { key: 'message', ... }]
+    const configTextFields = getTemplateTextFields(selectedTemplate);
+    const legacyTextFields = selectedTemplate?.textFields;
+
+    const normalizeTextField = (field, key) => {
+        if (!field) return null;
+        // New config_json format: { position: { x, y }, width, fontSize, ... }
+        if (field.position && typeof field.position === 'object') {
+            return {
+                key,
+                x: field.position.x ?? field.x ?? 16,
+                y: field.position.y ?? field.y ?? 0,
+                fieldWidth: field.width ?? field.fieldWidth ?? canvasSize.width - 32,
+                fontSize: field.fontSize ?? (key === 'name' ? 28 : 18),
+                fontFamily: field.fontFamily,
+                fontWeight: field.fontWeight,
+                color: field.color ?? '#FFFFFF',
+                align: field.align ?? 'center',
+                visible: field.visible !== false,
+            };
+        }
+        // Legacy array format: { key, x, y, fieldWidth, fontSize, ... }
+        if (field.key === key || (!field.key && key === 'name')) {
+            return {
+                key: key,
+                x: field.x ?? 16,
+                y: field.y ?? 0,
+                fieldWidth: field.fieldWidth ?? field.width ?? canvasSize.width - 32,
+                fontSize: field.fontSize ?? (key === 'name' ? 28 : 18),
+                fontFamily: field.fontFamily,
+                fontWeight: field.fontWeight,
+                color: field.color ?? '#FFFFFF',
+                align: field.align ?? 'center',
+                visible: field.visible !== false,
+            };
+        }
+        return null;
+    };
+
+    // Extract name and message fields from config_json or legacy format
+    let nameField = null;
+    let messageField = null;
+
+    if (configTextFields && typeof configTextFields === 'object' && !Array.isArray(configTextFields)) {
+        // config_json.textFields object format
+        nameField = normalizeTextField(configTextFields.name, 'name');
+        messageField = normalizeTextField(configTextFields.message, 'message');
+    }
+
+    // Fallback to legacy array format
+    if (!nameField && Array.isArray(legacyTextFields)) {
+        nameField = legacyTextFields.find(f => f?.key === 'name') ?? null;
+        if (nameField) nameField = normalizeTextField(nameField, 'name');
+    }
+    if (!messageField && Array.isArray(legacyTextFields)) {
+        messageField = legacyTextFields.find(f => f?.key === 'message') ?? null;
+        if (messageField) messageField = normalizeTextField(messageField, 'message');
+    }
+
+    // Final fallback to sensible defaults
+    if (!nameField) nameField = makeFallbackNameField(canvasSize);
+    if (!messageField) messageField = makeFallbackMessageField(canvasSize);
 
     // Center the name field on the poster so it's always visible and draggable
     const centeredNameField = applyDesignToTextField({
@@ -1110,13 +1222,15 @@ const PosterPreview = ({
                     setPositionAction={setNamePosition}
                     setScaleAction={setNameScale}
                     allowPinchScale={allowPinchScale}
-                    interactionScale={interactionScale} />
+                    interactionScale={interactionScale}
+                    contentAnimationStyle={contentAnimationStyle} />
                 : <StaticNameText
                     field={centeredField}
                     text={text}
                     textStyle={textStyle}
                     textPosition={p.namePosition ?? { x: 0, y: 0 }}
-                    textScale={p.nameScale ?? 1} />;
+                    textScale={p.nameScale ?? 1}
+                    contentAnimationStyle={contentAnimationStyle} />;
         }
 
         return interactive
@@ -1134,7 +1248,8 @@ const PosterPreview = ({
                 setPositionAction={setMessagePosition}
                 setScaleAction={setMessageScale}
                 allowPinchScale={allowPinchScale}
-                interactionScale={interactionScale} />
+                interactionScale={interactionScale}
+                contentAnimationStyle={contentAnimationStyle} />
             : <StaticMessageText
                 field={applyDesignToTextField({
                     field,
@@ -1145,7 +1260,8 @@ const PosterPreview = ({
                 text={text}
                 textStyle={textStyle}
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}
-                textScale={p.messageScale ?? 1} />;
+                textScale={p.messageScale ?? 1}
+                contentAnimationStyle={contentAnimationStyle} />;
     };
 
     // ── Photo layer ──────────────────────────────────────────────
@@ -1173,7 +1289,8 @@ const PosterPreview = ({
                     photoScale={p.photoScale ?? 1}
                     enablePhotoAnimation={enablePhotoAnimation}
                     allowPinchScale={allowPinchScale}
-                    interactionScale={interactionScale} />
+                    interactionScale={interactionScale}
+                    configAnimation={photoFrameAnimationConfig} />
                 : <StaticPhoto
                     frameStyle={designedPhotoFrame}
                     photoUri={displayPhotoUri}
@@ -1182,7 +1299,8 @@ const PosterPreview = ({
                     canvasSize={canvasSize}
                     photoShape={p.photoShape ?? 'template'}
                     enablePhotoAnimation={enablePhotoAnimation}
-                    photoScale={p.photoScale ?? 1} />
+                    photoScale={p.photoScale ?? 1}
+                    configAnimation={photoFrameAnimationConfig} />
         )
         : null;
 
@@ -1210,7 +1328,8 @@ const PosterPreview = ({
                 enablePhotoAnimation={enablePhotoAnimation}
                 allowPinchScale={allowPinchScale}
                 interactionScale={interactionScale}
-                resizeMode={resizeMode} />
+                resizeMode={resizeMode}
+                configAnimation={photoFrameAnimationConfig} />
             : <StaticPhoto
                 frameStyle={designedConfigFrameStyle}
                 photoUri={displayPhotoUri}
@@ -1220,7 +1339,8 @@ const PosterPreview = ({
                 photoShape={p.photoShape ?? 'template'}
                 enablePhotoAnimation={enablePhotoAnimation}
                 photoScale={p.photoScale ?? 1}
-                resizeMode={resizeMode} />;
+                resizeMode={resizeMode}
+                configAnimation={photoFrameAnimationConfig} />;
     };
 
     // ── The display text (with guaranteed fallback) ──────────────
@@ -1259,6 +1379,7 @@ const PosterPreview = ({
                     shouldPlay={playVideo}
                     muted={mediaMuted}
                     onAudioAvailabilityChange={onMediaAudioStateChange}
+                    onVideoLoad={onVideoLoad}
                     useImageFallbackForVideo={preferStillImageForVideo}
                 />
             ) : null}
@@ -1292,15 +1413,22 @@ const PosterPreview = ({
             ) : null}
 
             {/* ── 2. Background overlay ── */}
-            {p.bgOverlayColor && (
-                <View
-                    pointerEvents="none"
-                    style={[StyleSheet.absoluteFill, {
-                        backgroundColor: p.bgOverlayColor,
-                        opacity: p.bgOverlayOpacity,
-                    }]}
-                />
-            )}
+            {(() => {
+                const overlay = getTemplateBackgroundOverlay(selectedTemplate);
+                const overlayColor = p.bgOverlayColor ?? overlay?.color ?? null;
+                const overlayOpacity = p.bgOverlayOpacity ?? overlay?.opacity ?? 0.3;
+                const overlayEnabled = overlay?.enabled !== false;
+                if (!overlayColor || !overlayEnabled) return null;
+                return (
+                    <View
+                        pointerEvents="none"
+                        style={[StyleSheet.absoluteFill, {
+                            backgroundColor: overlayColor,
+                            opacity: overlayOpacity,
+                        }]}
+                    />
+                );
+            })()}
 
             {/* ── 3. Photo + text layers ── */}
             {isConfigDriven ? (
@@ -1328,13 +1456,15 @@ const PosterPreview = ({
                         setPositionAction={setNamePosition}
                         setScaleAction={setNameScale}
                         allowPinchScale={allowPinchScale}
-                        interactionScale={interactionScale} />
+                        interactionScale={interactionScale}
+                        contentAnimationStyle={contentAnimationStyle} />
                     : <StaticNameText
                         field={centeredNameField}
                         text={displayName}
                         textStyle={nameTextStyle}
                         textPosition={p.namePosition ?? { x: 0, y: 0 }}
-                        textScale={p.nameScale ?? 1} />
+                        textScale={p.nameScale ?? 1}
+                        contentAnimationStyle={contentAnimationStyle} />
             )}
 
             {/* ── 5. Message text
@@ -1350,13 +1480,15 @@ const PosterPreview = ({
                         setPositionAction={setMessagePosition}
                         setScaleAction={setMessageScale}
                         allowPinchScale={allowPinchScale}
-                        interactionScale={interactionScale} />
+                        interactionScale={interactionScale}
+                        contentAnimationStyle={contentAnimationStyle} />
                     : <StaticMessageText
                         field={designedMessageField}
                         text={displayMessage}
                         textStyle={messageTextStyle}
                         textPosition={p.messagePosition ?? { x: 0, y: 0 }}
-                        textScale={p.messageScale ?? 1} />
+                        textScale={p.messageScale ?? 1}
+                        contentAnimationStyle={contentAnimationStyle} />
             )}
 
             {(p.selectedTags || []).length > 0 ? (

@@ -85,14 +85,14 @@ API.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
 
-        // Refresh failed — remove tokens, keep user data, switch to auth
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token']);
-        const profileRaw = await AsyncStorage.getItem('user_profile');
-        if (profileRaw) {
-          const profile = JSON.parse(profileRaw);
-          profile.isLoggedIn = false;
-          await AsyncStorage.setItem('user_profile', JSON.stringify(profile));
+        // Refresh failed — clear tokens and navigate to login
+        try {
+          await AsyncStorage.removeItem('access_token');
+          await AsyncStorage.removeItem('refresh_token');
+        } catch (storageErr) {
+          console.warn('Failed to clear tokens:', storageErr);
         }
+
         sessionExpiredCb?.();
 
         return Promise.reject(err);
