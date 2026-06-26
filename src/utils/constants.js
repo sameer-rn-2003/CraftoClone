@@ -172,8 +172,8 @@ export const CATEGORIES = [
 ];
 
 export const POSTER_SIZE = {
-    width: 400,
-    height: 560,
+    width: 300,
+    height: 300,
 };
 
 export const SCREEN_PADDING = SPACING.base;

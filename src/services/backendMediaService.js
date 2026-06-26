@@ -19,7 +19,7 @@ const AUTH_TOKEN = '';                              // ← add if needed
 
 // ─── Transform ────────────────────────────────────────────────────
 // Map ONE item from your API response → internal template shape.
-// Poster canvas is always 400 × 560 px.
+// Poster canvas is always 300 × 300 px.
 // All x, y, width, height values must be in that coordinate space.
 const transform = item => ({
     // ── Identity ──────────────────────────────────────────────────
@@ -41,13 +41,13 @@ const transform = item => ({
 
     // ── Photo frame ───────────────────────────────────────────────
     // THIS is what tells the frontend WHERE the photo goes on the poster.
-    // x, y = top-left corner in poster space (0-400, 0-560)
+    // x, y = top-left corner in poster space (0-300, 0-300)
     photoFrame: {
-        x: item.photo_frame?.x ?? item.photoFrame?.x ?? 75,
-        y: item.photo_frame?.y ?? item.photoFrame?.y ?? 40,
-        width: item.photo_frame?.width ?? item.photoFrame?.width ?? 250,
-        height: item.photo_frame?.height ?? item.photoFrame?.height ?? 250,
-        borderRadius: item.photo_frame?.border_radius ?? item.photoFrame?.borderRadius ?? 125,
+        x: item.photo_frame?.x ?? item.photoFrame?.x ?? 90,
+        y: item.photo_frame?.y ?? item.photoFrame?.y ?? 63,
+        width: item.photo_frame?.width ?? item.photoFrame?.width ?? 120,
+        height: item.photo_frame?.height ?? item.photoFrame?.height ?? 120,
+        borderRadius: item.photo_frame?.border_radius ?? item.photoFrame?.borderRadius ?? 60,
         borderColor: item.photo_frame?.border_color ?? item.photoFrame?.borderColor ?? '#FFD700',
         borderWidth: item.photo_frame?.border_width ?? item.photoFrame?.borderWidth ?? 4,
     },

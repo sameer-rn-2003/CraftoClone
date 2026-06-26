@@ -1,11 +1,14 @@
 import { POSTER_SIZE } from './constants';
+import { isSvgShape } from './shapes';
 
 export const resolvePhotoFrameRadius = (photoShape, templateRadius) => {
+    if (isSvgShape(photoShape)) return 0;
     switch (photoShape) {
         case 'circle':
             return 999;
         case 'square':
             return 4;
+        case 'rect':
         case 'rectangle':
             return 0;
         default:

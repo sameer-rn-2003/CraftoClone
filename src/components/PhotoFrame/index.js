@@ -13,15 +13,15 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useDispatch, useSelector } from 'react-redux';
 import { setPhotoPosition } from '../../store/posterSlice';
 import { COLORS } from '../../utils/constants';
+import ShapeClipView from '../ShapeClipView';
 
 const PhotoFrame = ({
     width = 150,
     height = 150,
     borderRadius = 75,
-    borderColor = COLORS.primary,
-    borderWidth = 3,
     draggable = false,
     style,
+    photoShape = 'circle',
 }) => {
     const dispatch = useDispatch();
     const { userPhoto, photoPosition } = useSelector(s => s.poster);
@@ -63,8 +63,7 @@ const PhotoFrame = ({
             width,
             height,
             borderRadius,
-            borderColor,
-            borderWidth,
+            borderWidth: 0,
         },
         draggable && {
             transform: pan.getTranslateTransform(),
@@ -74,9 +73,16 @@ const PhotoFrame = ({
 
     if (!userPhoto) {
         return (
-            <View style={containerStyle}>
-                <MaterialCommunityIcons name="account-outline" style={styles.placeholder} />
-            </View>
+            <ShapeClipView
+                shape={photoShape}
+                width={width}
+                height={height}
+                placeholderIcon="account-outline"
+                style={StyleSheet.absoluteFill}>
+                <View style={containerStyle}>
+                    <MaterialCommunityIcons name="account-outline" style={styles.placeholder} />
+                </View>
+            </ShapeClipView>
         );
     }
 
@@ -85,22 +91,38 @@ const PhotoFrame = ({
             <Animated.View
                 style={[containerStyle, { transform: pan.getTranslateTransform() }]}
                 {...panResponder.panHandlers}>
-                <Image
-                    source={{ uri: userPhoto }}
-                    style={styles.photo}
+                <ShapeClipView
+                    shape={photoShape}
+                    width={width}
+                    height={height}
+                    photoUri={userPhoto}
                     resizeMode="cover"
-                />
+                    style={StyleSheet.absoluteFill}>
+                    <Image
+                        source={{ uri: userPhoto }}
+                        style={styles.photo}
+                        resizeMode="cover"
+                    />
+                </ShapeClipView>
             </Animated.View>
         );
     }
 
     return (
         <View style={containerStyle}>
-            <Image
-                source={{ uri: userPhoto }}
-                style={styles.photo}
+            <ShapeClipView
+                shape={photoShape}
+                width={width}
+                height={height}
+                photoUri={userPhoto}
                 resizeMode="cover"
-            />
+                style={StyleSheet.absoluteFill}>
+                <Image
+                    source={{ uri: userPhoto }}
+                    style={styles.photo}
+                    resizeMode="cover"
+                />
+            </ShapeClipView>
         </View>
     );
 };

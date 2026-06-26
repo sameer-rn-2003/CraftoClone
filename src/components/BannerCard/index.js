@@ -42,7 +42,7 @@ const PatternOverlay = ({ pattern, color }) => {
             {[60, 42, 24].map((sz, i) => (
                 <View key={i} style={{
                     position: 'absolute', width: sz, height: sz,
-                    borderRadius: sz / 2, borderWidth: 1.5,
+                    borderRadius: sz / 2, borderWidth: 0,
                     borderColor: color + '30',
                     top: i % 2 === 0 ? -sz / 3 : undefined,
                     bottom: i % 2 !== 0 ? -sz / 3 : undefined,
@@ -72,7 +72,7 @@ const PatternOverlay = ({ pattern, color }) => {
                     position: 'absolute', height: 18,
                     width: CARD_W + 20, left: -10,
                     top: i * 22 - 8,
-                    borderRadius: 10, borderWidth: 1.5,
+                    borderRadius: 10, borderWidth: 0,
                     borderColor: color + '28',
                     transform: [{ rotate: '-6deg' }],
                 }} />
@@ -178,7 +178,7 @@ const BannerCard = ({ template, userPhoto, onPress, style }) => {
                         position: 'absolute',
                         left: pf.x, top: pf.y, width: pf.w, height: pf.h,
                         borderRadius: pf.r,
-                        borderWidth: 2, borderColor: accentColor,
+                        borderWidth: 0, borderColor: accentColor,
                         backgroundColor: COLORS.card + 'DD',
                         alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',

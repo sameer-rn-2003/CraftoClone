@@ -68,9 +68,9 @@ const UserSetupScreen = ({ navigation }) => {
     };
 
     const handlePickImage = async () => {
-        const uri = await pickImage();
-        if (uri) {
-            setImageUri(uri);
+        const result = await pickImage();
+        if (result?.uri) {
+            setImageUri(result.uri);
         }
     };
 

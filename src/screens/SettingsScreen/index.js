@@ -93,9 +93,9 @@ const SettingsScreen = ({ navigation }) => {
     }, [handleLogout, navigation]);
 
     const handleSettingsPhotoPress = useCallback(async () => {
-        const uri = await pickImage({ autoStoreInProfilePhoto: false });
-        if (uri) {
-            setSettingsPhoto(uri);
+        const result = await pickImage({ autoStoreInProfilePhoto: false });
+        if (result?.uri) {
+            setSettingsPhoto(result.uri);
             setEditingSettingsProfile(true);
         }
     }, [pickImage]);

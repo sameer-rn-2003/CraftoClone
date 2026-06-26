@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
     setUserName, setUserMessage, setPremiumStatus, setPhotoPosition,
@@ -39,6 +40,7 @@ import {
     setUserPhoto,
     setDesignLayoutIndex,
     toggleSelectedTag,
+    setDynamicTextField,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
 import PosterPreview, { getPosterCompositionSize } from '../../components/PosterPreview';
@@ -331,13 +333,32 @@ const PhotoTab = ({
     );
 };
 // Memoized TextTab to prevent unnecessary re-renders
+const FIELD_LABELS = {
+    name: 'editor.text.name.label',
+    message: 'editor.text.message.label',
+};
+
+const i18nContentResolver = (content, lang) => {
+    if (!content) return '';
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && !Array.isArray(content)) {
+        return content[lang] ?? content['en'] ?? Object.values(content)[0] ?? '';
+    }
+    return String(content);
+};
+
+const FIELD_PLACEHOLDERS = {
+    name: 'editor.text.name.placeholder',
+    message: 'editor.text.message.placeholder',
+};
+
 const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, setUserMessageInput, userNameInput, userMessageInput }) => {
     const { t } = useTranslation();
-    const nameActive = idx => (p.nameFontSize ?? 26) === SIZE_PRESETS[idx];
-    const msgActive = idx => (p.messageFontSize ?? 14) === SIZE_PRESETS[idx];
     const locked = !p.isPremium;
-    const showName = p.showName;
-    const showMessage = locked ? true : p.showMessage;
+
+    const textFields = p.selectedTemplate?.config_json?.textFields
+        ?? p.selectedTemplate?.config?.textFields
+        ?? {};
 
     const handlePremiumAction = action => {
         if (locked) {
@@ -347,148 +368,188 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
         action();
     };
 
+    const renderTextInputSection = (key, field, {
+        value, onValueChange,
+        color, setColor,
+        fontSize, setFontSize,
+        bold, setBold,
+        italic, setItalic,
+        isName = false,
+        isMessage = false,
+    }) => {
+        if (field.visible === false) return null;
+
+        const showField = isName ? p.showName : (isMessage ? (locked ? true : p.showMessage) : true);
+        const setShow = isName ? setShowName : (isMessage ? setShowMessage : null);
+        const isBold = isName ? p.nameBold : (isMessage ? p.messageBold : bold);
+        const isItalic = isName ? p.nameItalic : (isMessage ? p.messageItalic : italic);
+        const fieldColor = isName ? p.nameColor : (isMessage ? p.messageColor : color);
+        const fieldFontSize = isName ? p.nameFontSize : (isMessage ? p.messageFontSize : fontSize);
+        const defaultFontSize = isName ? 26 : (isMessage ? 14 : 18);
+        const sizeActive = idx => (fieldFontSize ?? defaultFontSize) === SIZE_PRESETS[idx];
+
+        const labelKey = FIELD_LABELS[key] || key;
+        const placeholderKey = FIELD_PLACEHOLDERS[key] || key;
+
+        return (
+            <>
+                {setShow && (
+                    <View style={s.visibilityRow}>
+                        <View style={s.visibilityLeft}>
+                            <Text style={s.visibilityLabel}>
+                                {t(isName ? 'editor.visibility.showName' : 'editor.visibility.showMessage')}
+                            </Text>
+                            <Text style={s.visibilityHint}>
+                                {showField ? t('editor.visibility.visible') : t('editor.visibility.hidden')}
+                            </Text>
+                        </View>
+                        <Switch
+                            value={showField}
+                            onValueChange={v => dispatch(setShow(v))}
+                            disabled={isMessage && locked}
+                            trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
+                            thumbColor={EDITOR_COLORS.white}
+                        />
+                    </View>
+                )}
+
+                {showField && (
+                    <>
+                        {isMessage ? (
+                            <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
+                                <AppTextInput
+                                    label={t(typeof labelKey === 'string' && labelKey.startsWith('editor.') ? labelKey : key, { defaultValue: key })}
+                                    value={value}
+                                    onChangeText={v => onValueChange(v)}
+                                    placeholder={typeof placeholderKey === 'string' && placeholderKey.startsWith('editor.') ? t(placeholderKey, { defaultValue: i18nContentResolver(field.content, i18n.language) || key }) : i18nContentResolver(field.content, i18n.language) || key}
+                                    multiline={isMessage}
+                                    maxLength={isMessage ? 100 : 40}
+                                    editable={!isMessage || !locked}
+                                    locked={isMessage && locked}
+                                    onLockedPress={onUnlockPremium}
+                                />
+                            </LockedInputWrapper>
+                        ) : (
+                            <AppTextInput
+                                label={t(typeof labelKey === 'string' && labelKey.startsWith('editor.') ? labelKey : key, { defaultValue: key })}
+                                value={value}
+                                onChangeText={v => onValueChange(v)}
+                                placeholder={typeof placeholderKey === 'string' && placeholderKey.startsWith('editor.') ? t(placeholderKey, { defaultValue: i18nContentResolver(field.content, i18n.language) || key }) : i18nContentResolver(field.content, i18n.language) || key}
+                                maxLength={isMessage ? 100 : 40}
+                                returnKeyType="done"
+                            />
+                        )}
+
+                        <RowLabel>{t(isName ? 'editor.text.name.colour' : (isMessage ? 'editor.text.message.colour' : 'Text Colour'))}</RowLabel>
+                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
+                            <View style={[s.paletteRow, (locked || !isName) && s.lockedSection]}>
+                                {COLOUR_PALETTE.map(c => (
+                                    <ColourSwatch key={c} color={c} active={fieldColor === c}
+                                        onPress={() => handlePremiumAction(() => {
+                                            if (isName) dispatch(setNameColor(fieldColor === c ? null : c));
+                                            else if (isMessage) dispatch(setMessageColor(fieldColor === c ? null : c));
+                                            else setColor(fieldColor === c ? null : c);
+                                        })} />
+                                ))}
+                            </View>
+                        </LockedInputWrapper>
+
+                        <RowLabel>{t(isName ? 'editor.text.name.size' : (isMessage ? 'editor.text.message.size' : 'Font Size'))}</RowLabel>
+                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
+                            <View style={[s.sizeRow, (locked || !isName) && s.lockedSection]}>
+                                {SIZE_PRESETS.map((sz, i) => (
+                                    <SizeBtn key={sz} size={sz} active={sizeActive(i)}
+                                        onPress={() => handlePremiumAction(() => {
+                                            if (isName) dispatch(setNameFontSize(sizeActive(i) ? null : sz));
+                                            else if (isMessage) dispatch(setMessageFontSize(sizeActive(i) ? null : sz));
+                                            else setFontSize(sizeActive(i) ? null : sz);
+                                        })} />
+                                ))}
+                            </View>
+                        </LockedInputWrapper>
+
+                        <RowLabel>{t(isName ? 'editor.text.name.style' : (isMessage ? 'editor.text.message.style' : 'Style'))}</RowLabel>
+                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
+                            <View style={[s.toggleRow, (locked || !isName) && s.lockedSection]}>
+                                <StyleToggle label="B" active={isBold}
+                                    onPress={() => handlePremiumAction(() => {
+                                        if (isName) dispatch(setNameBold(!p.nameBold));
+                                        else if (isMessage) dispatch(setMessageBold(!p.messageBold));
+                                        else setBold(!isBold);
+                                    })} />
+                                <StyleToggle label="I" active={isItalic}
+                                    onPress={() => handlePremiumAction(() => {
+                                        if (isName) dispatch(setNameItalic(!p.nameItalic));
+                                        else if (isMessage) dispatch(setMessageItalic(!p.messageItalic));
+                                        else setItalic(!isItalic);
+                                    })} />
+                            </View>
+                        </LockedInputWrapper>
+                    </>
+                )}
+                <View style={s.divider} />
+            </>
+        );
+    };
+
+    const renderNameSection = () => {
+        const nameField = textFields?.name;
+        if (!nameField) return null;
+        return renderTextInputSection('name', nameField, {
+            value: userNameInput,
+            onValueChange: v => { setUserNameInput(v); dispatch(setUserName(v)); },
+            isName: true,
+        });
+    };
+
+    const renderMessageSection = () => {
+        const messageField = textFields?.message;
+        if (!messageField) return null;
+        return renderTextInputSection('message', messageField, {
+            value: userMessageInput,
+            onValueChange: v => { setUserMessageInput(v); dispatch(setUserMessage(v)); },
+            isMessage: true,
+        });
+    };
+
+    const renderDynamicFields = () => {
+        if (!textFields || typeof textFields !== 'object') return null;
+        return Object.entries(textFields)
+            .filter(([key]) => key !== 'name' && key !== 'message')
+            .map(([key, field]) => {
+                const dyn = p.dynamicTextFields?.[key] || {};
+                return (
+                    <React.Fragment key={key}>
+                        {renderTextInputSection(key, field, {
+                            value: dyn.value ?? '',
+                            onValueChange: v => dispatch(setDynamicTextField({ key, field: { value: v } })),
+                            color: dyn.color ?? null,
+                            setColor: c => dispatch(setDynamicTextField({ key, field: { color: c } })),
+                            fontSize: dyn.fontSize ?? null,
+                            setFontSize: sz => dispatch(setDynamicTextField({ key, field: { fontSize: sz } })),
+                            bold: dyn.bold ?? false,
+                            setBold: v => dispatch(setDynamicTextField({ key, field: { bold: v } })),
+                            italic: dyn.italic ?? false,
+                            setItalic: v => dispatch(setDynamicTextField({ key, field: { italic: v } })),
+                        })}
+                    </React.Fragment>
+                );
+            });
+    };
+
 
     return (
         <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            contentInsetAdjustmentBehavior="automatic"  // iOS: auto adjust for keyboard
+            contentInsetAdjustmentBehavior="automatic"
         >
             <View style={{ paddingBottom: SPACING.xxxl }}>
 
-                {/* ── SHOW / HIDE NAME ────────────────── */}
-                <View style={s.visibilityRow}>
-                    <View style={s.visibilityLeft}>
-                        <Text style={s.visibilityLabel}>{t('editor.visibility.showName')}</Text>
-                        <Text style={s.visibilityHint}>
-                            {showName ? t('editor.visibility.visible') : t('editor.visibility.hidden')}
-                        </Text>
-                    </View>
-                    <Switch
-                        value={showName}
-                        onValueChange={v => dispatch(setShowName(v))}
-                        trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
-                        thumbColor={EDITOR_COLORS.white}
-                    />
-                </View>
-
-                {showName && (
-                    <>
-                        <AppTextInput
-                            label={t('editor.text.name.label')}
-                            value={userNameInput}
-                            onChangeText={v => {
-                                console.log('Name input changed:', v);
-                                setUserNameInput(v);
-                                dispatch(setUserName(v));
-                            }}
-                            placeholder={t('editor.text.name.placeholder')}
-                            maxLength={40}
-                            returnKeyType="done"
-                        />
-
-                        <RowLabel>{t('editor.text.name.colour')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.paletteRow, locked && s.lockedSection]}>
-                                {COLOUR_PALETTE.map(c => (
-                                    <ColourSwatch key={c} color={c} active={p.nameColor === c}
-                                        onPress={() => handlePremiumAction(() => dispatch(setNameColor(p.nameColor === c ? null : c)))} />
-                                ))}
-                            </View>
-                        </LockedInputWrapper>
-
-                        <RowLabel>{t('editor.text.name.size')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.sizeRow, locked && s.lockedSection]}>
-                                {SIZE_PRESETS.map((sz, i) => (
-                                    <SizeBtn key={sz} size={sz} active={nameActive(i)}
-                                        onPress={() => handlePremiumAction(() => dispatch(setNameFontSize(nameActive(i) ? null : sz)))} />
-                                ))}
-                            </View>
-                        </LockedInputWrapper>
-
-                        <RowLabel>{t('editor.text.name.style')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.toggleRow, locked && s.lockedSection]}>
-                                <StyleToggle label="B" active={p.nameBold} onPress={() => handlePremiumAction(() => dispatch(setNameBold(!p.nameBold)))} />
-                                <StyleToggle label="I" active={p.nameItalic} onPress={() => handlePremiumAction(() => dispatch(setNameItalic(!p.nameItalic)))} />
-                            </View>
-                        </LockedInputWrapper>
-                    </>
-                )}
-
-                <View style={s.divider} />
-
-                {/* ── SHOW / HIDE MESSAGE ──────────────── */}
-                <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium} showOverlay={false}>
-                    <View style={s.visibilityRow}>
-                        <View style={s.visibilityLeft}>
-                            <Text style={s.visibilityLabel}>{t('editor.visibility.showMessage')}</Text>
-                            <Text style={s.visibilityHint}>
-                                {showMessage ? t('editor.visibility.visible') : t('editor.visibility.hidden')}
-                            </Text>
-                        </View>
-                        <Switch
-                            value={showMessage}
-                            disabled={locked}
-                            onValueChange={v => dispatch(setShowMessage(v))}
-                            trackColor={{ false: EDITOR_COLORS.border, true: EDITOR_COLORS.primary }}
-                            thumbColor={EDITOR_COLORS.white}
-                        />
-                    </View>
-                </LockedInputWrapper>
-
-                {showMessage && (
-                    <>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <AppTextInput
-                                label={t('editor.text.message.label')}
-                                value={userMessageInput}
-                                onChangeText={v => {
-                                    setUserMessageInput(v);
-                                    dispatch(setUserMessage(v));
-                                }}
-                                placeholder={t('editor.text.message.placeholder')}
-                                multiline
-                                maxLength={100}
-                                editable={!locked}
-                                locked={locked}
-                                onLockedPress={onUnlockPremium}
-                            />
-                        </LockedInputWrapper>
-
-                        <RowLabel>{t('editor.text.message.colour')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.paletteRow, locked && s.lockedSection]}>
-                                {COLOUR_PALETTE.map(c => (
-                                    <ColourSwatch key={c} color={c} active={p.messageColor === c}
-                                        onPress={() => handlePremiumAction(() => dispatch(setMessageColor(p.messageColor === c ? null : c)))} />
-                                ))}
-                            </View>
-                        </LockedInputWrapper>
-
-                        <RowLabel>{t('editor.text.message.size')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.sizeRow, locked && s.lockedSection]}>
-                                {SIZE_PRESETS.map((sz, i) => (
-                                    <SizeBtn key={sz} size={sz} active={msgActive(i)}
-                                        onPress={() => handlePremiumAction(() => dispatch(setMessageFontSize(msgActive(i) ? null : sz)))} />
-                                ))}
-                            </View>
-                        </LockedInputWrapper>
-
-                        <RowLabel>{t('editor.text.message.style')}</RowLabel>
-                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                            <View style={[s.toggleRow, locked && s.lockedSection]}>
-                                <StyleToggle label="B" active={p.messageBold} onPress={() => handlePremiumAction(() => dispatch(setMessageBold(!p.messageBold)))} />
-                                <StyleToggle label="I" active={p.messageItalic} onPress={() => handlePremiumAction(() => dispatch(setMessageItalic(!p.messageItalic)))} />
-                            </View>
-                        </LockedInputWrapper>
-                    </>
-                )}
-
-                <View style={s.divider} />
+                {renderNameSection()}
+                {renderMessageSection()}
+                {renderDynamicFields()}
 
                 <RowLabel>Frame Shape</RowLabel>
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
@@ -496,7 +557,10 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
                         {[
                             { id: 'circle', icon: 'circle-outline', label: 'Circle' },
                             { id: 'square', icon: 'square-outline', label: 'Square' },
-                            { id: 'rectangle', icon: 'rectangle-outline', label: 'Rectangle' },
+                            { id: 'rect', icon: 'rectangle-outline', label: 'Rect' },
+                            { id: 'triangle', icon: 'triangle-outline', label: 'Triangle' },
+                            { id: 'star', icon: 'star-four-points-outline', label: 'Star' },
+                            { id: 'hexagon', icon: 'hexagon-outline', label: 'Hexagon' },
                         ].map(shape => (
                             <Pressable
                                 key={shape.id}
@@ -1021,17 +1085,26 @@ const EditorScreen = ({ navigation, route }) => {
     }, [dispatch]);
 
     const pickLogoImage = useCallback(async () => {
-        return pickImage({ autoStoreInProfilePhoto: false });
+        const result = await pickImage({ autoStoreInProfilePhoto: false });
+        return result?.uri ?? null;
     }, [pickImage]);
 
     const handlePickProfileImage = useCallback(async () => {
-        const uri = await pickImage({ autoStoreInProfilePhoto: false });
-        if (uri) {
-            setCropResizeMode('cover');
-            setPendingCropUri(uri);
+        const result = await pickImage({ autoStoreInProfilePhoto: false });
+        if (!result?.uri) return null;
+
+        if ((result.width != null && result.width !== 300) || (result.height != null && result.height !== 300)) {
+            Alert.alert(
+                t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
+                t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
+            );
+            return null;
         }
-        return uri;
-    }, [pickImage]);
+
+        setCropResizeMode('cover');
+        setPendingCropUri(result.uri);
+        return result.uri;
+    }, [pickImage, t]);
 
     const commitPickedProfileImage = useCallback(async () => {
         if (!pendingCropUri) return;

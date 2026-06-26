@@ -19,7 +19,7 @@ const pickFirstUrl = (...values) => {
     return undefined;
 };
 
-const getNumericValue = (value, fallback = 0) => {
+export const getNumericValue = (value, fallback = 0) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
 };
@@ -143,11 +143,11 @@ export const normalizeTemplateMediaType = template => {
 export const getTemplateCanvasSize = template => {
     const configJson = template?.config_json ?? template?.config ?? null;
     const width = getNumericValue(
-        configJson?.width ?? template?.config?.width ?? template?.width ?? template?.canvasWidth,
+        configJson?.width ?? template?.config?.width ?? template?.width ?? template?.canvasWidth ?? template?.imgWidth,
         POSTER_SIZE.width,
     );
     const height = getNumericValue(
-        configJson?.height ?? template?.config?.height ?? template?.height ?? template?.canvasHeight,
+        configJson?.height ?? template?.config?.height ?? template?.height ?? template?.canvasHeight ?? template?.imgHeight,
         POSTER_SIZE.height,
     );
 
@@ -211,7 +211,9 @@ const normalizePhotoFrame = (frame, canvasSize) => {
             borderRadius = explicitRadius;
         } else if (shape === 'circle') {
             borderRadius = Math.min(width, height) / 2;
-        } else if (shape === 'square') {
+        } else if (shape === 'square' || shape === 'rect' || shape === 'rectangle') {
+            borderRadius = 0;
+        } else if (['triangle', 'star', 'hexagon'].includes(shape)) {
             borderRadius = 0;
         }
     }
@@ -223,7 +225,7 @@ const normalizePhotoFrame = (frame, canvasSize) => {
     const targetHeight = canvasSize?.height || POSTER_SIZE.height;
 
     // Only apply legacy center-coordinate adjustment for old admin templates
-    // that used POSTER_SIZE (400×560). New templates with 1080×1920 have correct
+    // that used POSTER_SIZE (300×300). New templates with 1080×1920 have correct
     // top-left coordinates from the admin panel.
     const isLegacyCanvas = targetWidth <= POSTER_SIZE.width && targetHeight <= POSTER_SIZE.height;
     if (shape === 'circle' && isLegacyCanvas) {
@@ -245,7 +247,7 @@ const normalizePhotoFrame = (frame, canvasSize) => {
         height,
         shape,
         borderRadius,
-        borderWidth: getNumericValue(frame.borderWidth ?? frame.border_width, 0),
+        borderWidth: 0,
         borderColor: frame.borderColor ?? frame.border_color ?? '#FFFFFF',
     };
 
@@ -294,18 +296,26 @@ export const getTemplatePhotoFrame = template => {
     }
 
     const photoLayer = getTemplateLayers(template).find(isUserPhotoLayer);
-    if (!photoLayer) {
-        return null;
+    if (photoLayer) {
+        return normalizePhotoFrame({
+            x: photoLayer.x,
+            y: photoLayer.y,
+            width: photoLayer.width,
+            height: photoLayer.height,
+            borderRadius: photoLayer.borderRadius,
+            borderWidth: photoLayer.borderWidth,
+            borderColor: photoLayer.borderColor,
+        }, canvasSize);
     }
 
+    // Compute a sensible fallback photo frame position when no explicit data exists
     return normalizePhotoFrame({
-        x: photoLayer.x,
-        y: photoLayer.y,
-        width: photoLayer.width,
-        height: photoLayer.height,
-        borderRadius: photoLayer.borderRadius,
-        borderWidth: photoLayer.borderWidth,
-        borderColor: photoLayer.borderColor,
+        x: Math.round(canvasSize.width * 0.30),
+        y: Math.round(canvasSize.height * 0.21),
+        width: Math.max(60, Math.round(Math.min(canvasSize.width, canvasSize.height) * 0.40)),
+        height: Math.max(60, Math.round(Math.min(canvasSize.width, canvasSize.height) * 0.40)),
+        shape: 'circle',
+        borderColor: '#FFFFFF',
     }, canvasSize);
 };
 
@@ -392,7 +402,8 @@ const scaleFrameToCanvas = (frame, canvasSize) => {
         height: getNumericValue(frame.height, 0) * scaleY,
         borderRadius: getNumericValue(frame.borderRadius ?? frame.radius, 0) * Math.min(scaleX, scaleY),
         borderColor: frame.borderColor ?? '#FFFFFF',
-        borderWidth: getNumericValue(frame.borderWidth, 0) * Math.min(scaleX, scaleY),
+        // borderWidth: getNumericValue(frame.borderWidth, 0) * Math.min(scaleX, scaleY),
+        borderWidth:0,
         shape: frame.shape,
     };
 };
@@ -492,16 +503,27 @@ export const buildTemplateRenderConfig = ({
         ? { id: resolvedAnimId }
         : { id: 'none' };
 
-    const nextPhotoFrame = photoFrameData ? {
-        x: photoFrameData.x,
-        y: photoFrameData.y,
-        width: photoFrameData.width,
-        height: photoFrameData.height,
-        shape: posterState.photoShape === 'template' ? photoFrameData.shape : posterState.photoShape,
-        borderColor: photoFrameData.borderColor,
-        borderWidth: photoFrameData.borderWidth,
-        animation: photoFrameAnimation,
-    } : undefined;
+    const nextPhotoFrame = photoFrameData ? (() => {
+        const userScale = posterState.photoScale ?? 1;
+        const userOffsetX = posterState.photoPosition?.x ?? 0;
+        const userOffsetY = posterState.photoPosition?.y ?? 0;
+
+        const adjustedWidth = Math.max(20, Math.round(photoFrameData.width * userScale));
+        const adjustedHeight = Math.max(20, Math.round(photoFrameData.height * userScale));
+        const adjustedX = Math.round(photoFrameData.x + (photoFrameData.width - adjustedWidth) / 2 + userOffsetX);
+        const adjustedY = Math.round(photoFrameData.y + (photoFrameData.height - adjustedHeight) / 2 + userOffsetY);
+
+        return {
+            x: Math.max(0, adjustedX),
+            y: Math.max(0, adjustedY),
+            width: adjustedWidth,
+            height: adjustedHeight,
+            shape: posterState.photoShape === 'template' ? photoFrameData.shape : posterState.photoShape,
+            borderColor: photoFrameData.borderColor,
+            borderWidth: photoFrameData.borderWidth,
+            animation: photoFrameAnimation,
+        };
+    })() : undefined;
 
     const configTextFields = getTemplateTextFields(template);
     const normalizedConfigFields = [];
@@ -523,33 +545,117 @@ export const buildTemplateRenderConfig = ({
             }
         });
     }
+    const layers = configJson?.layers ?? [];
+    const textLayerMap = { '{{headline}}': 'name', '{{subtext}}': 'message' };
+    const textLayerKeys = Object.keys(textLayerMap);
+    layers.forEach(layer => {
+        if (layer?.type === 'text' && layer.text) {
+            const matchedKey = textLayerKeys.find(k => layer.text.includes(k));
+            if (matchedKey) {
+                const roleKey = textLayerMap[matchedKey];
+                const existing = normalizedConfigFields.findIndex(f => f.key === roleKey);
+                const layerField = {
+                    key: roleKey,
+                    x: layer.x ?? 16,
+                    y: layer.y ?? 0,
+                    fieldWidth: layer.width,
+                    fontSize: layer.fontSize,
+                    fontFamily: layer.fontFamily,
+                    fontWeight: layer.fontWeight,
+                    color: layer.color,
+                    align: layer.align,
+                    visible: true,
+                };
+                if (existing >= 0) {
+                    normalizedConfigFields[existing] = {
+                        ...normalizedConfigFields[existing],
+                        x: layerField.x,
+                        y: layerField.y,
+                        fieldWidth: layerField.fieldWidth ?? normalizedConfigFields[existing].fieldWidth,
+                    };
+                } else {
+                    normalizedConfigFields.push(layerField);
+                }
+            }
+        }
+    });
     const rawTextFields = Array.isArray(template?.textFields) ? template.textFields : [];
     const allTextFields = normalizedConfigFields.length > 0 ? normalizedConfigFields : rawTextFields;
 
-    const textFields = allTextFields.reduce((accumulator, field) => {
-        const key = field?.key === 'message' ? 'message' : 'name';
-        const userOffset = key === 'name' ? posterState.namePosition : posterState.messagePosition;
-        const userScale = key === 'name' ? posterState.nameScale : posterState.messageScale;
-        const fontSizeOverride = key === 'name' ? posterState.nameFontSize : posterState.messageFontSize;
-        const colorOverride = key === 'name' ? posterState.nameColor : posterState.messageColor;
+    const getTextConfig = (key, field) => {
+        const isName = key === 'name';
+        const isMessage = key === 'message';
+        const dyn = (!isName && !isMessage) ? (posterState.dynamicTextFields?.[key] || {}) : {};
 
-        accumulator[key] = {
-            visible: key === 'name' ? posterState.showName !== false : posterState.showMessage !== false,
-            content: key === 'name' ? userData.headline : userData.subtext,
+        const userOffset = isName ? posterState.namePosition : (isMessage ? posterState.messagePosition : (dyn.position ?? { x: 0, y: 0 }));
+        const userScale = isName ? posterState.nameScale : (isMessage ? posterState.messageScale : (dyn.scale ?? 1));
+        const fontSizeOverride = isName ? posterState.nameFontSize : (isMessage ? posterState.messageFontSize : (dyn.fontSize ?? null));
+        const colorOverride = isName ? posterState.nameColor : (isMessage ? posterState.messageColor : (dyn.color ?? null));
+
+        const baseWidth = getNumericValue(field.fieldWidth ?? field.width, canvas.width - getNumericValue(field.x, 16) * 2);
+        const baseHeight = getNumericValue(field.height ?? 40, 40);
+        const baseFontSize = Math.min(36, getNumericValue(fontSizeOverride ?? field.fontSize, 36));
+        const maxFieldWidth = Math.min(canvas.width, 1920);
+        const scaledWidth = Math.max(20, Math.min(Math.round(baseWidth * userScale), maxFieldWidth));
+        const scaledHeight = Math.max(20, Math.round(baseHeight * userScale));
+        const scaledFontSize = Math.min(36, Math.round(baseFontSize * userScale));
+
+        const rawX = Math.round(getNumericValue(field.x, 16) + (baseWidth - scaledWidth) / 2 + (userOffset?.x ?? 0));
+        const rawY = Math.round(getNumericValue(field.y, 0) + (baseHeight - scaledHeight) / 2 + (userOffset?.y ?? 0));
+
+        const getContent = () => {
+            if (isName) return userData.headline;
+            if (isMessage) return userData.subtext;
+            return dyn.value ?? field.content ?? '';
+        };
+
+        const isVisible = isName ? posterState.showName !== false : (isMessage ? posterState.showMessage !== false : field.visible !== false);
+        const isBold = isName ? posterState.nameBold !== false : (isMessage ? posterState.messageBold === true : (dyn.bold ?? false));
+        const isItalic = isName ? posterState.nameItalic === true : (isMessage ? posterState.messageItalic === true : (dyn.italic ?? false));
+
+        const result = {
+            visible: isVisible,
+            content: getContent(),
             position: {
-                x: getNumericValue(field.x, 16) + (userOffset?.x ?? 0),
-                y: getNumericValue(field.y, 0) + (userOffset?.y ?? 0),
+                x: Math.max(0, Math.min(rawX, Math.max(0, maxFieldWidth - scaledWidth))),
+                y: Math.max(0, Math.min(rawY, Math.max(0, canvas.height - scaledHeight))),
             },
-            width: getNumericValue(field.fieldWidth ?? field.width, canvas.width - getNumericValue(field.x, 16) * 2),
-            fontSize: getNumericValue(fontSizeOverride ?? field.fontSize, key === 'name' ? 64 : 36),
-            fontFamily: field.fontFamily ?? (key === 'name' ? 'Poppins' : 'Inter'),
-            fontWeight: field.fontWeight ?? (key === 'name' ? 'bold' : 'normal'),
-            color: colorOverride ?? field.color ?? (key === 'name' ? '#FFFFFF' : '#EEEEEE'),
+            width: scaledWidth,
+            fontSize: scaledFontSize,
+            fontFamily: field.fontFamily ?? (isName ? 'Poppins' : (isMessage ? 'Inter' : undefined)),
+            fontWeight: field.fontWeight ?? (isName ? 'bold' : (isMessage ? 'normal' : undefined)),
+            color: colorOverride ?? field.color ?? (isName ? '#FFFFFF' : (isMessage ? '#EEEEEE' : '#FFFFFF')),
             align: posterState.textAlign ?? field.align ?? 'center',
-            bold: key === 'name' ? posterState.nameBold !== false : posterState.messageBold === true,
-            italic: key === 'name' ? posterState.nameItalic === true : posterState.messageItalic === true,
+            bold: isBold,
+            italic: isItalic,
             shadow: posterState.textShadow === true,
         };
+        
+        if (isName || isMessage) {
+            console.log(`[getTextConfig] ${key}:`, JSON.stringify({
+                fieldX: field.x,
+                fieldY: field.y,
+                fieldWidth: field.fieldWidth,
+                baseWidth,
+                scaledWidth,
+                userOffset,
+                userScale,
+                rawX,
+                rawY,
+                canvasW: canvas.width,
+                canvasH: canvas.height,
+                finalX: result.position.x,
+                finalY: result.position.y,
+            }));
+        }
+        
+        return result;
+    };
+
+    const textFields = allTextFields.reduce((accumulator, field) => {
+        const key = field?.key;
+        if (!key) return accumulator;
+        accumulator[key] = getTextConfig(key, field);
         return accumulator;
     }, {});
 
@@ -565,7 +671,13 @@ export const buildTemplateRenderConfig = ({
     const business = premiumProfile.business ?? {};
     const personal = premiumProfile.personal ?? {};
 
-    const activeSocialHandles = business.socialHandles || personal.socialHandles || {};
+    const normalizeSocialHandleObj = handles => Array.isArray(handles)
+        ? handles.reduce((acc, h) => { if (h.platform && h.value?.trim()) acc[h.platform] = h.value.replace(/^@/, ''); return acc; }, {})
+        : (handles || {});
+    const businessSocial = normalizeSocialHandleObj(business.socialHandles);
+    const personalSocial = normalizeSocialHandleObj(personal.socialHandles);
+    const hasAnyHandle = obj => Object.values(obj).some(v => typeof v === 'string' && v.trim());
+    const activeSocialHandles = hasAnyHandle(businessSocial) ? businessSocial : personalSocial;
     const SOCIAL_PLATFORMS = [
         { key: 'facebook', icon: 'facebook' },
         { key: 'instagram', icon: 'instagram' },
@@ -627,16 +739,16 @@ export const buildTemplateRenderConfig = ({
     if (resolvedAnimId && resolvedAnimId !== 'none') {
         const templateAnimations = configJson?.animation || [];
         const matchedTemplateAnim = templateAnimations.find(a => a?.id === resolvedAnimId);
-        const userExplicitlyChose = userAnimId !== 'none';
         const defaultAnim = PHOTO_ANIMATION_DEFAULTS[resolvedAnimId];
-        const baseAnim = matchedTemplateAnim ?? (userExplicitlyChose ? defaultAnim : templatePhotoFrameAnim) ?? defaultAnim;
+        const userAnimObj = userAnimId !== 'none' ? null : templatePhotoFrameAnim;
+        const baseAnim = matchedTemplateAnim ?? userAnimObj ?? {};
         animations.push({
             id: resolvedAnimId,
-            from: baseAnim?.from ?? { translateY: 60, opacity: 0 },
-            to: baseAnim?.to ?? { translateY: 0, opacity: 1 },
-            loop: baseAnim?.loop ?? false,
-            duration: getNumericValue(baseAnim?.duration, 1200),
-            easing: baseAnim?.easing ?? 'ease',
+            from: baseAnim?.from ?? defaultAnim?.from ?? { translateY: 60, opacity: 0 },
+            to: baseAnim?.to ?? defaultAnim?.to ?? { translateY: 0, opacity: 1 },
+            loop: baseAnim?.loop ?? defaultAnim?.loop ?? false,
+            duration: getNumericValue(baseAnim?.duration ?? defaultAnim?.duration, 1200),
+            easing: baseAnim?.easing ?? defaultAnim?.easing ?? 'ease',
         });
     }
 
@@ -696,7 +808,7 @@ export const buildTemplateRenderConfig = ({
             mobile: business.contactMobileNumber || personal.mobileNumber || '',
             address: business.contactAddress || personal.address || '',
             organization: business.businessName || personal.organizationName || '',
-            instagram: business.socialHandles?.instagram || personal.socialHandles?.instagram || '',
+            instagram: businessSocial.instagram || personalSocial.instagram || '',
         },
     };
 };

@@ -1,6 +1,6 @@
 // src/services/templateService.js
 // 16 configuration-driven templates across 4 categories.
-// POSTER COORDINATE SPACE: 400 × 560 px (all x, y, width, height in these units).
+// POSTER COORDINATE SPACE: 300 × 300 px (all x, y, width, height in these units).
 //
 // photoFrame : { x, y, width, height, borderRadius, borderColor, borderWidth }
 //              ── absolute top-left corner in poster space ──

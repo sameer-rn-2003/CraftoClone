@@ -10,6 +10,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import {
     setMessagePosition,
     setMessageScale,
@@ -19,12 +20,15 @@ import {
     setPhotoScale,
     updateStickerPosition,
     setBackgroundVideoDuration,
+    setDynamicTextField,
 } from '../../store/posterSlice';
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
 import {
     getPhotoFrameBaseStyle,
     resolvePhotoFrameRadius,
 } from '../../utils/photoFrameLayout';
+import { isSvgShape } from '../../utils/shapes';
+import ShapeClipView from '../ShapeClipView';
 import TemplateMedia from '../TemplateMedia';
 import { getTemplateImageSource, hasTemplateVideo } from '../../utils/templateMedia';
 import ConfiguredTemplateLayers from '../ConfiguredTemplateLayers';
@@ -35,6 +39,7 @@ import {
     getTemplateTextFields,
     getTemplateBackgroundOverlay,
     getTemplateAnimation,
+    getNumericValue,
     isConfigDrivenTemplate,
 } from '../../utils/templateConfig';
 
@@ -230,7 +235,7 @@ const CirclesPattern = ({ color }) => (
         {[200, 150, 90, 55].map((size, i) => (
             <View key={i} style={{
                 position: 'absolute', width: size, height: size,
-                borderRadius: size / 2, borderWidth: 2, borderColor: color + '30',
+                borderRadius: size / 2, borderWidth: 0, borderColor: color + '30',
                 top: i % 2 === 0 ? -size / 3 : undefined,
                 bottom: i % 2 !== 0 ? -size / 3 : undefined,
                 right: i < 2 ? -size / 3 : undefined,
@@ -258,7 +263,7 @@ const WavesPattern = ({ color, canvasSize }) => (
             <View key={i} style={{
                 position: 'absolute', height: 60,
                 width: canvasSize.width + 60, left: -30, top: i * 100 - 20,
-                borderRadius: 30, borderWidth: 2, borderColor: color + '25',
+                borderRadius: 30, borderWidth: 0, borderColor: color + '25',
                 transform: [{ rotate: '-8deg' }]
             }} />
         ))}
@@ -475,7 +480,7 @@ const getCenteredFallbackPhotoFrameStyle = ({ canvasSize = POSTER_SIZE, photoSha
         height: size,
         borderRadius: resolvePhotoFrameRadius(photoShape, templateRadius),
         borderColor: '#FFFFFF',
-        borderWidth: 2,
+        borderWidth: 0,
     };
 };
 
@@ -601,12 +606,21 @@ const DraggablePhoto = ({
         configAnimation,
     });
 
+    const svgShape = isSvgShape(photoShape);
+
+    const wrapperStyle = {
+        ...frameBaseStyle,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        backgroundColor: svgShape ? 'transparent' : (frameBaseStyle?.backgroundColor ?? COLORS.surface),
+    };
+
     return (
         <Animated.View
             style={[
                 styles.photoWrapper,
+                wrapperStyle,
                 {
-                    ...frameBaseStyle,
                     opacity: photoAnimationStyle.opacity,
                     transform: [
                         ...photoAnimationStyle.transform,
@@ -617,12 +631,23 @@ const DraggablePhoto = ({
             ]}
             {...panResponder.panHandlers}>
 
-            {photoUri
-                ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
-                : <View style={styles.photoPlaceholder}>
-                    <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
-                    <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
-                </View>}
+            <ShapeClipView
+                shape={photoShape}
+                width={frameBaseStyle?.width ?? canvasSize.width}
+                height={frameBaseStyle?.height ?? canvasSize.height}
+                photoUri={svgShape ? photoUri : null}
+                resizeMode={resizeMode}
+                borderColor={frameBaseStyle?.borderColor}
+                borderWidth={frameBaseStyle?.borderWidth}
+                placeholderIcon={!photoUri ? 'account-outline' : null}
+                style={svgShape ? { position: 'absolute', top: 0, left: 0 } : undefined}>
+                {photoUri
+                    ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
+                    : <View style={styles.photoPlaceholder}>
+                        <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
+                        <Text style={styles.placeholderText}>{t('poster.uploadPhoto')}</Text>
+                    </View>}
+            </ShapeClipView>
 
             <View style={[styles.dragHandle, { borderColor: accentColor + 'CC' }]} pointerEvents="none">
                 <Text style={styles.dragHandleIcon}>⊕</Text>
@@ -656,11 +681,20 @@ export const StaticPhoto = ({
         configAnimation,
     });
 
+    const svgShape = isSvgShape(photoShape);
+
+    const staticWrapperStyle = {
+        ...frameBaseStyle,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        backgroundColor: svgShape ? 'transparent' : (frameBaseStyle?.backgroundColor ?? COLORS.surface),
+    };
+
     return (
         <Animated.View
             style={[
                 styles.photoWrapper,
-                frameBaseStyle,
+                staticWrapperStyle,
                 {
                     opacity: photoAnimationStyle.opacity,
                     transform: [
@@ -672,11 +706,22 @@ export const StaticPhoto = ({
                 },
             ]}
             pointerEvents="none">
-            {photoUri
-                ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
-                : <View style={styles.photoPlaceholder}>
-                    <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
-                </View>}
+            <ShapeClipView
+                shape={photoShape}
+                width={frameBaseStyle?.width ?? canvasSize.width}
+                height={frameBaseStyle?.height ?? canvasSize.height}
+                photoUri={svgShape ? photoUri : null}
+                resizeMode={resizeMode}
+                borderColor={frameBaseStyle?.borderColor}
+                borderWidth={frameBaseStyle?.borderWidth}
+                placeholderIcon={!photoUri ? 'account-outline' : null}
+                style={svgShape ? { position: 'absolute', top: 0, left: 0 } : undefined}>
+                {photoUri
+                    ? <AnimatedPhotoContent photoUri={photoUri} resizeMode={resizeMode} />
+                    : <View style={styles.photoPlaceholder}>
+                        <MaterialCommunityIcons name="account-outline" style={styles.placeholderIcon} />
+                    </View>}
+            </ShapeClipView>
         </Animated.View>
     );
 };
@@ -777,6 +822,7 @@ const DraggableText = ({
     allowPinchScale = true,
     interactionScale = 1,
     contentAnimationStyle,
+    canvasSize,
 }) => {
     const dispatch = useDispatch();
 
@@ -835,7 +881,10 @@ const DraggableText = ({
                     } else {
                         const dist = getTouchDistance(touches);
                         const ratio = dist / initPinchDist.current;
-                        const newScale = Math.min(MAX_TEXT_SCALE, Math.max(MIN_TEXT_SCALE, initPinchScale.current * ratio));
+                        const maxScaleByWidth = canvasSize?.width
+                            ? canvasSize.width / (field?.fieldWidth ?? field?.width ?? 200)
+                            : MAX_TEXT_SCALE;
+                        const newScale = Math.min(MAX_TEXT_SCALE, maxScaleByWidth, Math.max(MIN_TEXT_SCALE, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
                     }
@@ -854,9 +903,10 @@ const DraggableText = ({
                 } else {
                     pan.flattenOffset();
                     const delta = getScaledGestureDelta(gesture, interactionScale);
+                    const cl = canvasSize ?? { width: 2000, height: 2000 };
                     const next = {
-                        x: committed.current.x + delta.x,
-                        y: committed.current.y + delta.y,
+                        x: Math.max(-cl.width, Math.min(committed.current.x + delta.x, cl.width)),
+                        y: Math.max(-cl.height, Math.min(committed.current.y + delta.y, cl.height)),
                     };
                     committed.current = next;
                     dispatch(setPositionAction(next));
@@ -1076,6 +1126,8 @@ const PosterPreview = ({
     // 2. Legacy array: [{ key: 'name', x, y, ... }, { key: 'message', ... }]
     const configTextFields = getTemplateTextFields(selectedTemplate);
     const legacyTextFields = selectedTemplate?.textFields;
+    const hasObjectFormatTextFields = configTextFields && typeof configTextFields === 'object'
+        && !Array.isArray(configTextFields) && Object.keys(configTextFields).length > 0;
 
     const normalizeTextField = (field, key) => {
         if (!field) return null;
@@ -1183,9 +1235,11 @@ const PosterPreview = ({
         if (editableRole === 'message' && !p.showMessage) return null;
 
         const field = getConfigTextField(layer);
+        const namePlaceholder = resolveI18nContent(configTextFields?.name?.content);
+        const messagePlaceholder = resolveI18nContent(configTextFields?.message?.content);
         const text = editableRole === 'name'
-            ? (p.userName || '')
-            : (p.userMessage || '');
+            ? (p.userName || namePlaceholder)
+            : (p.userMessage || messagePlaceholder);
         const layerFontSize = Number.isFinite(Number(layer?.fontSize)) ? Number(layer.fontSize) : 18;
         const isTemplateDesign = !activeDesignLayout;
         const textStyle = {
@@ -1223,7 +1277,8 @@ const PosterPreview = ({
                     setScaleAction={setNameScale}
                     allowPinchScale={allowPinchScale}
                     interactionScale={interactionScale}
-                    contentAnimationStyle={contentAnimationStyle} />
+                    contentAnimationStyle={contentAnimationStyle}
+                    canvasSize={canvasSize} />
                 : <StaticNameText
                     field={centeredField}
                     text={text}
@@ -1249,7 +1304,8 @@ const PosterPreview = ({
                 setScaleAction={setMessageScale}
                 allowPinchScale={allowPinchScale}
                 interactionScale={interactionScale}
-                contentAnimationStyle={contentAnimationStyle} />
+                contentAnimationStyle={contentAnimationStyle}
+                canvasSize={canvasSize} />
             : <StaticMessageText
                 field={applyDesignToTextField({
                     field,
@@ -1262,6 +1318,164 @@ const PosterPreview = ({
                 textPosition={p.messagePosition ?? { x: 0, y: 0 }}
                 textScale={p.messageScale ?? 1}
                 contentAnimationStyle={contentAnimationStyle} />;
+    };
+
+    // ── Helpers ───────────────────────────────────────────────────
+    const resolveI18nContent = (content) => {
+        if (!content) return '';
+        if (typeof content === 'string') return content;
+        if (typeof content === 'object' && !Array.isArray(content)) {
+            const lang = i18n.language || 'en';
+            return content[lang] ?? content['en'] ?? Object.values(content)[0] ?? '';
+        }
+        return '';
+    };
+
+    // ── Dynamic text fields from config.textFields ──────────────
+    // Renders only non-name/message fields from the object-format textFields.
+    // name and message are rendered by renderConfigTextLayer via layers.
+    // For array-format textFields (legacy local templates), returns null —
+    // those are handled by the legacy DraggableNameText / DraggableMessageText below.
+    const renderDynamicTextFields = () => {
+        if (!configTextFields || typeof configTextFields !== 'object' || Array.isArray(configTextFields)) return null;
+        const fieldKeys = Object.keys(configTextFields);
+        if (fieldKeys.length === 0) return null;
+
+        const configJson = selectedTemplate?.config_json ?? selectedTemplate?.config ?? null;
+        const sourceW = getNumericValue(
+            configJson?.width ?? selectedTemplate?.config?.width ?? selectedTemplate?.width,
+            canvasSize.width,
+        );
+        const sourceH = getNumericValue(
+            configJson?.height ?? selectedTemplate?.config?.height ?? selectedTemplate?.height,
+            canvasSize.height,
+        );
+        const scaleX = sourceW > 0 ? canvasSize.width / sourceW : 1;
+        const scaleY = sourceH > 0 ? canvasSize.height / sourceH : 1;
+        const uniformScale = Math.min(scaleX, scaleY);
+
+        return fieldKeys.map(key => {
+            const field = configTextFields[key];
+            if (!field) return null;
+
+            const isName = key === 'name';
+            const isMessage = key === 'message';
+
+            if (isName && p.showName === false) return null;
+            if (isMessage && p.showMessage === false) return null;
+            if (field.visible === false) return null;
+
+            const pos = (typeof field.position === 'object' && field.position !== null) ? field.position : {};
+            const fieldDef = {
+                x: Math.round((pos.x ?? 16) * scaleX),
+                y: Math.round((pos.y ?? 0) * scaleY),
+                fieldWidth: field.width ? Math.round(field.width * scaleX) : (canvasSize.width - Math.round((pos.x ?? 16) * scaleX) * 2),
+                align: field.align ?? 'center',
+            };
+
+            if (isName || isMessage) {
+                const up = isName ? (p.namePosition ?? { x: 0, y: 0 }) : (p.messagePosition ?? { x: 0, y: 0 });
+                console.log('[' + 'renderDynamicTextFields' + '] ' + key + ':', JSON.stringify({
+                    posX: pos.x,
+                    posY: pos.y,
+                    scaleX,
+                    scaleY,
+                    fieldDefX: fieldDef.x,
+                    fieldDefY: fieldDef.y,
+                    fieldDefWidth: fieldDef.fieldWidth,
+                    canvasW: canvasSize.width,
+                    canvasH: canvasSize.height,
+                    fieldWidth: field.width,
+                    userPositionX: up.x,
+                    userPositionY: up.y,
+                }));
+            }
+
+            const dyn = (isName || isMessage) ? {} : (p.dynamicTextFields?.[key] || {});
+            const isDynamic = !isName && !isMessage;
+
+            const userValue = isName ? p.userName : (isMessage ? p.userMessage : (dyn?.value ?? ''));
+            const placeholderText = resolveI18nContent(field.content);
+            const displayText = userValue || placeholderText || '';
+
+            const userFontSize = isName ? p.nameFontSize : (isMessage ? p.messageFontSize : (dyn?.fontSize ?? null));
+            const effectiveFontSize = Math.min(36, userFontSize != null ? Math.round(userFontSize * uniformScale) : Math.round((field.fontSize ?? 18) * uniformScale));
+
+            const userColor = isName ? p.nameColor : (isMessage ? p.messageColor : (dyn?.color ?? null));
+            const effectiveColor = userColor ?? field.color ?? '#FFFFFF';
+
+            const isBold = isName ? p.nameBold : (isMessage ? p.messageBold : (dyn?.bold ?? false));
+            const isItalic = isName ? p.nameItalic : (isMessage ? p.messageItalic : (dyn?.italic ?? false));
+
+            const userPosition = isName ? (p.namePosition ?? { x: 0, y: 0 }) : (isMessage ? (p.messagePosition ?? { x: 0, y: 0 }) : (dyn?.position ?? { x: 0, y: 0 }));
+            const userScale = isName ? (p.nameScale ?? 1) : (isMessage ? (p.messageScale ?? 1) : (dyn?.scale ?? 1));
+
+            const setPositionAction = isName ? setNamePosition : (isMessage ? setMessagePosition : null);
+            const setScaleAction = isName ? setNameScale : (isMessage ? setMessageScale : null);
+
+            const getDynamicPositionSetter = () => {
+                if (!isDynamic) return undefined;
+                return pos => dispatch(setDynamicTextField({ key, field: { position: pos } }));
+            };
+            const getDynamicScaleSetter = () => {
+                if (!isDynamic) return undefined;
+                return scale => dispatch(setDynamicTextField({ key, field: { scale } }));
+            };
+
+            const textStyle = {
+                fontSize: effectiveFontSize,
+                fontWeight: isBold ? 'bold' : 'normal',
+                fontStyle: isItalic ? 'italic' : 'normal',
+                color: effectiveColor,
+                textAlign: field.align ?? 'center',
+                fontFamily: field.fontFamily,
+                ...shadowStyle,
+            };
+
+            if (!displayText) return null;
+
+            const fieldForRender = {
+                ...fieldDef,
+                align: field.align ?? 'center',
+            };
+
+            if (interactive) {
+                const posAction = setPositionAction || getDynamicPositionSetter();
+                const scaleAction = setScaleAction || getDynamicScaleSetter();
+                if (posAction && scaleAction) {
+                    return (
+                        <DraggableText
+                            key={key}
+                            field={fieldForRender}
+                            text={displayText}
+                            textStyle={textStyle}
+                            textPosition={userPosition}
+                            textScale={userScale}
+                            setPositionAction={posAction}
+                            setScaleAction={scaleAction}
+                            allowPinchScale={allowPinchScale}
+                            interactionScale={interactionScale}
+                            contentAnimationStyle={contentAnimationStyle}
+                            canvasSize={canvasSize}
+                            numberOfLines={isMessage ? 2 : 1}
+                        />
+                    );
+                }
+            }
+
+            return (
+                <StaticText
+                    key={key}
+                    field={fieldForRender}
+                    text={displayText}
+                    textStyle={textStyle}
+                    textPosition={userPosition}
+                    textScale={userScale}
+                    contentAnimationStyle={contentAnimationStyle}
+                    numberOfLines={isMessage ? 2 : 1}
+                />
+            );
+        });
     };
 
     // ── Photo layer ──────────────────────────────────────────────
@@ -1437,15 +1651,15 @@ const PosterPreview = ({
                     context={renderContext}
                     skipBackgroundLayers={hasTemplateMedia}
                     renderUserPhotoLayer={renderConfigUserPhotoLayer}
-                    renderTextLayer={renderConfigTextLayer}
+                    renderTextLayer={null}
                 />
             ) : photoLayerNode}
 
-            {/* ── 4. Name text
-                  Always rendered for non-config templates (including reel/video).
-                  Uses makeFallbackNameField when no textFields in template.
-                  Falls back to "Your Name" when user hasn't typed anything.      ── */}
-            {!isConfigDriven && p.showName && !!displayName && (
+            {/* ── 4. All text fields from config.textFields (name, message, extras) ── */}
+            {renderDynamicTextFields()}
+
+            {/* ── 5. Legacy name text (only used when no object-format textFields and no layers) ── */}
+            {!hasObjectFormatTextFields && !isConfigDriven && p.showName && !!displayName && (
                 interactive
                     ? <DraggableNameText
                         field={centeredNameField}
@@ -1457,7 +1671,8 @@ const PosterPreview = ({
                         setScaleAction={setNameScale}
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale}
-                        contentAnimationStyle={contentAnimationStyle} />
+                        contentAnimationStyle={contentAnimationStyle}
+                        canvasSize={canvasSize} />
                     : <StaticNameText
                         field={centeredNameField}
                         text={displayName}
@@ -1467,9 +1682,8 @@ const PosterPreview = ({
                         contentAnimationStyle={contentAnimationStyle} />
             )}
 
-            {/* ── 5. Message text
-                  Same guaranteed-render logic as name above.                     ── */}
-            {!isConfigDriven && p.showMessage && !!displayMessage && (
+            {/* ── 6. Legacy message text (only used when no object-format textFields and no layers) ── */}
+            {!hasObjectFormatTextFields && !isConfigDriven && p.showMessage && !!displayMessage && (
                 interactive
                     ? <DraggableMessageText
                         field={designedMessageField}
@@ -1481,7 +1695,8 @@ const PosterPreview = ({
                         setScaleAction={setMessageScale}
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale}
-                        contentAnimationStyle={contentAnimationStyle} />
+                        contentAnimationStyle={contentAnimationStyle}
+                        canvasSize={canvasSize} />
                     : <StaticMessageText
                         field={designedMessageField}
                         text={displayMessage}

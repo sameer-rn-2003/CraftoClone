@@ -42,7 +42,7 @@ const useImagePicker = () => {
                     dispatch(setUserPhoto(asset.uri));
                 }
                 setLoading(false);
-                return asset.uri;
+                return { uri: asset.uri, width: asset.width ?? null, height: asset.height ?? null };
             }
         } catch (error) {
             console.error('useImagePicker error:', error);

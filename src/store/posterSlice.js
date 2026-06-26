@@ -72,7 +72,7 @@ const initialState = {
     showMessage: false,       // false = hide message text layer
 
     // ── Photo frame shape ────────────────────────────────────
-    photoShape: 'circle',  // 'template' | 'circle' | 'square' | 'rectangle'
+    photoShape: 'circle',  // 'template' | 'circle' | 'square' | 'rectangle' | 'rect' | 'triangle' | 'star' | 'hexagon'
 
     // ── Color accent override ────────────────────────────────
     accentColorOverride: null, // null = use template accent
@@ -87,6 +87,9 @@ const initialState = {
 
     // ── Saved posters ────────────────────────────────────────
     savedPosters: [],
+
+    // ── Dynamic text fields (for template-driven fields beyond name/message) ──
+    dynamicTextFields: {},  // { [key]: { value: '', fontSize: null, color: null, bold: false, italic: false, position: { x: 0, y: 0 }, scale: 1 } }
 
     // ── Home ─────────────────────────────────────────────────
     activeCategory: 'political',
@@ -114,11 +117,10 @@ const posterSlice = createSlice({
             state.nameFontSize = null;
             state.messageFontSize = null;
             state.backgroundVideoDuration = null;
+            state.dynamicTextFields = {};
         },
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
-            state.photoPosition = { x: 0, y: 0 };
-            state.photoScale = 1.0;
         },
         setUserPhotoAnimation(state, { payload }) { state.userPhotoAnimation = payload || 'none'; },
         setBackgroundVideoDuration(state, { payload }) { state.backgroundVideoDuration = payload || null; },
@@ -336,6 +338,20 @@ const posterSlice = createSlice({
             };
         },
 
+        setDynamicTextField(state, { payload }) {
+            const { key, field } = payload || {};
+            if (!key) return;
+            state.dynamicTextFields[key] = {
+                ...state.dynamicTextFields[key],
+                ...(field || {}),
+            };
+        },
+        setDynamicTextFields(state, { payload }) {
+            state.dynamicTextFields = { ...state.dynamicTextFields, ...(payload || {}) };
+        },
+        resetDynamicTextFields(state) {
+            state.dynamicTextFields = {};
+        },
         setUnreadNotificationCount(state, { payload }) { state.unreadNotificationCount = Number(payload) || 0; },
         setActiveCategory(state, { payload }) { state.activeCategory = payload; },
     },
@@ -357,6 +373,7 @@ export const {
     addSticker, updateStickerPosition, removeSticker,
     addSavedPoster, resetEditor, setActiveCategory,setIsLoggedIn,
     setUnreadNotificationCount,
+    setDynamicTextField, setDynamicTextFields, resetDynamicTextFields,
 } = posterSlice.actions;
 
 export default posterSlice.reducer;

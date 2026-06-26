@@ -39,7 +39,10 @@ import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
 import {
     getPosterFitLayout,
     getScaledPhotoFrameStyle,
+    resolvePhotoFrameRadius,
 } from '../../utils/photoFrameLayout';
+import { isSvgShape } from '../../utils/shapes';
+import ShapeClipView from '../../components/ShapeClipView';
 import {
     buildTemplateRenderContext,
     buildTemplateRenderConfig,
@@ -492,24 +495,6 @@ const FALLBACK_SUBCATEGORIES = {
         { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
     ],
 };
-const CREATE_POSTER_PRESETS = [
-    { id: 'image-1', name: 'Image 1', color: '#F97316', source: require('../../assets/images/image-1.jpg') },
-    { id: 'image-2', name: 'Image 2', color: '#2563EB', source: require('../../assets/images/image-2.jpg') },
-    { id: 'image-3', name: 'Image 3', color: '#16A34A', source: require('../../assets/images/image-3.jpg') },
-    { id: 'image-4', name: 'Image 4', color: '#DC2626', source: require('../../assets/images/image-4.jpg') },
-    { id: 'image-5', name: 'Image 5', color: '#8B5CF6', source: require('../../assets/images/image-5.jpg') },
-    { id: 'image-6', name: 'Image 6', color: '#0EA5E9', source: require('../../assets/images/image-6.jpg') },
-    { id: 'image-7', name: 'Image 7', color: '#F59E0B', source: require('../../assets/images/image-7.jpg') },
-    { id: 'image-8', name: 'Image 8', color: '#EC4899', source: require('../../assets/images/image-8.jpg') },
-    { id: 'image-9', name: 'Image 9', color: '#14B8A6', source: require('../../assets/images/image-9.jpg') },
-    { id: 'image-10', name: 'Image 10', color: '#6366F1', source: require('../../assets/images/image-10.jpg') },
-    { id: 'image-11', name: 'Image 11', color: '#84CC16', source: require('../../assets/images/image-11.jpg') },
-    { id: 'image-12', name: 'Image 12', color: '#EF4444', source: require('../../assets/images/image-12.jpg') },
-    { id: 'image-13', name: 'Image 13', color: '#06B6D4', source: require('../../assets/images/image-13.jpg') },
-    { id: 'image-14', name: 'Image 14', color: '#A855F7', source: require('../../assets/images/image-14.jpg') },
-    { id: 'image-16', name: 'Image 16', color: '#F59E0B', source: require('../../assets/images/image-16.jpg') },
-    { id: 'image-17', name: 'Image 17', color: '#EAB308', source: require('../../assets/images/image-17.jpg') },
-];
 const TEMPLATE_SOCIAL_PLATFORMS = [
     { key: 'facebook', icon: 'facebook' },
     { key: 'instagram', icon: 'instagram' },
@@ -737,26 +722,55 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                             : Number.isFinite(Number(layer?.border_radius))
                                 ? Number(layer.border_radius)
                                 : 0;
-                        const shapeRadius = photoShape === 'circle' ? 999
-                            : photoShape === 'square' ? 4
-                                : photoShape === 'rectangle' ? 0
-                                    : templateRadius;
+                        const shapeRadius = resolvePhotoFrameRadius(photoShape, templateRadius);
+                        const isSvg = isSvgShape(photoShape);
                         return userPhoto ? (
-                            <Animated.View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }, {
+                            <Animated.View style={[styles.userPhotoFrame, {
+                                ...layerStyle,
+                                borderRadius: shapeRadius,
+                                borderWidth: 0,
+                                borderColor: 'transparent',
+                                backgroundColor: isSvg ? 'transparent' : (layerStyle?.backgroundColor ?? '#FFFFFF'),
+                            }, {
                                 opacity: photoAnimationStyle.opacity,
                                 transform: photoAnimationStyle.transform,
                             }]} pointerEvents="none">
-                                <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                                <ShapeClipView
+                                    shape={photoShape}
+                                    width={layerStyle?.width ?? 100}
+                                    height={layerStyle?.height ?? 100}
+                                    photoUri={isSvg ? userPhoto : null}
+                                    borderColor={layerStyle?.borderColor}
+                                    borderWidth={layerStyle?.borderWidth}
+                                    resizeMode="cover"
+                                    style={isSvg ? { position: 'absolute', top: 0, left: 0 } : undefined}>
+                                    <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                                </ShapeClipView>
                             </Animated.View>
                         ) : null;
                     }}
                 />
             ) : userPhoto && photoFrameStyle ? (
-                <Animated.View style={[styles.userPhotoFrame, photoFrameStyle, {
+                <Animated.View style={[styles.userPhotoFrame, {
+                    ...photoFrameStyle,
+                    borderWidth: 0,
+                    borderColor: 'transparent',
+                    backgroundColor: isSvgShape(photoShape) ? 'transparent' : (photoFrameStyle?.backgroundColor ?? '#FFFFFF'),
+                }, {
                     opacity: photoAnimationStyle.opacity,
                     transform: photoAnimationStyle.transform,
                 }]} pointerEvents="none">
-                    <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                    <ShapeClipView
+                        shape={photoShape}
+                        width={photoFrameStyle?.width ?? 100}
+                        height={photoFrameStyle?.height ?? 100}
+                        photoUri={isSvgShape(photoShape) ? userPhoto : null}
+                        borderColor={photoFrameStyle?.borderColor}
+                        borderWidth={photoFrameStyle?.borderWidth}
+                        resizeMode="cover"
+                        style={isSvgShape(photoShape) ? { position: 'absolute', top: 0, left: 0 } : undefined}>
+                        <Image source={{ uri: userPhoto }} style={styles.userPhoto} resizeMode="cover" />
+                    </ShapeClipView>
                 </Animated.View>
             ) : null}
 
@@ -834,60 +848,63 @@ const getSpecialCategoryType = item => {
     return SPECIAL_CATEGORY_TYPES[normalized] || null;
 };
 
-const CUSTOM_POSTER_SIZE = 300;
+const buildCustomTemplate = ({ source, name = 'Custom Poster', imgWidth = 300, imgHeight = 300 }) => {
+    const MAX_CANVAS = 1920;
+    const scale = Math.min(1, MAX_CANVAS / Math.max(imgWidth, imgHeight));
+    const cw = Math.round(imgWidth * scale);
+    const ch = Math.round(imgHeight * scale);
+    const minDim = Math.min(cw, ch);
+    const photoFrameSize = Math.max(60, Math.round(minDim * 0.40));
 
-const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
-    id: '',
-    name,
-    category: 'custom',
-    mediaType: 'IMAGE',
-    source,
-    thumbnail: source,
-    width: CUSTOM_POSTER_SIZE,
-    height: CUSTOM_POSTER_SIZE,
-    canvasWidth: CUSTOM_POSTER_SIZE,
-    canvasHeight: CUSTOM_POSTER_SIZE,
-    accentColor: '#0D62DF',
-    backgroundColor: '#DDE5EC',
-    footerColor: 'transparent',
-    photoFrame: {
-        x: 90,
-        y: 64,
-        width: 120,
-        height: 120,
-        shape: 'circle',
-        borderColor: '#FFFFFF',
-        borderWidth: 3,
-    },
-    textFields: [
-        {
-            key: 'name',
-            label: 'Your Name',
-            x: 20,
-            y: 205,
-            fieldWidth: 260,
-            fontSize: 20,
-            fontWeight: '800',
-            color: '#FFFFFF',
-            align: 'center',
+    return {
+        id: '',
+        name,
+        category: 'custom',
+        mediaType: 'IMAGE',
+        source,
+        thumbnail: source,
+        width: cw,
+        height: ch,
+        canvasWidth: cw,
+        canvasHeight: ch,
+        accentColor: '#0D62DF',
+        backgroundColor: '#DDE5EC',
+        footerColor: 'transparent',
+        photoFrame: {
+            x: Math.round(cw * 0.30),
+            y: Math.round(ch * 0.21),
+            width: photoFrameSize,
+            height: photoFrameSize,
+            shape: 'circle',
+            borderColor: '#FFFFFF',
+            borderWidth: 3,
         },
-        {
-            key: 'message',
-            label: 'Your Message',
-            x: 24,
-            y: 235,
-            fieldWidth: 252,
-            fontSize: 13,
-            fontWeight: '500',
-            color: '#FFFFFF',
-            align: 'center',
-        },
-    ],
-});
-
-const getImageSource = source => (
-    typeof source === 'string' ? { uri: source } : source
-);
+        textFields: [
+            {
+                key: 'name',
+                label: 'Your Name',
+                x: Math.round(cw * 0.067),
+                y: Math.round(ch * 0.68),
+                fieldWidth: Math.round(cw * 0.87),
+                fontSize: Math.max(12, Math.min(120, Math.round(minDim * 0.05))),
+                fontWeight: '800',
+                color: '#FFFFFF',
+                align: 'center',
+            },
+            {
+                key: 'message',
+                label: 'Your Message',
+                x: Math.round(cw * 0.08),
+                y: Math.round(ch * 0.78),
+                fieldWidth: Math.round(cw * 0.84),
+                fontSize: Math.max(10, Math.min(100, Math.round(minDim * 0.033))),
+                fontWeight: '500',
+                color: '#FFFFFF',
+                align: 'center',
+            },
+        ],
+    };
+};
 
 const HomeScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -926,7 +943,6 @@ const HomeScreen = ({ navigation }) => {
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [isSubscriptionVisible, setSubscriptionVisible] = useState(false);
     const [isCreateModalVisible, setCreateModalVisible] = useState(false);
-    const [createSearch, setCreateSearch] = useState('');
     const [specialPickerType, setSpecialPickerType] = useState(null);
     const [pendingSpecialCategory, setPendingSpecialCategory] = useState(null);
     const [subcategoryChoices, setSubcategoryChoices] = useState([]);
@@ -1267,43 +1283,50 @@ const HomeScreen = ({ navigation }) => {
     }, [dispatch, navigation, userMessage, userName, userPhoto]);
 
     const handleCreatePress = useCallback(() => {
-        setCreateSearch('');
         setCreateModalVisible(true);
     }, []);
 
     const handleCreateFromGallery = useCallback(async () => {
-        const backgroundUri = await pickImage({ autoStoreInProfilePhoto: false });
-        if (!backgroundUri) return;
+        const bgResult = await pickImage({ autoStoreInProfilePhoto: false });
+        if (!bgResult?.uri) return;
+
+        if ((bgResult.width != null && bgResult.width !== 300) || (bgResult.height != null && bgResult.height !== 300)) {
+            Alert.alert(
+                t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
+                t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
+            );
+            return;
+        }
+
+        const backgroundUri = bgResult.uri;
+        const imgWidth = 300;
+        const imgHeight = 300;
 
         let nextUserPhoto = userPhoto;
         if (!nextUserPhoto) {
-            nextUserPhoto = await pickImage({ autoStoreInProfilePhoto: false });
-            if (nextUserPhoto) {
-                dispatch(setUserPhoto(nextUserPhoto));
+            const userResult = await pickImage({ autoStoreInProfilePhoto: false });
+            if (userResult?.uri) {
+                if ((userResult.width != null && userResult.width !== 300) || (userResult.height != null && userResult.height !== 300)) {
+                    Alert.alert(
+                        t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
+                        t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
+                    );
+                    return;
+                }
+                nextUserPhoto = userResult.uri;
+                dispatch(setUserPhoto(userResult.uri));
             }
         }
 
         const template = buildCustomTemplate({
             source: backgroundUri,
             name: t('home.create.customPoster'),
+            imgWidth,
+            imgHeight,
         });
         setCreateModalVisible(false);
         openEditorWithTemplate(template, { userPhoto: nextUserPhoto || userPhoto });
     }, [dispatch, openEditorWithTemplate, pickImage, t, userPhoto]);
-
-    const handleCreatePresetSelect = useCallback(async preset => {
-        let nextUserPhoto = userPhoto;
-        if (!nextUserPhoto) {
-            nextUserPhoto = await pickImage({ autoStoreInProfilePhoto: false });
-            if (nextUserPhoto) {
-                dispatch(setUserPhoto(nextUserPhoto));
-            }
-        }
-        setCreateModalVisible(false);
-        openEditorWithTemplate(buildCustomTemplate({ source: preset.source, name: preset.name }), {
-            userPhoto: nextUserPhoto || userPhoto,
-        });
-    }, [dispatch, openEditorWithTemplate, pickImage, userPhoto]);
 
     const handleDevPremiumToggle = useCallback(async () => {
         const nextValue = !isPremium;
@@ -1410,11 +1433,6 @@ const HomeScreen = ({ navigation }) => {
         return [activeChip, ...visible.filter(item => item.id !== activeChip.id)].slice(0, CATEGORY_PREVIEW_LIMIT);
     }, [activeCategory, chips]);
     const hasMoreCategories = chips.length > CATEGORY_PREVIEW_LIMIT;
-    const filteredCreatePresets = useMemo(() => {
-        const query = createSearch.trim().toLowerCase();
-        if (!query) return CREATE_POSTER_PRESETS;
-        return CREATE_POSTER_PRESETS.filter(item => item.name.toLowerCase().includes(query));
-    }, [createSearch]);
     const specialPickerChoices = useMemo(
         () => subcategoryChoices,
         [subcategoryChoices],
@@ -2345,33 +2363,6 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </Pressable>
 
-                        <View style={styles.createSearchBar}>
-                            <MaterialCommunityIcons name="magnify" style={styles.createSearchIcon} />
-                            <TextInput
-                                value={createSearch}
-                                onChangeText={setCreateSearch}
-                                placeholder={t('home.create.searchPlaceholder', { defaultValue: 'Search background posters' })}
-                                placeholderTextColor="#8A94A3"
-                                style={styles.createSearchInput}
-                            />
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <View style={styles.createPresetGrid}>
-                                {filteredCreatePresets.map(preset => (
-                                    <Pressable
-                                        key={preset.id}
-                                        style={styles.createPresetCard}
-                                        onPress={() => handleCreatePresetSelect(preset)}>
-                                        <View style={styles.createPresetImageWrap}>
-                                            <Image source={getImageSource(preset.source)} style={styles.createPresetImage} resizeMode="contain" />
-                                        </View>
-                                        <View style={[styles.createPresetAccent, { backgroundColor: preset.color }]} />
-                                        <Text style={styles.createPresetName} numberOfLines={1}>{preset.name}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        </ScrollView>
                     </Pressable>
                 </Pressable>
             </Modal>
@@ -2958,74 +2949,7 @@ const styles = StyleSheet.create({
         fontFamily: fonts.FONT_FAMILY.Medium,
         color: COLORS.textSecondary,
     },
-    createSearchBar: {
-        height: heightPixel(42),
-        borderRadius: widthPixel(21),
-        borderWidth: widthPixel(1),
-        borderColor: '#D7DEE8',
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: widthPixel(13),
-        marginBottom: heightPixel(12),
-    },
-    createSearchIcon: {
-        fontSize: widthPixel(20),
-        color: '#4B5563',
-        marginRight: widthPixel(8),
-    },
-    createSearchInput: {
-        flex: 1,
-        paddingVertical: 0,
-        fontSize: widthPixel(12),
-        fontFamily: fonts.FONT_FAMILY.Medium,
-        color: '#111827',
-    },
-    createPresetGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: widthPixel(5),
-        paddingBottom: heightPixel(8),
-    },
-    createPresetCard: {
-        width: '49%',
-        flexGrow: 0,
-        flexShrink: 0,
-        borderRadius: widthPixel(12),
-        overflow: 'hidden',
-        backgroundColor: '#F3F6FA',
-        borderWidth: widthPixel(1),
-        borderColor: '#E1E7EF',
-    },
-    createPresetImageWrap: {
-        width: '100%',
-        aspectRatio: 2,
-        borderTopLeftRadius: widthPixel(12),
-        borderTopRightRadius: widthPixel(12),
-        overflow: 'hidden',
-        backgroundColor: '#DDE5EC',
-    },
-    createPresetImage: {
-        width: '100%',
-        height: heightPixel(180),
-    },
-    createPresetAccent: {
-        position: 'absolute',
-        left: widthPixel(7),
-        top: heightPixel(7),
-        width: widthPixel(10),
-        height: widthPixel(10),
-        borderRadius: widthPixel(5),
-        borderWidth: widthPixel(1),
-        borderColor: '#FFFFFF',
-    },
-    createPresetName: {
-        paddingHorizontal: widthPixel(7),
-        paddingVertical: heightPixel(7),
-        fontSize: widthPixel(10),
-        fontFamily: fonts.FONT_FAMILY.Bold,
-        color: '#111827',
-    },
+
     specialChoiceList: {
         gap: heightPixel(9),
         paddingBottom: heightPixel(4),
