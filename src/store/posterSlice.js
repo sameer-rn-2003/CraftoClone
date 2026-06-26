@@ -69,10 +69,10 @@ const initialState = {
     textAlign: 'center',     // 'left' | 'center' | 'right'
     textShadow: false,
     showName: true,           // false = hide name text layer
-    showMessage: true,        // false = hide message text layer
+    showMessage: false,       // false = hide message text layer
 
     // ── Photo frame shape ────────────────────────────────────
-    photoShape: 'template',  // 'template' | 'circle' | 'square' | 'rounded'
+    photoShape: 'circle',  // 'template' | 'circle' | 'square' | 'rectangle'
 
     // ── Color accent override ────────────────────────────────
     accentColorOverride: null, // null = use template accent
@@ -293,7 +293,7 @@ const posterSlice = createSlice({
             state.textAlign = 'center';
             state.textShadow = false;
             state.showName = true;
-            state.showMessage = true;
+            state.showMessage = false;
             state.photoShape = 'template';
             state.accentColorOverride = null;
             state.bgOverlayColor = null;

@@ -5,6 +5,7 @@ import { Platform, PermissionsAndroid, Alert } from 'react-native';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import i18n from '../i18n';
+import { isMetroAssetUrl } from '../utils/helpers';
 
 /**
  * Request Android storage permission (for Android < 13)
@@ -81,6 +82,10 @@ const getMimeType = uri => {
 
 const ensureFileShareUrl = async uri => {
     if (!uri) throw new Error('No media URI provided');
+
+    if (isMetroAssetUrl(uri)) {
+        throw new Error('Cannot share: localhost asset URL is not shareable');
+    }
 
     if (uri.startsWith('file://')) {
         return { shareUrl: uri, type: getMimeType(uri) };

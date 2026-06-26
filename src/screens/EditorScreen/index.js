@@ -30,7 +30,7 @@ import {
     setNameFontSize, setMessageFontSize,
     setNameBold, setNameItalic,
     setMessageBold, setMessageItalic,
-    setTextAlign, setTextShadow, setShowName, setShowMessage,
+    setTextShadow, setShowName, setShowMessage, setPhotoShape,
     hydratePremiumProfile,
     addSticker, removeSticker,
     setPhotoScale, setPremiumProfileField,
@@ -145,14 +145,6 @@ const StyleToggle = ({ label, active, onPress }) => (
     <Pressable onPress={onPress}
         style={[s.styleToggle, active && s.styleToggleActive]}>
         <Text style={[s.styleToggleText, active && s.styleToggleTextActive]}>{label}</Text>
-    </Pressable>
-);
-
-const AlignBtn = ({ icon, label, value, current, onPress }) => (
-    <Pressable onPress={() => onPress(value)}
-        style={[s.alignBtn, current === value && s.alignBtnActive]}>
-        <Text style={[s.alignIcon, current === value && s.alignIconActive]}>{icon}</Text>
-        {label && <Text style={[s.alignLabel, current === value && s.alignLabelActive]}>{label}</Text>}
     </Pressable>
 );
 
@@ -498,16 +490,27 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
 
                 <View style={s.divider} />
 
-                {/* ── TEXT ALIGNMENT + SHADOW ── */}
-                <RowLabel>{t('editor.text.alignment')}</RowLabel>
+                <RowLabel>Frame Shape</RowLabel>
                 <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
-                    <View style={[s.toggleRow, locked && s.lockedSection]}>
-                        <AlignBtn icon="⬛◻◻" label={t('editor.text.align.left')} value="left" current={p.textAlign}
-                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
-                        <AlignBtn icon="◻⬛◻" label={t('editor.text.align.center')} value="center" current={p.textAlign}
-                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
-                        <AlignBtn icon="◻◻⬛" label={t('editor.text.align.right')} value="right" current={p.textAlign}
-                            onPress={v => handlePremiumAction(() => dispatch(setTextAlign(v)))} />
+                    <View style={[s.shapeRow, locked && s.lockedSection]}>
+                        {[
+                            { id: 'circle', icon: 'circle-outline', label: 'Circle' },
+                            { id: 'square', icon: 'square-outline', label: 'Square' },
+                            { id: 'rectangle', icon: 'rectangle-outline', label: 'Rectangle' },
+                        ].map(shape => (
+                            <Pressable
+                                key={shape.id}
+                                style={[s.shapeBtn, p.photoShape === shape.id && s.shapeBtnActive]}
+                                onPress={() => handlePremiumAction(() => dispatch(setPhotoShape(shape.id)))}>
+                                <MaterialCommunityIcons
+                                    name={shape.icon}
+                                    style={s.shapeIcon}
+                                />
+                                <Text style={[s.shapeLabel, p.photoShape === shape.id && s.shapeLabelActive]}>
+                                    {shape.label}
+                                </Text>
+                            </Pressable>
+                        ))}
                     </View>
                 </LockedInputWrapper>
 
@@ -1675,20 +1678,6 @@ const s = StyleSheet.create({
         color: EDITOR_COLORS.textSecondary,
     },
     styleToggleTextActive: { color: EDITOR_COLORS.white },
-
-    // — Align buttons —
-    alignBtn: {
-        flex: 1, height: 50, borderRadius: BORDER_RADIUS.md,
-        backgroundColor: EDITOR_COLORS.surface,
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1, borderColor: EDITOR_COLORS.border,
-        gap: 2,
-    },
-    alignBtnActive: { backgroundColor: EDITOR_COLORS.primary, borderColor: EDITOR_COLORS.primary },
-    alignIcon: { fontSize: 13, color: EDITOR_COLORS.textMuted },
-    alignIconActive: { color: EDITOR_COLORS.white },
-    alignLabel: { fontSize: FONTS.sizes.xs, color: EDITOR_COLORS.textMuted, fontWeight: FONTS.weights.medium },
-    alignLabelActive: { color: EDITOR_COLORS.white },
 
     // — Switch row —
     switchRow: {

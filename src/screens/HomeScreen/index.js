@@ -50,7 +50,7 @@ import {
     normalizeTemplateMediaType,
     normalizeTemplateApiItem,
 } from '../../utils/templateConfig';
-import { uploadUserPhotoToS3 } from '../../utils/helpers';
+import { uploadUserPhotoToS3, uploadBackgroundToS3 } from '../../utils/helpers';
 import usePosterGenerator from '../../hooks/usePosterGenerator';
 import PosterPreview, {
     getPremiumDetailsForPoster,
@@ -739,7 +739,7 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 : 0;
                         const shapeRadius = photoShape === 'circle' ? 999
                             : photoShape === 'square' ? 4
-                                : photoShape === 'rounded' ? 24
+                                : photoShape === 'rectangle' ? 0
                                     : templateRadius;
                         return userPhoto ? (
                             <Animated.View style={[styles.userPhotoFrame, layerStyle, { borderRadius: shapeRadius }, {
@@ -837,7 +837,7 @@ const getSpecialCategoryType = item => {
 const CUSTOM_POSTER_SIZE = 300;
 
 const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
-    id: `custom_${Date.now()}`,
+    id: '',
     name,
     category: 'custom',
     mediaType: 'IMAGE',
@@ -855,7 +855,7 @@ const buildCustomTemplate = ({ source, name = 'Custom Poster' }) => ({
         y: 64,
         width: 120,
         height: 120,
-        borderRadius: 60,
+        shape: 'circle',
         borderColor: '#FFFFFF',
         borderWidth: 3,
     },
@@ -1625,17 +1625,22 @@ const HomeScreen = ({ navigation }) => {
     const generateTemplateMediaFile = useCallback(async item => {
         const mediaType = normalizeTemplateMediaType(item);
 
-        const photoUrl = await uploadUserPhotoToS3(posterState.userPhoto);
+        const [photoUrl, bgUrl] = await Promise.all([
+            uploadUserPhotoToS3(posterState.userPhoto),
+            uploadBackgroundToS3(item.source),
+        ]);
+
+        const templateWithBg = bgUrl ? { ...item, source: bgUrl } : item;
 
         const renderContext = buildTemplateRenderContext({
-            template: item,
+            template: templateWithBg,
             userPhoto: photoUrl,
             userName: posterState.userName,
             userMessage: posterState.userMessage,
             premiumProfile: posterState.premiumProfile,
         });
         const renderConfig = buildTemplateRenderConfig({
-            template: item,
+            template: templateWithBg,
             posterState: { ...posterState, userPhoto: photoUrl },
             userData: renderContext,
         });

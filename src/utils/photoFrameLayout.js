@@ -6,8 +6,8 @@ export const resolvePhotoFrameRadius = (photoShape, templateRadius) => {
             return 999;
         case 'square':
             return 4;
-        case 'rounded':
-            return 24;
+        case 'rectangle':
+            return 0;
         default:
             return templateRadius ?? 0;
     }

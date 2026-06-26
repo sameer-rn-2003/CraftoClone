@@ -11,9 +11,19 @@ const normalizeRenderConfig = (config = {}) => {
     if (config.template) {
         result.template = config.template;
     }
-    if (config.media) {
-        result.media = config.media;
+
+    const media = config.media ?? {};
+    const hasValidBackground = typeof media.backgroundSource === 'string'
+        && /^https:\/\//i.test(media.backgroundSource.trim());
+    const hasValidOverlay = typeof media.frameOverlaySource === 'string'
+        && /^https?:\/\//i.test(media.frameOverlaySource.trim());
+
+    if (hasValidBackground || hasValidOverlay) {
+        result.media = {};
+        if (hasValidBackground) result.media.backgroundSource = media.backgroundSource.trim();
+        if (hasValidOverlay) result.media.frameOverlaySource = media.frameOverlaySource.trim();
     }
+
     if (config.userContent) {
         result.userContent = config.userContent;
     }
@@ -54,6 +64,17 @@ const normalizeGenerationPayload = (data = {}) => ({
 
 export const generateMediaApi = (data) => {
     if (!data) return Promise.reject(new Error('data required'));
+
+    const renderConfig = data.render_config ?? {};
+    const media = renderConfig.media ?? {};
+
+    if (media.backgroundSource && !/^https:\/\//i.test(String(media.backgroundSource).trim())) {
+        return Promise.reject(new Error('Invalid backgroundSource: must be a valid HTTPS CDN URL'));
+    }
+
+    if (!data.type && !data.mediaType && !renderConfig.template) {
+        return Promise.reject(new Error('type or template is required'));
+    }
 
     const hasTopAnimation = Array.isArray(data?.render_config?.animation) && data.render_config.animation.length > 0;
     const photoFrameAnim = data?.render_config?.photoFrame?.animation;

@@ -27,7 +27,7 @@ import { getTemplateCanvasSize, buildTemplateRenderConfig, buildTemplateRenderCo
 import mediaGenerationService from '../../services/mediaGenerationService';
 import { shareImage } from '../../services/imageService';
 import { trackTemplateActionApi } from '../../apiService/trackingApi';
-import { uploadUserPhotoToS3 } from '../../utils/helpers';
+import { uploadUserPhotoToS3, uploadBackgroundToS3 } from '../../utils/helpers';
 import {
     COLORS,
     FONTS,
@@ -91,30 +91,43 @@ const PreviewScreen = ({ navigation, route }) => {
 
     const generateMediaFile = useCallback(async () => {
         if (!selectedTemplate) return;
-        const mediaType = isVideoTemplate ? 'VIDEO' : 'IMAGE';
+        const isCustom = !selectedTemplate.id;
+        const hasAnimation = (selectedTemplate.config_json?.animation?.length > 0)
+            || (selectedTemplate.config_json?.photoFrame?.animation);
+        const mediaType = isCustom
+            ? (hasAnimation ? 'VIDEO' : 'IMAGE')
+            : (isVideoTemplate ? 'VIDEO' : 'IMAGE');
 
-        const photoUrl = await uploadUserPhotoToS3(posterState.userPhoto);
+        const [photoUrl, bgUrl] = await Promise.all([
+            uploadUserPhotoToS3(posterState.userPhoto),
+            uploadBackgroundToS3(selectedTemplate.source),
+        ]);
+
+        const templateWithBg = bgUrl ? { ...selectedTemplate, source: bgUrl } : selectedTemplate;
 
         const renderContext = buildTemplateRenderContext({
-            template: selectedTemplate,
+            template: templateWithBg,
             userPhoto: photoUrl,
             userName: posterState.userName,
             userMessage: posterState.userMessage,
             premiumProfile: posterState.premiumProfile,
         });
         const renderConfig = buildTemplateRenderConfig({
-            template: selectedTemplate,
+            template: templateWithBg,
             posterState: { ...posterState, userPhoto: photoUrl },
             userData: renderContext,
         });
 
         setGenerationMessage(`Submitting ${mediaType.toLowerCase()} render...`);
-        const res = await mediaGenerationService.startMediaGeneration({
-            template_id: selectedTemplate.id,
+        const payload = {
             type: mediaType,
             user_data: renderContext,
             render_config: renderConfig,
-        });
+        };
+        if (selectedTemplate.id) {
+            payload.template_id = selectedTemplate.id;
+        }
+        const res = await mediaGenerationService.startMediaGeneration(payload);
         const jobId = res?.jobId ?? res?.id ?? res?.job_id ?? res?.data?.jobId;
         if (!jobId) throw new Error('No job id returned by server');
 

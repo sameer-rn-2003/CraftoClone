@@ -3,9 +3,21 @@ import { PHOTO_ANIMATION_DEFAULTS } from './photoAnimationOptions';
 
 const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
 const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
+const URL_PATTERN = /^https?:\/\//i;
 const LEGACY_CIRCLE_SAFE_INSET = 24;
 
 const hasValue = value => value !== undefined && value !== null && value !== '';
+
+const isHttpUrl = value => typeof value === 'string' && URL_PATTERN.test(value);
+
+const pickFirstUrl = (...values) => {
+    for (const value of values) {
+        if (isHttpUrl(value)) {
+            return value;
+        }
+    }
+    return undefined;
+};
 
 const getNumericValue = (value, fallback = 0) => {
     const parsed = Number(value);
@@ -231,6 +243,7 @@ const normalizePhotoFrame = (frame, canvasSize) => {
         y: Math.max(0, y),
         width,
         height,
+        shape,
         borderRadius,
         borderWidth: getNumericValue(frame.borderWidth ?? frame.border_width, 0),
         borderColor: frame.borderColor ?? frame.border_color ?? '#FFFFFF',
@@ -635,6 +648,22 @@ export const buildTemplateRenderConfig = ({
         includeAnimation: templateOutput?.includeAnimation ?? animations.length > 0,
     };
 
+    const isLocalAssetUrl = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        return /^(http:\/\/localhost|http:\/\/127\.0\.0\.1|http:\/\/10\.|http:\/\/192\.168\.)/.test(url.trim());
+    };
+
+    const safeBackgroundSource = pickFirstUrl(
+        template?.source,
+        template?.image_url,
+        template?.imageUrl,
+        template?.video_url,
+        template?.videoUrl,
+    );
+    const backgroundSource = isLocalAssetUrl(safeBackgroundSource)
+        ? undefined
+        : safeBackgroundSource;
+
     return {
         template: {
             canvas: { width: canvas.width, height: canvas.height },
@@ -642,13 +671,7 @@ export const buildTemplateRenderConfig = ({
             backgroundColor: configJson?.background ?? template?.backgroundColor ?? '#000000',
         },
         media: {
-            backgroundSource: pickFirstValue(
-                template?.source,
-                template?.image_url,
-                template?.imageUrl,
-                template?.video_url,
-                template?.videoUrl,
-            ),
+            backgroundSource,
             frameOverlaySource: pickFirstValue(
                 configJson?.frameOverlaySource,
                 configJson?.frame_overlay_source,

@@ -2,6 +2,7 @@ import RNFS from 'react-native-fs';
 import { Platform, Alert, PermissionsAndroid } from 'react-native';
 import { generateMediaApi, getMediaStatusApi } from '../apiService/mediaApi';
 import i18n from '../i18n';
+import { isMetroAssetUrl } from '../utils/helpers';
 
 const getDownloadDir = () => {
     return Platform.OS === 'android' ? RNFS.DownloadDirectoryPath : RNFS.DocumentDirectoryPath;
@@ -28,17 +29,20 @@ const requestDownloadPermission = async () => {
     }
 };
 
-export const getGeneratedMediaUrl = status => (
-    status?.media_url
-    || status?.mediaUrl
-    || status?.url
-    || status?.result_url
-    || status?.resultUrl
-    || status?.download_url
-    || status?.downloadUrl
-    || status?.output_url
-    || status?.outputUrl
-);
+export const getGeneratedMediaUrl = status => {
+    const raw =
+        status?.media_url
+        || status?.mediaUrl
+        || status?.url
+        || status?.result_url
+        || status?.resultUrl
+        || status?.download_url
+        || status?.downloadUrl
+        || status?.output_url
+        || status?.outputUrl;
+    if (isMetroAssetUrl(raw)) return undefined;
+    return raw;
+};
 
 const getFileExtension = (url, fallback = 'mp4') => {
     const cleanPath = String(url || '').split('?')[0].split('#')[0];
@@ -107,6 +111,9 @@ export const pollMediaStatus = async (jobId, opts = {}) => {
 
 export const downloadGeneratedMedia = async (url, filenameHint = '', mediaType = 'VIDEO') => {
     if (!url) throw new Error('url required');
+    if (isMetroAssetUrl(url)) {
+        throw new Error('Invalid media URL: localhost asset URL cannot be downloaded');
+    }
 
     const hasPermission = await requestDownloadPermission();
     if (!hasPermission) {
