@@ -58,9 +58,9 @@ const initialState = {
     messageColor: null,      // null = use template default
     nameFontSize: null,      // null = use template default (number override)
     messageFontSize: null,
-    namePosition: { x: 0, y: 0 },
+    namePosition: null,
     nameScale: 1.0,
-    messagePosition: { x: 0, y: 0 },
+    messagePosition: null,
     messageScale: 1.0,
     nameBold: true,
     nameItalic: false,
@@ -112,9 +112,9 @@ const posterSlice = createSlice({
             state.designLayoutIndex = 0;
             state.photoPosition = { x: 0, y: 0 };
             state.photoScale = 1.0;
-            state.namePosition = { x: 0, y: 0 };
+            state.namePosition = null;
             state.nameScale = 1.0;
-            state.messagePosition = { x: 0, y: 0 };
+            state.messagePosition = null;
             state.messageScale = 1.0;
             state.nameFontSize = null;
             state.messageFontSize = null;
@@ -188,8 +188,8 @@ const posterSlice = createSlice({
             const nextIndex = ((state.designLayoutIndex || 0) + 1) % 4;
             state.designLayoutIndex = nextIndex;
             state.photoPosition = { x: 0, y: 0 };
-            state.namePosition = { x: 0, y: 0 };
-            state.messagePosition = { x: 0, y: 0 };
+            state.namePosition = null;
+            state.messagePosition = null;
             if (nextIndex === 0) {
                 state.nameFontSize = null;
                 state.messageFontSize = null;
@@ -201,8 +201,8 @@ const posterSlice = createSlice({
                 ? Math.max(0, Math.min(3, Math.round(nextIndex)))
                 : 0;
             state.photoPosition = { x: 0, y: 0 };
-            state.namePosition = { x: 0, y: 0 };
-            state.messagePosition = { x: 0, y: 0 };
+            state.namePosition = null;
+            state.messagePosition = null;
             if (state.designLayoutIndex === 0) {
                 state.nameFontSize = null;
                 state.messageFontSize = null;
@@ -286,9 +286,9 @@ const posterSlice = createSlice({
             state.messageColor = null;
             state.nameFontSize = null;
             state.messageFontSize = null;
-            state.namePosition = { x: 0, y: 0 };
+            state.namePosition = null;
             state.nameScale = 1.0;
-            state.messagePosition = { x: 0, y: 0 };
+            state.messagePosition = null;
             state.messageScale = 1.0;
             state.nameBold = true;
             state.nameItalic = false;

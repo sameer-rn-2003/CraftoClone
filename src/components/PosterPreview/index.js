@@ -829,13 +829,19 @@ const DraggableText = ({
     interactionScale = 1,
     contentAnimationStyle,
     canvasSize,
+    configBasePosition,
+    configFieldWidth,
+    configFieldHeight,
 }) => {
     const dispatch = useDispatch();
 
-    const pan = useRef(new Animated.ValueXY({ x: textPosition.x, y: textPosition.y })).current;
+    const initialAbsX = textPosition?.x ?? configBasePosition?.x ?? field?.x ?? 16;
+    const initialAbsY = textPosition?.y ?? configBasePosition?.y ?? field?.y ?? 0;
+
+    const pan = useRef(new Animated.ValueXY({ x: initialAbsX, y: initialAbsY })).current;
     const scaleAnim = useRef(new Animated.Value(textScale)).current;
 
-    const committed = useRef({ x: textPosition.x, y: textPosition.y });
+    const committed = useRef({ x: initialAbsX, y: initialAbsY });
     const committedScale = useRef(textScale);
 
     const isPinching = useRef(false);
@@ -844,14 +850,15 @@ const DraggableText = ({
     const localScale = useRef(textScale);
 
     const prevTextPosition = useRef(textPosition);
-    if (
-        (prevTextPosition.current.x !== textPosition.x || prevTextPosition.current.y !== textPosition.y)
-        && !isPinching.current
-    ) {
-        prevTextPosition.current = textPosition;
-        committed.current = { x: textPosition.x, y: textPosition.y };
-        pan.setOffset({ x: 0, y: 0 });
-        pan.setValue({ x: textPosition.x, y: textPosition.y });
+    if (textPosition && !isPinching.current) {
+        const px = textPosition.x;
+        const py = textPosition.y;
+        if (prevTextPosition.current?.x !== px || prevTextPosition.current?.y !== py) {
+            prevTextPosition.current = textPosition;
+            committed.current = { x: px, y: py };
+            pan.setOffset({ x: 0, y: 0 });
+            pan.setValue({ x: px, y: py });
+        }
     }
 
     const prevTextScale = useRef(textScale);
@@ -872,7 +879,7 @@ const DraggableText = ({
                 initPinchDist.current = null;
                 pan.setOffset(committed.current);
                 pan.setValue({ x: 0, y: 0 });
-                console.log(`[DraggableText] Drag Start - committedPosition:`, committed.current, `scale:`, committedScale.current);
+                console.log(`[DraggableText] GRANT | field: ${text} | committed:`, committed.current);
             },
 
             onPanResponderMove: (evt, gesture) => {
@@ -894,11 +901,9 @@ const DraggableText = ({
                         const newScale = Math.min(MAX_TEXT_SCALE, maxScaleByWidth, Math.max(MIN_TEXT_SCALE, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
-                        console.log(`[DraggableText] Pinching - scale: ${newScale.toFixed(3)}, ratio: ${ratio.toFixed(3)}`);
                     }
                 } else if (!isPinching.current) {
                     const delta = getScaledGestureDelta(gesture, interactionScale);
-                    console.log(`[DraggableText] Dragging - offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}, scaledDelta: {x: ${delta.x.toFixed(1)}, y: ${delta.y.toFixed(1)}}, committedPosition:`, committed.current);
                     pan.setValue(delta);
                 }
             },
@@ -906,19 +911,16 @@ const DraggableText = ({
             onPanResponderRelease: (_, gesture) => {
                 if (isPinching.current) {
                     committedScale.current = localScale.current;
-                    console.log(`[DraggableText] Pinch End - finalScale: ${localScale.current.toFixed(3)}`);
                     dispatch(setScaleAction(localScale.current));
                     isPinching.current = false;
                     initPinchDist.current = null;
                 } else {
                     pan.flattenOffset();
-                    const delta = getScaledGestureDelta(gesture, interactionScale);
-                    const cl = canvasSize ?? { width: 2000, height: 2000 };
                     const next = {
-                        x: Math.max(-cl.width, Math.min(committed.current.x + delta.x, cl.width)),
-                        y: Math.max(-cl.height, Math.min(committed.current.y + delta.y, cl.height)),
+                        x: pan.x.__getValue(),
+                        y: pan.y.__getValue(),
                     };
-                    console.log(`[DraggableText] Drag End - finalPosition:`, next, `offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}`);
+                    console.log(`[DraggableText] RELEASE | field: ${text} | next:`, next);
                     committed.current = next;
                     dispatch(setPositionAction(next));
                 }
@@ -936,14 +938,15 @@ const DraggableText = ({
         <Animated.Text
             style={[
                 styles.textField,
-                resolveTextBounds(field),
                 textStyle,
                 {
+                    position: 'absolute',
+                    left: pan.x,
+                    top: pan.y,
                     opacity: contentAnimationStyle?.opacity ?? 1,
                     transform: [
                         ...(contentAnimationStyle?.transform || []),
                         { scale: scaleAnim },
-                        ...pan.getTranslateTransform(),
                     ],
                 },
             ]}
@@ -955,27 +958,31 @@ const DraggableText = ({
     );
 };
 
-const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textScale, contentAnimationStyle }) => (
-    <Animated.Text
-        style={[
-            styles.textField,
-            resolveTextBounds(field),
-            textStyle,
-            {
-                opacity: contentAnimationStyle?.opacity ?? 1,
-                transform: [
-                    ...(contentAnimationStyle?.transform || []),
-                    { scale: textScale },
-                    { translateX: textPosition.x },
-                    { translateY: textPosition.y },
-                ],
-            },
-        ]}
-        numberOfLines={numberOfLines}
-        adjustsFontSizeToFit>
-        {text}
-    </Animated.Text>
-);
+const StaticText = ({ text, numberOfLines, field, textStyle, textPosition, textScale, contentAnimationStyle, configBasePosition }) => {
+    const staticAbsX = textPosition?.x ?? configBasePosition?.x ?? field?.x ?? 16;
+    const staticAbsY = textPosition?.y ?? configBasePosition?.y ?? field?.y ?? 0;
+    return (
+        <Animated.Text
+            style={[
+                styles.textField,
+                textStyle,
+                {
+                    position: 'absolute',
+                    left: staticAbsX,
+                    top: staticAbsY,
+                    opacity: contentAnimationStyle?.opacity ?? 1,
+                    transform: [
+                        ...(contentAnimationStyle?.transform || []),
+                        { scale: textScale },
+                    ],
+                },
+            ]}
+            numberOfLines={numberOfLines}
+            adjustsFontSizeToFit>
+            {text}
+        </Animated.Text>
+    );
+};
 
 const DraggableNameText = props => <DraggableText {...props} numberOfLines={1} />;
 const DraggableMessageText = props => <DraggableText {...props} numberOfLines={2} />;
@@ -1072,6 +1079,21 @@ const PosterPreview = ({
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const textFieldScale = useMemo(() => {
+        const configJson = selectedTemplate?.config_json ?? selectedTemplate?.config ?? null;
+        const sourceW = getNumericValue(
+            configJson?.width ?? selectedTemplate?.config?.width ?? selectedTemplate?.width,
+            canvasSize.width,
+        );
+        const sourceH = getNumericValue(
+            configJson?.height ?? selectedTemplate?.config?.height ?? selectedTemplate?.height,
+            canvasSize.height,
+        );
+        return {
+            scaleX: sourceW > 0 ? canvasSize.width / sourceW : 1,
+            scaleY: sourceH > 0 ? canvasSize.height / sourceH : 1,
+        };
+    }, [selectedTemplate, canvasSize]);
     const textFieldPositions = useSelector(state => state.poster.textFieldPositions);
     const activeTextField = useSelector(state => state.poster.activeTextField);
     const activeDesignLayout = useMemo(
@@ -1243,14 +1265,15 @@ const PosterPreview = ({
     const renderTextLayers = (layers) => {
         if (!layers) return null;
         const context = renderContext;
-        const posterLayout = undefined;
+        const scaleX = textFieldScale.scaleX;
+        const scaleY = textFieldScale.scaleY;
         
         return layers
             .filter(layer => layer?.type === 'text')
             .map((layer, index) => {
                 const savedOffset = textFieldPositions[layer.id];
-                const baseX = layer.x || 0;
-                const baseY = layer.y || 0;
+                const baseX = (layer.x || 0) * scaleX;
+                const baseY = (layer.y || 0) * scaleY;
                 const isActive = interactive && activeTextField === layer.id;
 
                 // Resolve text content from context
@@ -1268,16 +1291,8 @@ const PosterPreview = ({
                     });
                 }
 
-                const scaleX = posterLayout?.scaleX || 1;
-                const scaleY = posterLayout?.scaleY || 1;
-                const offsetX = posterLayout?.offsetX || 0;
-                const offsetY = posterLayout?.offsetY || 0;
-
                 if (interactive) {
                     const layerStyle = {
-                        position: 'absolute',
-                        left: baseX * scaleX + offsetX,
-                        top: baseY * scaleY + offsetY,
                         width: (layer.width || 200) * scaleX,
                         height: (layer.height || 60) * scaleY,
                     };
@@ -1286,6 +1301,8 @@ const PosterPreview = ({
                             key={`${layer.id}_${index}`}
                             fieldId={layer.id}
                             text={textContent}
+                            baseX={baseX}
+                            baseY={baseY}
                             style={layerStyle}
                             layout={canvasSize}
                             isActive={isActive}
@@ -1294,11 +1311,12 @@ const PosterPreview = ({
                             fontFamily={layer.fontFamily}
                             fontWeight={layer.fontWeight}
                             textAlign={layer.align}
+                            interactionScale={interactionScale}
                         />
                     );
                 } else {
-                    const absX = (baseX + (savedOffset?.x ?? 0)) * scaleX + offsetX;
-                    const absY = (baseY + (savedOffset?.y ?? 0)) * scaleY + offsetY;
+                    const absX = savedOffset?.x ?? baseX;
+                    const absY = savedOffset?.y ?? baseY;
                     return (
                         <Text
                             key={`${layer.id}_${index}`}
@@ -1366,19 +1384,22 @@ const PosterPreview = ({
                     field={centeredField}
                     text={text}
                     textStyle={textStyle}
-                    textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                    textPosition={p.namePosition}
                     textScale={p.nameScale ?? 1}
                     setPositionAction={setNamePosition}
                     setScaleAction={setNameScale}
                     allowPinchScale={allowPinchScale}
                     interactionScale={interactionScale}
                     contentAnimationStyle={contentAnimationStyle}
-                    canvasSize={canvasSize} />
+                    canvasSize={canvasSize}
+                    configBasePosition={{ x: Math.round((field.x ?? 16) * textFieldScale.scaleX), y: Math.round((field.y ?? 0) * textFieldScale.scaleY) }}
+                    configFieldWidth={layer.width ? Math.round(layer.width * textFieldScale.scaleX) : undefined}
+                    configFieldHeight={layer.height ? Math.round(layer.height * textFieldScale.scaleY) : undefined} />
                 : <StaticNameText
                     field={centeredField}
                     text={text}
                     textStyle={textStyle}
-                    textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                    textPosition={p.namePosition}
                     textScale={p.nameScale ?? 1}
                     contentAnimationStyle={contentAnimationStyle} />;
         }
@@ -1393,14 +1414,17 @@ const PosterPreview = ({
                 })}
                 text={text}
                 textStyle={textStyle}
-                textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                textPosition={p.messagePosition}
                 textScale={p.messageScale ?? 1}
                 setPositionAction={setMessagePosition}
                 setScaleAction={setMessageScale}
                 allowPinchScale={allowPinchScale}
                 interactionScale={interactionScale}
                 contentAnimationStyle={contentAnimationStyle}
-                canvasSize={canvasSize} />
+                canvasSize={canvasSize}
+                configBasePosition={{ x: Math.round((field.x ?? 16) * textFieldScale.scaleX), y: Math.round((field.y ?? 0) * textFieldScale.scaleY) }}
+                configFieldWidth={layer.width ? Math.round(layer.width * textFieldScale.scaleX) : undefined}
+                configFieldHeight={layer.height ? Math.round(layer.height * textFieldScale.scaleY) : undefined} />
             : <StaticMessageText
                 field={applyDesignToTextField({
                     field,
@@ -1410,7 +1434,7 @@ const PosterPreview = ({
                 })}
                 text={text}
                 textStyle={textStyle}
-                textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                textPosition={p.messagePosition}
                 textScale={p.messageScale ?? 1}
                 contentAnimationStyle={contentAnimationStyle} />;
     };
@@ -1436,17 +1460,8 @@ const PosterPreview = ({
         const fieldKeys = Object.keys(configTextFields);
         if (fieldKeys.length === 0) return null;
 
-        const configJson = selectedTemplate?.config_json ?? selectedTemplate?.config ?? null;
-        const sourceW = getNumericValue(
-            configJson?.width ?? selectedTemplate?.config?.width ?? selectedTemplate?.width,
-            canvasSize.width,
-        );
-        const sourceH = getNumericValue(
-            configJson?.height ?? selectedTemplate?.config?.height ?? selectedTemplate?.height,
-            canvasSize.height,
-        );
-        const scaleX = sourceW > 0 ? canvasSize.width / sourceW : 1;
-        const scaleY = sourceH > 0 ? canvasSize.height / sourceH : 1;
+        const scaleX = textFieldScale.scaleX;
+        const scaleY = textFieldScale.scaleY;
         const uniformScale = Math.min(scaleX, scaleY);
 
         return fieldKeys.map(key => {
@@ -1502,7 +1517,7 @@ const PosterPreview = ({
             const isBold = isName ? p.nameBold : (isMessage ? p.messageBold : (dyn?.bold ?? false));
             const isItalic = isName ? p.nameItalic : (isMessage ? p.messageItalic : (dyn?.italic ?? false));
 
-            const userPosition = isName ? (p.namePosition ?? { x: 0, y: 0 }) : (isMessage ? (p.messagePosition ?? { x: 0, y: 0 }) : (dyn?.position ?? { x: 0, y: 0 }));
+            const userPosition = isName ? p.namePosition : (isMessage ? p.messagePosition : (dyn?.position ?? null));
             const userScale = isName ? (p.nameScale ?? 1) : (isMessage ? (p.messageScale ?? 1) : (dyn?.scale ?? 1));
 
             const setPositionAction = isName ? setNamePosition : (isMessage ? setMessagePosition : null);
@@ -1553,6 +1568,9 @@ const PosterPreview = ({
                             contentAnimationStyle={contentAnimationStyle}
                             canvasSize={canvasSize}
                             numberOfLines={isMessage ? 2 : 1}
+                            configBasePosition={{ x: fieldDef.x, y: fieldDef.y }}
+                            configFieldWidth={fieldDef.fieldWidth}
+                            configFieldHeight={field.height ? Math.round(field.height * scaleY) : undefined}
                         />
                     );
                 }
@@ -1763,19 +1781,22 @@ const PosterPreview = ({
                         field={centeredNameField}
                         text={displayName}
                         textStyle={nameTextStyle}
-                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                        textPosition={p.namePosition}
                         textScale={p.nameScale ?? 1}
                         setPositionAction={setNamePosition}
                         setScaleAction={setNameScale}
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale}
                         contentAnimationStyle={contentAnimationStyle}
-                        canvasSize={canvasSize} />
+                        canvasSize={canvasSize}
+                        configBasePosition={{ x: Math.round((nameField?.x ?? 16) * textFieldScale.scaleX), y: Math.round((nameField?.y ?? 0) * textFieldScale.scaleY) }}
+                        configFieldWidth={nameField?.fieldWidth ? Math.round(nameField.fieldWidth * textFieldScale.scaleX) : undefined}
+                        configFieldHeight={nameField?.height ? Math.round(nameField.height * textFieldScale.scaleY) : undefined} />
                     : <StaticNameText
                         field={centeredNameField}
                         text={displayName}
                         textStyle={nameTextStyle}
-                        textPosition={p.namePosition ?? { x: 0, y: 0 }}
+                        textPosition={p.namePosition}
                         textScale={p.nameScale ?? 1}
                         contentAnimationStyle={contentAnimationStyle} />
             )}
@@ -1787,19 +1808,22 @@ const PosterPreview = ({
                         field={designedMessageField}
                         text={displayMessage}
                         textStyle={messageTextStyle}
-                        textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                        textPosition={p.messagePosition}
                         textScale={p.messageScale ?? 1}
                         setPositionAction={setMessagePosition}
                         setScaleAction={setMessageScale}
                         allowPinchScale={allowPinchScale}
                         interactionScale={interactionScale}
                         contentAnimationStyle={contentAnimationStyle}
-                        canvasSize={canvasSize} />
+                        canvasSize={canvasSize}
+                        configBasePosition={{ x: Math.round((messageField?.x ?? 16) * textFieldScale.scaleX), y: Math.round((messageField?.y ?? 0) * textFieldScale.scaleY) }}
+                        configFieldWidth={messageField?.fieldWidth ? Math.round(messageField.fieldWidth * textFieldScale.scaleX) : undefined}
+                        configFieldHeight={messageField?.height ? Math.round(messageField.height * textFieldScale.scaleY) : undefined} />
                     : <StaticMessageText
                         field={designedMessageField}
                         text={displayMessage}
                         textStyle={messageTextStyle}
-                        textPosition={p.messagePosition ?? { x: 0, y: 0 }}
+                        textPosition={p.messagePosition}
                         textScale={p.messageScale ?? 1}
                         contentAnimationStyle={contentAnimationStyle} />
             )}

@@ -493,6 +493,9 @@ export const buildTemplateRenderConfig = ({
         ),
     };
 
+    const scaleX = sourceCanvas.sourceWidth > 0 ? canvas.width / sourceCanvas.sourceWidth : 1;
+    const scaleY = sourceCanvas.sourceHeight > 0 ? canvas.height / sourceCanvas.sourceHeight : 1;
+
     const photoFrameData = scaleFrameToCanvas(getTemplatePhotoFrame(template), sourceCanvas);
     const userAnimId = posterState.userPhotoAnimation || 'none';
     const templatePhotoFrameAnim = configJson?.photoFrame?.animation ?? configJson?.photo_frame?.animation;
@@ -588,22 +591,22 @@ export const buildTemplateRenderConfig = ({
         const dyn = (!isName && !isMessage) ? (posterState.dynamicTextFields?.[key] || {}) : {};
 
         const layerOffset = textFieldPositions[key];
-        const userOffset = layerOffset
-            || (isName ? posterState.namePosition : (isMessage ? posterState.messagePosition : (dyn.position ?? { x: 0, y: 0 })));
+        const userOffset = isName
+            ? posterState.namePosition
+            : (isMessage ? posterState.messagePosition : (layerOffset || (dyn.position ?? { x: 0, y: 0 })));
         const userScale = isName ? posterState.nameScale : (isMessage ? posterState.messageScale : (dyn.scale ?? 1));
         const fontSizeOverride = isName ? posterState.nameFontSize : (isMessage ? posterState.messageFontSize : (dyn.fontSize ?? null));
         const colorOverride = isName ? posterState.nameColor : (isMessage ? posterState.messageColor : (dyn.color ?? null));
 
-        const baseWidth = getNumericValue(field.fieldWidth ?? field.width, canvas.width - getNumericValue(field.x, 16) * 2);
-        const baseHeight = getNumericValue(field.height ?? 40, 40);
+        const baseX = Math.round(getNumericValue(field.x, 16) * scaleX);
+        const baseY = Math.round(getNumericValue(field.y, 0) * scaleY);
+        const baseWidth = Math.round(getNumericValue(field.fieldWidth ?? field.width, sourceCanvas.sourceWidth - getNumericValue(field.x, 16) * 2) * scaleX);
+        const baseHeight = Math.round(getNumericValue(field.height ?? 40, 40) * scaleY);
         const baseFontSize = Math.min(36, getNumericValue(fontSizeOverride ?? field.fontSize, 36));
-        const maxFieldWidth = Math.min(canvas.width, 1920);
-        const scaledWidth = Math.max(20, Math.min(Math.round(baseWidth * userScale), maxFieldWidth));
-        const scaledHeight = Math.max(20, Math.round(baseHeight * userScale));
         const scaledFontSize = Math.min(36, Math.round(baseFontSize * userScale));
 
-        const rawX = Math.round(getNumericValue(field.x, 16) + (baseWidth - scaledWidth) / 2 + (userOffset?.x ?? 0));
-        const rawY = Math.round(getNumericValue(field.y, 0) + (baseHeight - scaledHeight) / 2 + (userOffset?.y ?? 0));
+        const adjustedX = Math.round(userOffset?.x ?? baseX);
+        const adjustedY = Math.round(userOffset?.y ?? baseY);
 
         const getContent = () => {
             if (isName) return userData.headline;
@@ -619,8 +622,8 @@ export const buildTemplateRenderConfig = ({
             visible: isVisible,
             content: getContent(),
             position: {
-                x: Math.max(0, Math.min(rawX, Math.max(0, maxFieldWidth - scaledWidth))),
-                y: Math.max(0, Math.min(rawY, Math.max(0, canvas.height - scaledHeight))),
+                x: Math.max(0, adjustedX),
+                y: Math.max(0, adjustedY),
             },
             fontSize: scaledFontSize,
             fontFamily: field.fontFamily ?? (isName ? 'Poppins' : (isMessage ? 'Inter' : undefined)),
@@ -636,18 +639,13 @@ export const buildTemplateRenderConfig = ({
             console.log(`[getTextConfig] ${key}:`, JSON.stringify({
                 fieldX: field.x,
                 fieldY: field.y,
-                fieldWidth: field.fieldWidth,
-                baseWidth,
-                scaledWidth,
-                layerOffset,
+                scaleX,
+                scaleY,
+                baseX,
+                baseY,
                 userOffset,
-                userScale,
-                rawX,
-                rawY,
-                canvasW: canvas.width,
-                canvasH: canvas.height,
-                finalX: result.position.x,
-                finalY: result.position.y,
+                adjustedX: result.position.x,
+                adjustedY: result.position.y,
             }));
         }
 

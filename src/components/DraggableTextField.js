@@ -1,7 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Animated, PanResponder, Pressable, Text } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { setTextFieldPosition, setActiveTextField } from '../store/posterSlice';
+import {
+    setTextFieldPosition,
+    setActiveTextField,
+    setNamePosition,
+    setMessagePosition,
+} from '../store/posterSlice';
 
 const DraggableTextField = ({
   fieldId,
@@ -17,18 +22,41 @@ const DraggableTextField = ({
   fontFamily,
   fontWeight,
   textAlign,
-  children
+  children,
+  interactionScale = 1,
+  baseX = 0,
+  baseY = 0,
 }) => {
   const dispatch = useDispatch();
   const pan = useRef(new Animated.ValueXY()).current;
   const [isDragging, setIsDragging] = useState(false);
 
-  const savedOffset = useSelector(state => state.poster.textFieldPositions[fieldId]);
-  const committed = useRef(savedOffset || { x: 0, y: 0 });
+  const isNameField = fieldId === 'name' || fieldId === 'headline';
+  const isMessageField = fieldId === 'message' || fieldId === 'subtext';
+
+  const namePosition = useSelector(state => state.poster.namePosition);
+  const messagePosition = useSelector(state => state.poster.messagePosition);
+  const textFieldPosition = useSelector(state => state.poster.textFieldPositions[fieldId]);
+
+  const savedOffset = isNameField
+    ? namePosition
+    : (isMessageField ? messagePosition : textFieldPosition);
+  const committed = useRef(
+    savedOffset || {
+      x: baseX,
+      y: baseY,
+    },
+  );
 
   useEffect(() => {
+    committed.current = savedOffset || {
+      x: baseX,
+      y: baseY,
+    };
+
     pan.setValue(committed.current);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseX, baseY]);
 
   useEffect(() => {
     if (savedOffset) {
@@ -36,6 +64,7 @@ const DraggableTextField = ({
       pan.setOffset({ x: 0, y: 0 });
       pan.setValue(savedOffset);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedOffset]);
 
   const panResponder = useRef(
@@ -49,28 +78,28 @@ const DraggableTextField = ({
         dispatch(setActiveTextField(fieldId));
         pan.setOffset(committed.current);
         pan.setValue({ x: 0, y: 0 });
-        console.log(`[DraggableTextField] Drag Start - fieldId: ${fieldId}, committedOffset:`, committed.current);
       },
 
       onPanResponderMove: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        pan.setValue({ x: dx, y: dy });
-        const totalX = committed.current.x + dx;
-        const totalY = committed.current.y + dy;
-        console.log(`[DraggableTextField] Dragging - fieldId: ${fieldId}, gestureDelta: {dx: ${dx}, dy: ${dy}}, totalOffset: {x: ${totalX}, y: ${totalY}}`);
+        const scale = interactionScale && interactionScale > 0 ? interactionScale : 1;
+        pan.setValue({ x: gestureState.dx / scale, y: gestureState.dy / scale });
       },
 
       onPanResponderRelease: (evt, gestureState) => {
         setIsDragging(false);
         pan.flattenOffset();
-        const { dx, dy } = gestureState;
         const next = {
-          x: committed.current.x + dx,
-          y: committed.current.y + dy,
+          x: pan.x.__getValue(),
+          y: pan.y.__getValue(),
         };
         committed.current = next;
-        console.log(`[DraggableTextField] Drag End - fieldId: ${fieldId}, finalOffset: {x: ${next.x}, y: ${next.y}}`);
-        dispatch(setTextFieldPosition({ id: fieldId, x: next.x, y: next.y }));
+        if (isNameField) {
+          dispatch(setNamePosition(next));
+        } else if (isMessageField) {
+          dispatch(setMessagePosition(next));
+        } else {
+          dispatch(setTextFieldPosition({ id: fieldId, x: next.x, y: next.y }));
+        }
         onDragEnd?.(fieldId, next);
       },
 
@@ -87,7 +116,9 @@ const DraggableTextField = ({
       style={[
         style,
         {
-          transform: pan.getTranslateTransform(),
+          position: 'absolute',
+          left: pan.x,
+          top: pan.y,
           borderWidth: isActive ? 2 : 0,
           borderColor: isActive ? '#5B6CFF' : 'transparent',
           borderStyle: 'dashed',
