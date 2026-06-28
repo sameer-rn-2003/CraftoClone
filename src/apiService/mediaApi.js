@@ -31,7 +31,16 @@ const normalizeRenderConfig = (config = {}) => {
         result.photoFrame = config.photoFrame;
     }
     if (config.textFields) {
-        result.textFields = config.textFields;
+        result.textFields = Object.fromEntries(
+            Object.entries(config.textFields).map(([key, field]) => [
+                key,
+                key === 'name' || key === 'message'
+                    ? Object.fromEntries(
+                          Object.entries(field).filter(([k]) => k !== 'width')
+                      )
+                    : field,
+            ])
+        );
     }
     if (config.backgroundOverlay) {
         result.backgroundOverlay = config.backgroundOverlay;

@@ -95,6 +95,8 @@ const initialState = {
     activeCategory: 'political',
     // Notifications
     unreadNotificationCount: 0,
+    textFieldPositions: {}, // { fieldId: { x: number, y: number } }
+    activeTextField: null, // Currently selected text field ID
 };
 
 const posterSlice = createSlice({
@@ -354,6 +356,21 @@ const posterSlice = createSlice({
         },
         setUnreadNotificationCount(state, { payload }) { state.unreadNotificationCount = Number(payload) || 0; },
         setActiveCategory(state, { payload }) { state.activeCategory = payload; },
+        setTextFieldPosition: (state, action) => {
+            const { id, x, y } = action.payload;
+            state.textFieldPositions[id] = { x, y };
+        },
+        setActiveTextField: (state, action) => {
+            state.activeTextField = action.payload;
+        },
+        resetTextFields: (state) => {
+            state.textFieldPositions = {};
+            state.activeTextField = null;
+        },
+        resetTextFieldPosition: (state, action) => {
+            const { id } = action.payload;
+            delete state.textFieldPositions[id];
+        },
     },
 });
 
@@ -374,6 +391,7 @@ export const {
     addSavedPoster, resetEditor, setActiveCategory,setIsLoggedIn,
     setUnreadNotificationCount,
     setDynamicTextField, setDynamicTextFields, resetDynamicTextFields,
+    setTextFieldPosition, setActiveTextField, resetTextFields, resetTextFieldPosition
 } = posterSlice.actions;
 
 export default posterSlice.reducer;

@@ -32,6 +32,7 @@ import ShapeClipView from '../ShapeClipView';
 import TemplateMedia from '../TemplateMedia';
 import { getTemplateImageSource, hasTemplateVideo } from '../../utils/templateMedia';
 import ConfiguredTemplateLayers from '../ConfiguredTemplateLayers';
+import DraggableTextField from '../DraggableTextField';
 import {
     buildTemplateRenderContext,
     getTemplateEditableTextRole,
@@ -543,6 +544,7 @@ const DraggablePhoto = ({
                 initPinchDist.current = null;
                 pan.setOffset(committed.current);
                 pan.setValue({ x: 0, y: 0 });
+                console.log(`[DraggablePhoto] Drag Start - committedPosition:`, committed.current, `scale:`, committedScale.current);
             },
 
             onPanResponderMove: (evt, gesture) => {
@@ -561,9 +563,11 @@ const DraggablePhoto = ({
                         const newScale = Math.min(3.0, Math.max(0.25, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
+                        console.log(`[DraggablePhoto] Pinching - scale: ${newScale.toFixed(3)}, ratio: ${ratio.toFixed(3)}`);
                     }
                 } else if (!isPinching.current) {
                     const delta = getScaledGestureDelta(gesture, interactionScale);
+                    console.log(`[DraggablePhoto] Dragging - offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}, scaledDelta: {x: ${delta.x.toFixed(1)}, y: ${delta.y.toFixed(1)}}, committedPosition:`, committed.current);
                     pan.setValue(delta);
                 }
             },
@@ -571,6 +575,7 @@ const DraggablePhoto = ({
             onPanResponderRelease: (_, gesture) => {
                 if (isPinching.current) {
                     committedScale.current = localScale.current;
+                    console.log(`[DraggablePhoto] Pinch End - finalScale: ${localScale.current.toFixed(3)}`);
                     dispatch(setPhotoScale(localScale.current));
                     isPinching.current = false;
                     initPinchDist.current = null;
@@ -581,6 +586,7 @@ const DraggablePhoto = ({
                         x: committed.current.x + delta.x,
                         y: committed.current.y + delta.y,
                     };
+                    console.log(`[DraggablePhoto] Drag End - finalPosition: {x: ${next.x.toFixed(1)}, y: ${next.y.toFixed(1)}}, offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}`);
                     committed.current = next;
                     dispatch(setPhotoPosition(next));
                 }
@@ -866,6 +872,7 @@ const DraggableText = ({
                 initPinchDist.current = null;
                 pan.setOffset(committed.current);
                 pan.setValue({ x: 0, y: 0 });
+                console.log(`[DraggableText] Drag Start - committedPosition:`, committed.current, `scale:`, committedScale.current);
             },
 
             onPanResponderMove: (evt, gesture) => {
@@ -887,9 +894,11 @@ const DraggableText = ({
                         const newScale = Math.min(MAX_TEXT_SCALE, maxScaleByWidth, Math.max(MIN_TEXT_SCALE, initPinchScale.current * ratio));
                         localScale.current = newScale;
                         scaleAnim.setValue(newScale);
+                        console.log(`[DraggableText] Pinching - scale: ${newScale.toFixed(3)}, ratio: ${ratio.toFixed(3)}`);
                     }
                 } else if (!isPinching.current) {
                     const delta = getScaledGestureDelta(gesture, interactionScale);
+                    console.log(`[DraggableText] Dragging - offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}, scaledDelta: {x: ${delta.x.toFixed(1)}, y: ${delta.y.toFixed(1)}}, committedPosition:`, committed.current);
                     pan.setValue(delta);
                 }
             },
@@ -897,6 +906,7 @@ const DraggableText = ({
             onPanResponderRelease: (_, gesture) => {
                 if (isPinching.current) {
                     committedScale.current = localScale.current;
+                    console.log(`[DraggableText] Pinch End - finalScale: ${localScale.current.toFixed(3)}`);
                     dispatch(setScaleAction(localScale.current));
                     isPinching.current = false;
                     initPinchDist.current = null;
@@ -908,6 +918,7 @@ const DraggableText = ({
                         x: Math.max(-cl.width, Math.min(committed.current.x + delta.x, cl.width)),
                         y: Math.max(-cl.height, Math.min(committed.current.y + delta.y, cl.height)),
                     };
+                    console.log(`[DraggableText] Drag End - finalPosition:`, next, `offset: {dx: ${gesture.dx}, dy: ${gesture.dy}}`);
                     committed.current = next;
                     dispatch(setPositionAction(next));
                 }
@@ -1061,6 +1072,8 @@ const PosterPreview = ({
     const { t } = useTranslation();
     const selectedTemplate = p.selectedTemplate;
     const canvasSize = useMemo(() => getTemplateCanvasSize(selectedTemplate), [selectedTemplate]);
+    const textFieldPositions = useSelector(state => state.poster.textFieldPositions);
+    const activeTextField = useSelector(state => state.poster.activeTextField);
     const activeDesignLayout = useMemo(
         () => getDesignLayout(p.designLayoutIndex, canvasSize),
         [canvasSize, p.designLayoutIndex],
@@ -1225,6 +1238,88 @@ const PosterPreview = ({
         color: p.messageColor ?? '#FFFFFF',
         textAlign: activeDesignLayout?.align ?? messageField.align ?? p.textAlign ?? 'center',
         ...shadowStyle,
+    };
+
+    const renderTextLayers = (layers) => {
+        if (!layers) return null;
+        const context = renderContext;
+        const posterLayout = undefined;
+        
+        return layers
+            .filter(layer => layer?.type === 'text')
+            .map((layer, index) => {
+                const savedOffset = textFieldPositions[layer.id];
+                const baseX = layer.x || 0;
+                const baseY = layer.y || 0;
+                const isActive = interactive && activeTextField === layer.id;
+
+                // Resolve text content from context
+                let textContent = layer.text || '';
+                if (textContent.includes('{{')) {
+                    textContent = textContent.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+                        const trimmedKey = key.trim();
+                        if (trimmedKey === 'headline' || trimmedKey === 'name') {
+                            return context?.headline || context?.name || '';
+                        }
+                        if (trimmedKey === 'subtext' || trimmedKey === 'message') {
+                            return context?.subtext || context?.message || '';
+                        }
+                        return context?.[trimmedKey] || match;
+                    });
+                }
+
+                const scaleX = posterLayout?.scaleX || 1;
+                const scaleY = posterLayout?.scaleY || 1;
+                const offsetX = posterLayout?.offsetX || 0;
+                const offsetY = posterLayout?.offsetY || 0;
+
+                if (interactive) {
+                    const layerStyle = {
+                        position: 'absolute',
+                        left: baseX * scaleX + offsetX,
+                        top: baseY * scaleY + offsetY,
+                        width: (layer.width || 200) * scaleX,
+                        height: (layer.height || 60) * scaleY,
+                    };
+                    return (
+                        <DraggableTextField
+                            key={`${layer.id}_${index}`}
+                            fieldId={layer.id}
+                            text={textContent}
+                            style={layerStyle}
+                            layout={canvasSize}
+                            isActive={isActive}
+                            fontSize={(Number(layer.fontSize) || 24) * Math.min(scaleX, scaleY)}
+                            color={layer.color}
+                            fontFamily={layer.fontFamily}
+                            fontWeight={layer.fontWeight}
+                            textAlign={layer.align}
+                        />
+                    );
+                } else {
+                    const absX = (baseX + (savedOffset?.x ?? 0)) * scaleX + offsetX;
+                    const absY = (baseY + (savedOffset?.y ?? 0)) * scaleY + offsetY;
+                    return (
+                        <Text
+                            key={`${layer.id}_${index}`}
+                            style={{
+                                position: 'absolute',
+                                left: absX,
+                                top: absY,
+                                width: (layer.width || 200) * scaleX,
+                                height: (layer.height || 60) * scaleY,
+                                color: layer.color || '#FFFFFF',
+                                fontSize: (Number(layer.fontSize) || 24) * Math.min(scaleX, scaleY),
+                                fontFamily: layer.fontFamily || 'Poppins',
+                                fontWeight: layer.fontWeight || 'bold',
+                                textAlign: layer.align || 'center',
+                            }}
+                        >
+                            {textContent}
+                        </Text>
+                    );
+                }
+            });
     };
 
     // ── Config-driven text layer renderer ────────────────────────
@@ -1646,13 +1741,16 @@ const PosterPreview = ({
 
             {/* ── 3. Photo + text layers ── */}
             {isConfigDriven ? (
-                <ConfiguredTemplateLayers
-                    template={selectedTemplate}
-                    context={renderContext}
-                    skipBackgroundLayers={hasTemplateMedia}
-                    renderUserPhotoLayer={renderConfigUserPhotoLayer}
-                    renderTextLayer={null}
-                />
+                <>
+                    <ConfiguredTemplateLayers
+                        template={selectedTemplate}
+                        context={renderContext}
+                        skipBackgroundLayers={hasTemplateMedia}
+                        renderUserPhotoLayer={renderConfigUserPhotoLayer}
+                        renderTextLayer={() => null}
+                    />
+                    {renderTextLayers(selectedTemplate?.config_json?.layers || selectedTemplate?.config?.layers)}
+                </>
             ) : photoLayerNode}
 
             {/* ── 4. All text fields from config.textFields (name, message, extras) ── */}

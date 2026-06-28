@@ -62,8 +62,23 @@ const sanitizeFileName = value =>
         .replace(/^_+|_+$/g, '');
 
 export const startMediaGeneration = async (payload) => {
-    // payload should include template_id, type, and user_data/context render values.
-    const res = await generateMediaApi(payload);
+    // Ensure text positions are preserved if layers exist in render_config
+    const layers = payload?.render_config?.layers;
+    const enhancedPayload = layers
+        ? {
+            ...payload,
+            render_config: {
+                ...payload.render_config,
+                layers: layers.map(layer => ({
+                    ...layer,
+                    x: layer.x || 0,
+                    y: layer.y || 0,
+                })),
+            },
+        }
+        : payload;
+
+    const res = await generateMediaApi(enhancedPayload);
     return res.data?.data ?? res.data;
 };
 

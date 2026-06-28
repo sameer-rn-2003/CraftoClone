@@ -461,7 +461,6 @@ const buildDefaultTemplateLayers = ({ template, canvas, photoFrame, textFields, 
             type: 'text',
             x: field.position.x,
             y: field.position.y,
-            width: field.width,
             text: key === 'name' ? '{{headline}}' : '{{subtext}}',
             fontSize: field.fontSize,
             fontFamily: field.fontFamily,
@@ -545,6 +544,7 @@ export const buildTemplateRenderConfig = ({
             }
         });
     }
+    const { textFieldPositions = {} } = posterState;
     const layers = configJson?.layers ?? [];
     const textLayerMap = { '{{headline}}': 'name', '{{subtext}}': 'message' };
     const textLayerKeys = Object.keys(textLayerMap);
@@ -587,7 +587,9 @@ export const buildTemplateRenderConfig = ({
         const isMessage = key === 'message';
         const dyn = (!isName && !isMessage) ? (posterState.dynamicTextFields?.[key] || {}) : {};
 
-        const userOffset = isName ? posterState.namePosition : (isMessage ? posterState.messagePosition : (dyn.position ?? { x: 0, y: 0 }));
+        const layerOffset = textFieldPositions[key];
+        const userOffset = layerOffset
+            || (isName ? posterState.namePosition : (isMessage ? posterState.messagePosition : (dyn.position ?? { x: 0, y: 0 })));
         const userScale = isName ? posterState.nameScale : (isMessage ? posterState.messageScale : (dyn.scale ?? 1));
         const fontSizeOverride = isName ? posterState.nameFontSize : (isMessage ? posterState.messageFontSize : (dyn.fontSize ?? null));
         const colorOverride = isName ? posterState.nameColor : (isMessage ? posterState.messageColor : (dyn.color ?? null));
@@ -620,7 +622,6 @@ export const buildTemplateRenderConfig = ({
                 x: Math.max(0, Math.min(rawX, Math.max(0, maxFieldWidth - scaledWidth))),
                 y: Math.max(0, Math.min(rawY, Math.max(0, canvas.height - scaledHeight))),
             },
-            width: scaledWidth,
             fontSize: scaledFontSize,
             fontFamily: field.fontFamily ?? (isName ? 'Poppins' : (isMessage ? 'Inter' : undefined)),
             fontWeight: field.fontWeight ?? (isName ? 'bold' : (isMessage ? 'normal' : undefined)),
@@ -638,12 +639,25 @@ export const buildTemplateRenderConfig = ({
                 fieldWidth: field.fieldWidth,
                 baseWidth,
                 scaledWidth,
+                layerOffset,
                 userOffset,
                 userScale,
                 rawX,
                 rawY,
                 canvasW: canvas.width,
                 canvasH: canvas.height,
+                finalX: result.position.x,
+                finalY: result.position.y,
+            }));
+        }
+
+        if (!isName && !isMessage && layerOffset) {
+            console.log(`[getTextConfig] ${key} (layer):`, JSON.stringify({
+                fieldX: field.x,
+                fieldY: field.y,
+                layerOffset,
+                rawX,
+                rawY,
                 finalX: result.position.x,
                 finalY: result.position.y,
             }));
@@ -661,9 +675,9 @@ export const buildTemplateRenderConfig = ({
 
     const bgOverlay = getTemplateBackgroundOverlay(template);
     const backgroundOverlay = posterState.bgOverlayColor
-        ? { enabled: true, color: posterState.bgOverlayColor, opacity: posterState.bgOverlayOpacity }
+        ? { enabled: false, color: posterState.bgOverlayColor, opacity: posterState.bgOverlayOpacity }
         : bgOverlay
-            ? { enabled: bgOverlay.enabled !== false, color: bgOverlay.color ?? 'rgba(0,0,0,0.3)', opacity: getNumericValue(bgOverlay.opacity, 0.3) }
+            ? { enabled: false, color: bgOverlay.color ?? 'rgba(0,0,0,0.3)', opacity: getNumericValue(bgOverlay.opacity, 0.3) }
             : undefined;
 
     const premiumProfile = posterState.premiumProfile ?? {};
@@ -804,12 +818,18 @@ export const buildTemplateRenderConfig = ({
         output,
         templateVariables: {
             name: posterState.userName || '',
-            message: business.businessDescription || posterState.userMessage || '',
+            message: business.businessDescription || '',
             mobile: business.contactMobileNumber || personal.mobileNumber || '',
             address: business.contactAddress || personal.address || '',
             organization: business.businessName || personal.organizationName || '',
             instagram: businessSocial.instagram || personalSocial.instagram || '',
         },
+        layers: layers.length > 0 ? layers : undefined,
+        width: configJson?.width || 1080,
+        height: configJson?.height || 1920,
+        version: configJson?.version || '1.0',
+        variables: configJson?.variables || [],
+        background: configJson?.background || '#ffffff',
     };
 };
 

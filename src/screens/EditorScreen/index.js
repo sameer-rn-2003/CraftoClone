@@ -41,6 +41,8 @@ import {
     setDesignLayoutIndex,
     toggleSelectedTag,
     setDynamicTextField,
+    resetTextFields,
+    setActiveTextField,
 } from '../../store/posterSlice';
 import useImagePicker from '../../hooks/useImagePicker';
 import PosterPreview, { getPosterCompositionSize } from '../../components/PosterPreview';
@@ -954,6 +956,18 @@ const EditorScreen = ({ navigation, route }) => {
     const [pendingCropUri, setPendingCropUri] = useState(null);
     const [cropResizeMode, setCropResizeMode] = useState('cover');
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+    const [isDragMode, setIsDragMode] = useState(false);
+
+    useEffect(() => {
+        dispatch(resetTextFields());
+        return () => {
+            // Cleanup on unmount
+        };
+    }, [p.selectedTemplate?.id, dispatch]);
+
+    const handleTapOutside = useCallback(() => {
+        dispatch(setActiveTextField(null));
+    }, [dispatch]);
     const canvasSize = useMemo(() => getTemplateCanvasSize(p.selectedTemplate), [p.selectedTemplate]);
     const compositionSize = useMemo(
         () => getPosterCompositionSize(p.selectedTemplate, p),
@@ -1219,6 +1233,23 @@ const EditorScreen = ({ navigation, route }) => {
         userNameInput,
     ]);
 
+    const renderDragModeToggle = () => (
+        <View style={s.dragModeRow}>
+            <Pressable
+                style={[s.dragModeBtn, isDragMode && s.dragModeActive]}
+                onPress={() => setIsDragMode(!isDragMode)}
+            >
+                <MaterialCommunityIcons 
+                    name={isDragMode ? 'gesture-tap' : 'gesture-tap-hold'} 
+                    style={s.dragModeIcon} 
+                />
+                <Text style={[s.dragModeText, isDragMode && s.dragModeTextActive]}>
+                    {isDragMode ? 'Tap to select' : 'Drag to reposition'}
+                </Text>
+            </Pressable>
+        </View>
+    );
+
     const shouldCollapsePoster = isKeyboardVisible && (activeTab === 'text' || activeTab === 'details');
     const isTextTabActive = activeTab === 'text';
 
@@ -1245,7 +1276,9 @@ const EditorScreen = ({ navigation, route }) => {
             </View>
 
             {/* ── Poster preview (fixed, not scrollable) ─────────────────────── */}
-            <View style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
+            <Pressable
+                onPress={handleTapOutside}
+                style={[s.posterContainer, shouldCollapsePoster && s.posterContainerCollapsed]}>
                 <View style={[s.posterShadowRing, {
                     width: previewWidth + 20,
                     height: previewHeight + 20,
@@ -1254,6 +1287,7 @@ const EditorScreen = ({ navigation, route }) => {
                     width: previewWidth,
                     height: previewHeight,
                 }, shouldCollapsePoster && s.posterClipCollapsed]}>
+                    {renderDragModeToggle()}
                     <View style={[s.posterScaler, {
                         width: compositionSize.width,
                         height: compositionSize.height,
@@ -1262,7 +1296,7 @@ const EditorScreen = ({ navigation, route }) => {
                         marginTop: -(compositionSize.height * (1 - previewScale)) / 2,
                     }]}>
                         <PosterPreview
-                            interactive
+                            interactive={isDragMode}
                             allowPinchScale={p.isPremium}
                             interactionScale={previewScale}
                             mediaMuted={isTemplateMuted}
@@ -1292,7 +1326,7 @@ const EditorScreen = ({ navigation, route }) => {
                         })}
                     </View> */}
                 </View>
-            </View>
+            </Pressable>
 
             {/* ── Tab bar (fixed) ─────────────────────── */}
             <View style={s.tabBarWrapper}>
@@ -1396,6 +1430,38 @@ const EditorScreen = ({ navigation, route }) => {
 };
 
 const s = StyleSheet.create({
+    dragModeRow: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 30,
+    },
+    dragModeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: BORDER_RADIUS.full || 999,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    dragModeActive: {
+        backgroundColor: 'rgba(91, 108, 255, 0.8)',
+    },
+    dragModeIcon: {
+        fontSize: 16,
+        color: '#FFFFFF',
+    },
+    dragModeText: {
+        fontSize: 11,
+        color: '#FFFFFF',
+        fontWeight: '500',
+    },
+    dragModeTextActive: {
+        color: '#FFFFFF',
+    },
     safeArea: { flex: 1, backgroundColor: EDITOR_COLORS.background },
 
     // Header

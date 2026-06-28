@@ -33,6 +33,7 @@ import {
     setUserPhoto,
     setIsLoggedIn,
     setSpecialCategoryContext,
+    resetTextFields,
 } from '../../store/posterSlice';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
@@ -801,7 +802,6 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                     position: 'absolute',
                                     left: (configTextFields.name.position?.x ?? 16) * scaleX + offsetX,
                                     top: (configTextFields.name.position?.y ?? 0) * scaleY + offsetY,
-                                    width: (configTextFields.name.width ?? 267) * scaleX,
                                     color: configTextFields.name.color ?? '#FFFFFF',
                                     fontSize: (configTextFields.name.fontSize ?? 28) * Math.min(scaleX, scaleY),
                                     fontFamily: configTextFields.name.fontFamily,
@@ -822,7 +822,6 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                     position: 'absolute',
                                     left: (configTextFields.message.position?.x ?? 16) * scaleX + offsetX,
                                     top: (configTextFields.message.position?.y ?? 0) * scaleY + offsetY,
-                                    width: (configTextFields.message.width ?? 267) * scaleX,
                                     color: configTextFields.message.color ?? '#EEEEEE',
                                     fontSize: (configTextFields.message.fontSize ?? 18) * Math.min(scaleX, scaleY),
                                     fontFamily: configTextFields.message.fontFamily,
@@ -1272,6 +1271,7 @@ const HomeScreen = ({ navigation }) => {
 
     const openEditorWithTemplate = useCallback((template, extraParams = {}) => {
         dispatch(setSelectedTemplate(template));
+        dispatch(resetTextFields());
         navigation?.navigate?.('EditorScreen', {
             templateId: template.id,
             template,
