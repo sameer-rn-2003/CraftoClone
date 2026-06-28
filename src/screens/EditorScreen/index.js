@@ -57,6 +57,7 @@ import { getSubscriptionPlansApi } from '../../apiService/subscriptionApi';
 import {
     startRazorpayTestCheckout,
     verifySubscriptionPurchaseAndSync,
+    syncSubscriptionStatus,
 } from '../../services/subscriptionService';
 import {
     FONTS, SPACING, BORDER_RADIUS, SHADOW,
@@ -443,8 +444,8 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
                         )}
 
                         <RowLabel>{t(isName ? 'editor.text.name.colour' : (isMessage ? 'editor.text.message.colour' : 'Text Colour'))}</RowLabel>
-                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
-                            <View style={[s.paletteRow, (locked || !isName) && s.lockedSection]}>
+                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
+                            <View style={[s.paletteRow, locked && s.lockedSection]}>
                                 {COLOUR_PALETTE.map(c => (
                                     <ColourSwatch key={c} color={c} active={fieldColor === c}
                                         onPress={() => handlePremiumAction(() => {
@@ -457,8 +458,8 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
                         </LockedInputWrapper>
 
                         <RowLabel>{t(isName ? 'editor.text.name.size' : (isMessage ? 'editor.text.message.size' : 'Font Size'))}</RowLabel>
-                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
-                            <View style={[s.sizeRow, (locked || !isName) && s.lockedSection]}>
+                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
+                            <View style={[s.sizeRow, locked && s.lockedSection]}>
                                 {SIZE_PRESETS.map((sz, i) => (
                                     <SizeBtn key={sz} size={sz} active={sizeActive(i)}
                                         onPress={() => handlePremiumAction(() => {
@@ -471,8 +472,8 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
                         </LockedInputWrapper>
 
                         <RowLabel>{t(isName ? 'editor.text.name.style' : (isMessage ? 'editor.text.message.style' : 'Style'))}</RowLabel>
-                        <LockedInputWrapper locked={locked || !isName} onUnlock={onUnlockPremium}>
-                            <View style={[s.toggleRow, (locked || !isName) && s.lockedSection]}>
+                        <LockedInputWrapper locked={locked} onUnlock={onUnlockPremium}>
+                            <View style={[s.toggleRow, locked && s.lockedSection]}>
                                 <StyleToggle label="B" active={isBold}
                                     onPress={() => handlePremiumAction(() => {
                                         if (isName) dispatch(setNameBold(!p.nameBold));
@@ -1040,6 +1041,7 @@ const EditorScreen = ({ navigation, route }) => {
             if (stored?.premiumProfile) {
                 dispatch(hydratePremiumProfile(stored.premiumProfile));
             }
+            await syncSubscriptionStatus(dispatch);
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
