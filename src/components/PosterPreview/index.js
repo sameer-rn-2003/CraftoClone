@@ -1965,7 +1965,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     textField: {
-        position: 'absolute', left: 16, right: 16,
+        position: 'absolute', left: 16,
     },
     footer: {
         position: 'absolute', bottom: 0, left: 0, right: 0, height: 36,

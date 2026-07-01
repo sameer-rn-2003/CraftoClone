@@ -73,7 +73,7 @@ const initialState = {
     showMessage: false,       // false = hide message text layer
 
     // ── Photo frame shape ────────────────────────────────────
-    photoShape: 'circle',  // 'template' | 'circle' | 'square' | 'rectangle' | 'rect' | 'triangle' | 'star' | 'hexagon'
+    photoShape: 'template',  // 'template' | 'circle' | 'square' | 'rectangle' | 'rect' | 'triangle' | 'star' | 'hexagon'
 
     // ── Color accent override ────────────────────────────────
     accentColorOverride: null, // null = use template accent
@@ -121,6 +121,7 @@ const posterSlice = createSlice({
             state.messageFontSize = null;
             state.backgroundVideoDuration = null;
             state.dynamicTextFields = {};
+            state.photoShape = 'template';
             const pfAnim = payload?.config_json?.photoFrame?.animation ?? payload?.config_json?.photo_frame?.animation;
             const templateAnimArr = payload?.config_json?.animation || [];
             state.userPhotoAnimation = pfAnim?.id || templateAnimArr[0]?.id || 'none';

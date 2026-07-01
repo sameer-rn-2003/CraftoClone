@@ -111,7 +111,8 @@ console.log('Upload URL:', cdnUrl, 'File Key:', fileKey);
        let updateRes = await updateUserProfileApi({
             name: name.trim(),
             profile_photo_key: fileKey,
-            language: i18n.language, // optional but good
+            language: i18n.language,
+            company_name: companyName.trim() || undefined,
         });
 
 console.log('Profile update response:', updateRes.data);
@@ -195,15 +196,6 @@ console.log('Profile update response:', updateRes.data);
                     placeholderTextColor={COLORS.textSecondary}
                     value={name}
                     onChangeText={setName}
-                />
-
-                <Text style={styles.label}>Company Name (optional)</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Your company name"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={companyName}
-                    onChangeText={setCompanyNameState}
                 />
 
                 <Pressable

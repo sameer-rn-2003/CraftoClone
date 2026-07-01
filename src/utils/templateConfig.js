@@ -609,9 +609,9 @@ export const buildTemplateRenderConfig = ({
             : Math.round(getNumericValue(field.fieldWidth ?? field.width, sourceCanvas.sourceWidth - getNumericValue(field.x, 16) * 2) * scaleX);
         const baseHeight = Math.round(getNumericValue(field.height ?? 40, 40) * scaleY);
         const baseFontSize = Math.min(36, getNumericValue(fontSizeOverride ?? field.fontSize, 36));
-        const scaledFontSize = Math.min(36, Math.round(baseFontSize * userScale));
+        const scaledFontSize = Math.min(36, Math.round(baseFontSize * userScale)) - (isName || isMessage ? 8.5 : 0);
 
-        const adjustedX = Math.round(userOffset?.x ?? baseX);
+        const adjustedX = Math.round(userOffset?.x ?? baseX) - (isName || isMessage ? 28 : 0);
         const adjustedY = Math.round(userOffset?.y ?? baseY);
 
         const getContent = () => {

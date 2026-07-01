@@ -484,20 +484,6 @@ const SPECIAL_CATEGORY_TYPES = {
     panchayat: 'panchayat',
 };
 
-const FALLBACK_SUBCATEGORIES = {
-    political: [
-        { id: 'bjp', name: 'BJP', color: '#F97316' },
-        { id: 'congress', name: 'Congress', color: '#22C55E' },
-        { id: 'aap', name: 'AAP', color: '#2563EB' },
-        { id: 'samajwadi', name: 'Samajwadi Party', color: '#DC2626' },
-    ],
-    panchayat: [
-        { id: 'sarpanch', name: 'Sarpanch Candidate', color: '#0EA5E9' },
-        { id: 'ward', name: 'Ward Member', color: '#8B5CF6' },
-        { id: 'gram', name: 'Gram Panchayat', color: '#16A34A' },
-        { id: 'zila', name: 'Zila Parishad', color: '#F59E0B' },
-    ],
-};
 const TEMPLATE_SOCIAL_PLATFORMS = [
     { key: 'facebook', icon: 'facebook' },
     { key: 'instagram', icon: 'instagram' },
@@ -1024,9 +1010,6 @@ const HomeScreen = ({ navigation }) => {
             setCategories([
                 { id: 'all', label: t('categories.all'), icon: null, categoryId: 'all' },
                 ...formatted,
-                ...(formatted.some(item => getSpecialCategoryType(item) === 'panchayat')
-                    ? []
-                    : [{ id: 'panchayat', label: t('categories.panchayat', { defaultValue: 'Panchayat Chunav' }), icon: mapCategoryIcon('panchayat'), categoryId: null }]),
             ]);
 
         } catch (e) {
@@ -1598,10 +1581,10 @@ const HomeScreen = ({ navigation }) => {
                     description: sub.description || '',
                     image_url: sub.image_url,
                 }));
-                setSubcategoryChoices(formatted.length > 0 ? formatted : (FALLBACK_SUBCATEGORIES[specialType] || []));
+                setSubcategoryChoices(formatted);
             } catch (e) {
                 console.warn('Failed to fetch subcategories:', e?.message);
-                setSubcategoryChoices(FALLBACK_SUBCATEGORIES[specialType] || []);
+                setSubcategoryChoices([]);
             } finally {
                 setSubcategoryLoading(false);
             }

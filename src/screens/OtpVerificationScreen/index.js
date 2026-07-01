@@ -14,6 +14,7 @@ import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import Toast from '../../components/Toast';
 import { requestOtp, verifyOtp } from '../../apiService/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { mergeUserProfile } from '../../utils/userStorage';
 
 const COLORS = {
     pageBackground: '#F3F4FA',
@@ -34,6 +35,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     const { t } = useTranslation();
     const phone = route?.params?.phone || '';
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+    const [companyName, setCompanyName] = useState('');
     const [seconds, setSeconds] = useState(48);
     const [isVerifying, setIsVerifying] = useState(false);
     const [isResending, setIsResending] = useState(false);
@@ -101,11 +103,16 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     const res = await verifyOtp({
       phone_number: `+91${phone}`,
       otp: finalOtp,
+      company_name: companyName.trim() || undefined,
     });
     const { access_token, refresh_token } = res.data.data;
 
     await AsyncStorage.setItem('access_token', access_token);
     await AsyncStorage.setItem('refresh_token', refresh_token);
+
+    if (companyName.trim()) {
+      await mergeUserProfile({ companyName: companyName.trim() });
+    }
 
     showToast('Login successful', 'success');
 
@@ -196,6 +203,14 @@ const OtpVerificationScreen = ({ navigation, route }) => {
                             />
                         ))}
                     </View>
+
+                    <TextInput
+                        style={styles.companyInput}
+                        value={companyName}
+                        onChangeText={setCompanyName}
+                        placeholder="Company name (optional)"
+                        placeholderTextColor={COLORS.textSecondary}
+                    />
 
                     <Text style={styles.resendLabel}>{t('auth.otp.resendIn')}</Text>
                     <View style={styles.timerRow}>
@@ -359,6 +374,19 @@ const styles = StyleSheet.create({
     },
     otpFilled: {
         borderColor: COLORS.activeBorder,
+    },
+    companyInput: {
+        width: widthPixel(327),
+        height: heightPixel(44),
+        borderRadius: widthPixel(12),
+        backgroundColor: COLORS.inputBackground,
+        borderWidth: widthPixel(1),
+        borderColor: COLORS.inputBorder,
+        paddingHorizontal: widthPixel(14),
+        fontSize: widthPixel(13),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: COLORS.textPrimary,
+        marginBottom: heightPixel(20),
     },
     resendLabel: {
         fontSize: widthPixel(10),

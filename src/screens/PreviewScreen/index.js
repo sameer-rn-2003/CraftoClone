@@ -237,7 +237,7 @@ const PreviewScreen = ({ navigation, route }) => {
                         borderColor: accentColor + '30',
                         width: previewWidth,
                         height: previewHeight,
-                    }]} pointerEvents="none">
+                    }]}>
                         <View style={[styles.posterScaler, {
                             width: compositionSize.width,
                             height: compositionSize.height,
