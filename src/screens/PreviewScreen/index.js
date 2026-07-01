@@ -91,12 +91,10 @@ const PreviewScreen = ({ navigation, route }) => {
 
     const generateMediaFile = useCallback(async () => {
         if (!selectedTemplate) return;
-        const isCustom = !selectedTemplate.id;
-        const hasAnimation = (selectedTemplate.config_json?.animation?.length > 0)
-            || (selectedTemplate.config_json?.photoFrame?.animation);
-        const mediaType = isCustom
-            ? (hasAnimation ? 'VIDEO' : 'IMAGE')
-            : (isVideoTemplate ? 'VIDEO' : 'IMAGE');
+        const userAnimId = posterState.userPhotoAnimation || 'none';
+        const mediaType = isVideoTemplate
+            ? 'VIDEO'
+            : (userAnimId !== 'none' ? 'VIDEO' : 'IMAGE');
 
         const [photoUrl, bgUrl] = await Promise.all([
             uploadUserPhotoToS3(posterState.userPhoto),

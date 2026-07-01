@@ -24,6 +24,8 @@ import {
 } from '../../store/posterSlice';
 import { COLORS, POSTER_SIZE } from '../../utils/constants';
 import {
+    getDefaultPhotoFramePosition,
+    getDefaultNameTextPosition,
     getPhotoFrameBaseStyle,
     resolvePhotoFrameRadius,
 } from '../../utils/photoFrameLayout';
@@ -141,13 +143,16 @@ export const getPosterCompositionSize = (template, posterState) => {
 // Used when a template has no textFields defined (most reel/video templates).
 // Positions are expressed as fractions of canvasSize so they work at any resolution.
 
-const makeFallbackNameField = canvasSize => ({
-    y: Math.round(canvasSize.height * 0.60),
-    x: 20,
-    fieldWidth: canvasSize.width - 40,
-    align: 'center',
-    fontSize: 28,
-});
+const makeFallbackNameField = canvasSize => {
+    const field = {
+        y: Math.round(canvasSize.height * 0.60),
+        x: 20,
+        fieldWidth: canvasSize.width - 40,
+        align: 'center',
+        fontSize: 28,
+    };
+    return getDefaultNameTextPosition(field, canvasSize);
+};
 
 const makeFallbackMessageField = canvasSize => ({
     y: Math.round(canvasSize.height * 0.70),
@@ -284,8 +289,8 @@ const PatternLayer = ({ pattern, accentColor, canvasSize }) => {
 // ─── Photo animation ──────────────────────────────────────────────
 
 const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMetrics = {}, configAnimation = null) => {
-    // If we have a config animation with from/to values, use them directly
-    if (configAnimation && configAnimation.from && configAnimation.to) {
+    // If we have a config animation with from/to values and user hasn't disabled it, use them directly
+    if (animationId !== 'none' && configAnimation && configAnimation.from && configAnimation.to) {
         return {
             from: configAnimation.from,
             to: configAnimation.to,
@@ -295,11 +300,7 @@ const getPhotoAnimationConfig = (animationId, canvasSize = POSTER_SIZE, frameMet
         };
     }
 
-    // If config animation has an id and user hasn't selected a custom animation,
-    // use the config animation id
-    const effectiveAnimationId = (animationId === 'none' && configAnimation?.id)
-        ? configAnimation.id
-        : animationId;
+    const effectiveAnimationId = animationId;
 
     const frameWidth = Number(frameMetrics?.width) || 0;
     const frameHeight = Number(frameMetrics?.height) || 0;
@@ -471,18 +472,17 @@ const AnimatedPhotoContent = ({ photoUri, resizeMode = 'cover' }) => {
 
 const getCenteredFallbackPhotoFrameStyle = ({ canvasSize = POSTER_SIZE, photoShape = 'template' }) => {
     const size = Math.max(96, Math.min(canvasSize.width, canvasSize.height) * 0.28);
-    const left = (canvasSize.width - size) / 2;
-    const top = (canvasSize.height - size) / 2;
     const templateRadius = size / 2;
-    return {
-        left,
-        top,
+    const base = {
+        left: 0,
+        top: 0,
         width: size,
         height: size,
         borderRadius: resolvePhotoFrameRadius(photoShape, templateRadius),
         borderColor: '#FFFFFF',
         borderWidth: 0,
     };
+    return getDefaultPhotoFramePosition(base, canvasSize);
 };
 
 const DraggablePhoto = ({
@@ -601,7 +601,7 @@ const DraggablePhoto = ({
     ).current;
 
     const frameBaseStyle = frameStyle
-        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
+        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape, canvasSize })
         ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
 
     const photoAnimationStyle = usePhotoAnimationStyle({
@@ -676,7 +676,7 @@ export const StaticPhoto = ({
     configAnimation = null,
 }) => {
     const frameBaseStyle = frameStyle
-        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape })
+        ?? getPhotoFrameBaseStyle({ photoFrame, photoShape, canvasSize })
         ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape });
 
     const photoAnimationStyle = usePhotoAnimationStyle({
@@ -1224,12 +1224,12 @@ const PosterPreview = ({
     if (!messageField) messageField = makeFallbackMessageField(canvasSize);
 
     // Center the name field on the poster so it's always visible and draggable
-    const centeredNameField = applyDesignToTextField({
+    const centeredNameField = getDefaultNameTextPosition(applyDesignToTextField({
         field: nameField,
         y: activeDesignLayout?.nameY,
         align: activeDesignLayout?.align,
         canvasSize,
-    });
+    }), canvasSize);
     const designedMessageField = applyDesignToTextField({
         field: messageField,
         y: activeDesignLayout?.messageY,
@@ -1249,7 +1249,7 @@ const PosterPreview = ({
         fontWeight: nameFontWeight,
         fontStyle: nameFontStyle,
         color: p.nameColor ?? '#FFFFFF',
-        textAlign: activeDesignLayout?.align ?? nameField.align ?? p.textAlign ?? 'center',
+        textAlign: centeredNameField?.align ?? activeDesignLayout?.align ?? nameField.align ?? p.textAlign ?? 'center',
         ...shadowStyle,
     };
 
@@ -1272,12 +1272,17 @@ const PosterPreview = ({
             .filter(layer => layer?.type === 'text')
             .map((layer, index) => {
                 const savedOffset = textFieldPositions[layer.id];
-                const baseX = (layer.x || 0) * scaleX;
-                const baseY = (layer.y || 0) * scaleY;
+                const rawText = layer.text || '';
+
+                const isNameLayer = rawText.includes('{{headline}}') || rawText.includes('{{name}}');
+                const defaultNamePos = isNameLayer ? getDefaultNameTextPosition({ x: 0, y: 0, fieldWidth: 0 }, canvasSize) : null;
+                const baseX = defaultNamePos ? Math.round(defaultNamePos.x) : (layer.x || 0) * scaleX;
+                const baseY = defaultNamePos ? Math.round(defaultNamePos.y) : (layer.y || 0) * scaleY;
+                const align = defaultNamePos ? defaultNamePos.align : layer.align;
                 const isActive = interactive && activeTextField === layer.id;
 
                 // Resolve text content from context
-                let textContent = layer.text || '';
+                let textContent = rawText;
                 if (textContent.includes('{{')) {
                     textContent = textContent.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
                         const trimmedKey = key.trim();
@@ -1310,7 +1315,7 @@ const PosterPreview = ({
                             color={layer.color}
                             fontFamily={layer.fontFamily}
                             fontWeight={layer.fontWeight}
-                            textAlign={layer.align}
+                            textAlign={align}
                             interactionScale={interactionScale}
                         />
                     );
@@ -1330,7 +1335,7 @@ const PosterPreview = ({
                                 fontSize: (Number(layer.fontSize) || 24) * Math.min(scaleX, scaleY),
                                 fontFamily: layer.fontFamily || 'Poppins',
                                 fontWeight: layer.fontWeight || 'bold',
-                                textAlign: layer.align || 'center',
+                                textAlign: align || 'center',
                             }}
                         >
                             {textContent}
@@ -1373,17 +1378,18 @@ const PosterPreview = ({
         if (!text) return undefined;
 
         if (editableRole === 'name') {
-            const centeredField = applyDesignToTextField({
+            const centeredField = getDefaultNameTextPosition(applyDesignToTextField({
                 field,
                 y: activeDesignLayout?.nameY,
                 align: activeDesignLayout?.align,
                 canvasSize,
-            });
+            }), canvasSize);
+            const nameTextStyle = { ...textStyle, textAlign: centeredField.align ?? 'right' };
             return interactive
                 ? <DraggableNameText
                     field={centeredField}
                     text={text}
-                    textStyle={textStyle}
+                    textStyle={nameTextStyle}
                     textPosition={p.namePosition}
                     textScale={p.nameScale ?? 1}
                     setPositionAction={setNamePosition}
@@ -1392,13 +1398,13 @@ const PosterPreview = ({
                     interactionScale={interactionScale}
                     contentAnimationStyle={contentAnimationStyle}
                     canvasSize={canvasSize}
-                    configBasePosition={{ x: Math.round((field.x ?? 16) * textFieldScale.scaleX), y: Math.round((field.y ?? 0) * textFieldScale.scaleY) }}
+                    configBasePosition={{ x: Math.round(centeredField.x ?? 16), y: Math.round(centeredField.y ?? 0) }}
                     configFieldWidth={layer.width ? Math.round(layer.width * textFieldScale.scaleX) : undefined}
                     configFieldHeight={layer.height ? Math.round(layer.height * textFieldScale.scaleY) : undefined} />
                 : <StaticNameText
                     field={centeredField}
                     text={text}
-                    textStyle={textStyle}
+                    textStyle={nameTextStyle}
                     textPosition={p.namePosition}
                     textScale={p.nameScale ?? 1}
                     contentAnimationStyle={contentAnimationStyle} />;
@@ -1476,12 +1482,15 @@ const PosterPreview = ({
             if (field.visible === false) return null;
 
             const pos = (typeof field.position === 'object' && field.position !== null) ? field.position : {};
-            const fieldDef = {
+            const rawFieldDef = {
                 x: Math.round((pos.x ?? 16) * scaleX),
                 y: Math.round((pos.y ?? 0) * scaleY),
                 fieldWidth: field.width ? Math.round(field.width * scaleX) : (canvasSize.width - Math.round((pos.x ?? 16) * scaleX) * 2),
                 align: field.align ?? 'center',
             };
+            const fieldDef = isName
+                ? { ...rawFieldDef, ...getDefaultNameTextPosition(rawFieldDef, canvasSize) }
+                : rawFieldDef;
 
             if (isName || isMessage) {
                 const up = isName ? (p.namePosition ?? { x: 0, y: 0 }) : (p.messagePosition ?? { x: 0, y: 0 });
@@ -1537,17 +1546,14 @@ const PosterPreview = ({
                 fontWeight: isBold ? 'bold' : 'normal',
                 fontStyle: isItalic ? 'italic' : 'normal',
                 color: effectiveColor,
-                textAlign: field.align ?? 'center',
+                textAlign: fieldDef.align ?? 'center',
                 fontFamily: field.fontFamily,
                 ...shadowStyle,
             };
 
             if (!displayText) return null;
 
-            const fieldForRender = {
-                ...fieldDef,
-                align: field.align ?? 'center',
-            };
+            const fieldForRender = fieldDef;
 
             if (interactive) {
                 const posAction = setPositionAction || getDynamicPositionSetter();
@@ -1595,13 +1601,14 @@ const PosterPreview = ({
     const basePhotoFrameStyle = getPhotoFrameBaseStyle({
         photoFrame,
         photoShape: p.photoShape ?? 'template',
+        canvasSize,
     }) ?? getCenteredFallbackPhotoFrameStyle({ canvasSize, photoShape: p.photoShape ?? 'template' });
 
-    const designedPhotoFrame = applyDesignToFrame({
+    const designedPhotoFrame = getDefaultPhotoFramePosition(applyDesignToFrame({
         frameStyle: basePhotoFrameStyle,
         layout: activeDesignLayout,
         canvasSize,
-    });
+    }), canvasSize);
 
     const photoLayerNode = (designedPhotoFrame || displayPhotoUri)
         ? (
@@ -1637,11 +1644,11 @@ const PosterPreview = ({
             layerStyle,
             photoShape: p.photoShape ?? 'template',
         });
-        const designedConfigFrameStyle = applyDesignToFrame({
+        const designedConfigFrameStyle = getDefaultPhotoFramePosition(applyDesignToFrame({
             frameStyle: configPhotoFrameStyle,
             layout: activeDesignLayout,
             canvasSize,
-        });
+        }), canvasSize);
         const resizeMode = layer?.resizeMode ?? 'cover';
         return interactive
             ? <DraggablePhoto
@@ -1789,8 +1796,8 @@ const PosterPreview = ({
                         interactionScale={interactionScale}
                         contentAnimationStyle={contentAnimationStyle}
                         canvasSize={canvasSize}
-                        configBasePosition={{ x: Math.round((nameField?.x ?? 16) * textFieldScale.scaleX), y: Math.round((nameField?.y ?? 0) * textFieldScale.scaleY) }}
-                        configFieldWidth={nameField?.fieldWidth ? Math.round(nameField.fieldWidth * textFieldScale.scaleX) : undefined}
+                        configBasePosition={{ x: Math.round(centeredNameField.x ?? 16), y: Math.round(centeredNameField.y ?? 0) }}
+                        configFieldWidth={centeredNameField.fieldWidth ? Math.round(centeredNameField.fieldWidth) : undefined}
                         configFieldHeight={nameField?.height ? Math.round(nameField.height * textFieldScale.scaleY) : undefined} />
                     : <StaticNameText
                         field={centeredNameField}

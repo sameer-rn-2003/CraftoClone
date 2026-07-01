@@ -1,5 +1,6 @@
 import { POSTER_SIZE } from './constants';
 import { PHOTO_ANIMATION_DEFAULTS } from './photoAnimationOptions';
+import { getDefaultPhotoFramePosition, getDefaultNameTextPosition } from './photoFrameLayout';
 
 const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
 const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
@@ -499,7 +500,7 @@ export const buildTemplateRenderConfig = ({
     const photoFrameData = scaleFrameToCanvas(getTemplatePhotoFrame(template), sourceCanvas);
     const userAnimId = posterState.userPhotoAnimation || 'none';
     const templatePhotoFrameAnim = configJson?.photoFrame?.animation ?? configJson?.photo_frame?.animation;
-    const resolvedAnimId = userAnimId !== 'none' ? userAnimId : (templatePhotoFrameAnim?.id ?? 'none');
+    const resolvedAnimId = userAnimId;
 
     const photoFrameAnimation = resolvedAnimId !== 'none'
         ? { id: resolvedAnimId }
@@ -512,8 +513,10 @@ export const buildTemplateRenderConfig = ({
 
         const adjustedWidth = Math.max(20, Math.round(photoFrameData.width * userScale));
         const adjustedHeight = Math.max(20, Math.round(photoFrameData.height * userScale));
-        const adjustedX = Math.round(photoFrameData.x + (photoFrameData.width - adjustedWidth) / 2 + userOffsetX);
-        const adjustedY = Math.round(photoFrameData.y + (photoFrameData.height - adjustedHeight) / 2 + userOffsetY);
+        const margin = Math.max(8, Math.round(canvas.width * 0.04));
+        const defaultFrameStyle = getDefaultPhotoFramePosition({ left: 0, top: 0, width: adjustedWidth, height: adjustedHeight }, canvas);
+        const adjustedX = Math.round(defaultFrameStyle.left + userOffsetX);
+        const adjustedY = Math.round(defaultFrameStyle.top + userOffsetY);
 
         return {
             x: Math.max(0, adjustedX),
@@ -598,9 +601,12 @@ export const buildTemplateRenderConfig = ({
         const fontSizeOverride = isName ? posterState.nameFontSize : (isMessage ? posterState.messageFontSize : (dyn.fontSize ?? null));
         const colorOverride = isName ? posterState.nameColor : (isMessage ? posterState.messageColor : (dyn.color ?? null));
 
-        const baseX = Math.round(getNumericValue(field.x, 16) * scaleX);
-        const baseY = Math.round(getNumericValue(field.y, 0) * scaleY);
-        const baseWidth = Math.round(getNumericValue(field.fieldWidth ?? field.width, sourceCanvas.sourceWidth - getNumericValue(field.x, 16) * 2) * scaleX);
+        const defaultNamePosition = isName ? getDefaultNameTextPosition({ x: 0, y: 0, fieldWidth: 0 }, canvas) : null;
+        const baseX = defaultNamePosition ? Math.round(defaultNamePosition.x) : Math.round(getNumericValue(field.x, 16) * scaleX);
+        const baseY = defaultNamePosition ? Math.round(defaultNamePosition.y) : Math.round(getNumericValue(field.y, 0) * scaleY);
+        const baseWidth = defaultNamePosition
+            ? Math.round(defaultNamePosition.fieldWidth)
+            : Math.round(getNumericValue(field.fieldWidth ?? field.width, sourceCanvas.sourceWidth - getNumericValue(field.x, 16) * 2) * scaleX);
         const baseHeight = Math.round(getNumericValue(field.height ?? 40, 40) * scaleY);
         const baseFontSize = Math.min(36, getNumericValue(fontSizeOverride ?? field.fontSize, 36));
         const scaledFontSize = Math.min(36, Math.round(baseFontSize * userScale));
@@ -629,7 +635,7 @@ export const buildTemplateRenderConfig = ({
             fontFamily: field.fontFamily ?? (isName ? 'Poppins' : (isMessage ? 'Inter' : undefined)),
             fontWeight: field.fontWeight ?? (isName ? 'bold' : (isMessage ? 'normal' : undefined)),
             color: colorOverride ?? field.color ?? (isName ? '#FFFFFF' : (isMessage ? '#EEEEEE' : '#FFFFFF')),
-            align: posterState.textAlign ?? field.align ?? 'center',
+            align: defaultNamePosition ? defaultNamePosition.align : (posterState.textAlign ?? field.align ?? 'center'),
             bold: isBold,
             italic: isItalic,
             shadow: posterState.textShadow === true,
@@ -752,8 +758,7 @@ export const buildTemplateRenderConfig = ({
         const templateAnimations = configJson?.animation || [];
         const matchedTemplateAnim = templateAnimations.find(a => a?.id === resolvedAnimId);
         const defaultAnim = PHOTO_ANIMATION_DEFAULTS[resolvedAnimId];
-        const userAnimObj = userAnimId !== 'none' ? null : templatePhotoFrameAnim;
-        const baseAnim = matchedTemplateAnim ?? userAnimObj ?? {};
+        const baseAnim = matchedTemplateAnim ?? templatePhotoFrameAnim ?? {};
         animations.push({
             id: resolvedAnimId,
             from: baseAnim?.from ?? defaultAnim?.from ?? { translateY: 60, opacity: 0 },
@@ -812,7 +817,7 @@ export const buildTemplateRenderConfig = ({
         backgroundOverlay,
         premiumBands,
         stickers: posterState.stickers ?? [],
-        animation: animations.length > 0 ? animations : undefined,
+        animation: animations.length > 0 ? animations : [],
         output,
         templateVariables: {
             name: posterState.userName || '',

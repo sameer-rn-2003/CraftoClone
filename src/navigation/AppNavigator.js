@@ -28,7 +28,7 @@ import { getStoredLanguage } from '../i18n/storage';
 import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 
 import { getUserProfile } from '../utils/userStorage';
-import { setIsLoggedIn } from '../store/posterSlice';
+import { setUserName, setCompanyName, setUserPhoto, setIsLoggedIn } from '../store/posterSlice';
 import { setSessionExpiredCallback } from '../apiService/apiService';
 
 const Stack = createStackNavigator();
@@ -96,11 +96,14 @@ const AppNavigator = () => {
                     await i18n.changeLanguage('en');
                 }
 
-                // 🔐 Restore login state from storage
+                // 🔐 Restore login state and profile from storage
                 const user = await getUserProfile();
 
                 if (user?.isLoggedIn) {
                     dispatch(setIsLoggedIn(true));
+                    if (user?.name) dispatch(setUserName(user.name));
+                    if (user?.companyName) dispatch(setCompanyName(user.companyName));
+                    if (user?.imageUri) dispatch(setUserPhoto(user.imageUri));
                 }
 
             } catch (e) {

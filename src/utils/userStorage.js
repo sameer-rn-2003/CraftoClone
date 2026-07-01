@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const USER_PROFILE_KEY = 'user_profile';
 const DEFAULT_PROFILE = {
     name: '',
+    companyName: '',
     imageUri: '',
     isLoggedIn: false,
     isPremium: false,

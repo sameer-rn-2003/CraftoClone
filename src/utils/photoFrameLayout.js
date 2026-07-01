@@ -48,13 +48,36 @@ export const getPosterFitLayout = (containerWidth, containerHeight, posterSize =
     };
 };
 
+export const getDefaultPhotoFramePosition = (frameStyle, canvasSize) => {
+    if (!frameStyle || !canvasSize) return frameStyle;
+    const margin = Math.max(8, Math.round(canvasSize.width * 0.04));
+    return {
+        ...frameStyle,
+        left: margin,
+        top: canvasSize.height - frameStyle.height - margin,
+    };
+};
+
+export const getDefaultNameTextPosition = (field, canvasSize) => {
+    if (!field || !canvasSize) return field;
+    const margin = Math.max(8, Math.round(canvasSize.width * 0.04));
+    return {
+        ...field,
+        x: Math.round(canvasSize.width * 0.50),
+        y: Math.round(canvasSize.height * 0.80),
+        fieldWidth: Math.round(canvasSize.width * 0.46),
+        align: 'right',
+    };
+};
+
 export const getPhotoFrameBaseStyle = ({
     photoFrame,
     photoShape = 'template',
+    canvasSize,
 }) => {
     if (!photoFrame) return null;
 
-    return {
+    const base = {
         left: photoFrame.x,
         top: photoFrame.y,
         width: photoFrame.width,
@@ -63,6 +86,8 @@ export const getPhotoFrameBaseStyle = ({
         borderColor: photoFrame.borderColor,
         borderWidth: photoFrame.borderWidth,
     };
+
+    return getDefaultPhotoFramePosition(base, canvasSize);
 };
 
 export const getScaledPhotoFrameStyle = ({
@@ -75,24 +100,27 @@ export const getScaledPhotoFrameStyle = ({
     if (!photoFrame || !posterLayout) return null;
 
     const { scaleX = 1, scaleY = 1, offsetX = 0, offsetY = 0 } = posterLayout;
-    const frameLeft = photoFrame.x * scaleX + offsetX;
-    const frameTop = photoFrame.y * scaleY + offsetY;
     const frameWidth = photoFrame.width * scaleX;
     const frameHeight = photoFrame.height * scaleY;
 
     const scaledWidth = frameWidth * photoScale;
     const scaledHeight = frameHeight * photoScale;
-    const centerX = frameLeft + frameWidth / 2;
-    const centerY = frameTop + frameHeight / 2;
 
     const shapeRadius = resolvePhotoFrameRadius(photoShape, photoFrame.borderRadius);
     const radiusScale = Math.min(scaleX, scaleY);
-    const rawLeft = centerX - scaledWidth / 2 + (photoPosition.x * scaleX);
-    const rawTop = centerY - scaledHeight / 2 + (photoPosition.y * scaleY);
+
+    const posterWidth = posterLayout.width ?? 0;
+    const posterHeight = posterLayout.height ?? 0;
+    const margin = Math.max(8, Math.round(posterWidth * 0.04));
+    const defaultLeft = offsetX + margin;
+    const defaultTop = offsetY + posterHeight - scaledHeight - margin;
+
+    const rawLeft = defaultLeft + (photoPosition.x * scaleX);
+    const rawTop = defaultTop + (photoPosition.y * scaleY);
     const minLeft = offsetX;
     const minTop = offsetY;
-    const maxLeft = offsetX + Math.max((posterLayout.width ?? 0) - scaledWidth, 0);
-    const maxTop = offsetY + Math.max((posterLayout.height ?? 0) - scaledHeight, 0);
+    const maxLeft = offsetX + Math.max(posterWidth - scaledWidth, 0);
+    const maxTop = offsetY + Math.max(posterHeight - scaledHeight, 0);
 
     return {
         left: Math.min(maxLeft, Math.max(minLeft, rawLeft)),

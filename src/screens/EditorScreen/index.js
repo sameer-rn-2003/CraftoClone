@@ -1126,19 +1126,9 @@ const EditorScreen = ({ navigation, route }) => {
         if (!pendingCropUri) return;
         dispatch(setUserPhoto(pendingCropUri));
         await mergeUserProfile({ imageUri: pendingCropUri, imageFit: cropResizeMode });
-        const frame = p.selectedTemplate?.photoFrame;
-        if (frame && frame.width && frame.height) {
-            const frameCenterX = frame.x + frame.width / 2;
-            const frameCenterY = frame.y + frame.height / 2;
-            const canvasCenterX = canvasSize.width / 2;
-            const canvasCenterY = canvasSize.height / 2;
-            dispatch(setPhotoPosition({
-                x: canvasCenterX - frameCenterX,
-                y: canvasCenterY - frameCenterY,
-            }));
-        }
+        dispatch(setPhotoPosition({ x: 0, y: 0 }));
         setPendingCropUri(null);
-    }, [canvasSize, cropResizeMode, dispatch, p.selectedTemplate?.photoFrame, pendingCropUri]);
+    }, [cropResizeMode, dispatch, pendingCropUri]);
 
     const handlePreview = useCallback(() => {
         if (!p.userPhoto) {

@@ -16,6 +16,7 @@ import Toast from '../../components/Toast';
 import useImagePicker from '../../hooks/useImagePicker';
 import {
     setUserName,
+    setCompanyName,
     setUserPhoto,
     setPremiumStatus,
     hydratePremiumProfile,
@@ -42,6 +43,7 @@ const UserSetupScreen = ({ navigation }) => {
     const { t } = useTranslation();
     const { pickImage, loading } = useImagePicker();
     const [name, setName] = useState('');
+    const [companyName, setCompanyNameState] = useState('');
     const [imageUri, setImageUri] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
@@ -51,6 +53,7 @@ const UserSetupScreen = ({ navigation }) => {
         (async () => {
             const existing = await getUserProfile();
             if (existing?.name) setName(existing.name);
+            if (existing?.companyName) setCompanyNameState(existing.companyName);
             if (existing?.imageUri) setImageUri(existing.imageUri);
         })();
     }, []);
@@ -119,6 +122,7 @@ console.log('Profile update response:', updateRes.data);
         const profile = {
             ...existing,
             name: name.trim(),
+            companyName: companyName.trim(),
             imageUri, // keep local for UI
             isLoggedIn: true,
         };
@@ -126,6 +130,7 @@ console.log('Profile update response:', updateRes.data);
         await saveUserProfile(profile);
 
         dispatch(setUserName(profile.name));
+        dispatch(setCompanyName(profile.companyName));
         dispatch(setUserPhoto(profile.imageUri));
         dispatch(setPremiumStatus(!!profile.isPremium));
         dispatch(hydratePremiumProfile(profile.premiumProfile));
@@ -190,6 +195,15 @@ console.log('Profile update response:', updateRes.data);
                     placeholderTextColor={COLORS.textSecondary}
                     value={name}
                     onChangeText={setName}
+                />
+
+                <Text style={styles.label}>Company Name (optional)</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Your company name"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={companyName}
+                    onChangeText={setCompanyNameState}
                 />
 
                 <Pressable

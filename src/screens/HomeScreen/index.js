@@ -38,6 +38,8 @@ import {
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
 import {
+    getDefaultPhotoFramePosition,
+    getDefaultNameTextPosition,
     getPosterFitLayout,
     getScaledPhotoFrameStyle,
     resolvePhotoFrameRadius,
@@ -565,13 +567,14 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
         }
 
         const size = Math.max(widthPixel(52), posterLayout.width * 0.18);
+        const margin = Math.max(8, Math.round(posterLayout.width * 0.04));
 
         return {
             width: size,
             height: size,
             borderRadius: size / 2,
-            left: posterLayout.offsetX + (posterLayout.width - size) / 2,
-            top: posterLayout.offsetY + (posterLayout.height - size) / 2,
+            left: posterLayout.offsetX + margin,
+            top: posterLayout.offsetY + posterLayout.height - size - margin,
             borderWidth: Math.max(2, size * 0.06),
         };
     }, [posterLayout]);
@@ -725,13 +728,20 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 : 0;
                         const shapeRadius = resolvePhotoFrameRadius(photoShape, templateRadius);
                         const isSvg = isSvgShape(photoShape);
+                        const canvasSize = { width: posterLayout.width, height: posterLayout.height };
+                        const defaultedLayerStyle = getDefaultPhotoFramePosition(layerStyle, canvasSize);
+                        const adjustedLayerStyle = {
+                            ...defaultedLayerStyle,
+                            left: (defaultedLayerStyle?.left ?? layerStyle.left) + posterLayout.offsetX,
+                            top: (defaultedLayerStyle?.top ?? layerStyle.top) + posterLayout.offsetY,
+                        };
                         return userPhoto ? (
                             <Animated.View style={[styles.userPhotoFrame, {
-                                ...layerStyle,
+                                ...adjustedLayerStyle,
                                 borderRadius: shapeRadius,
                                 borderWidth: 0,
                                 borderColor: 'transparent',
-                                backgroundColor: isSvg ? 'transparent' : (layerStyle?.backgroundColor ?? '#FFFFFF'),
+                                backgroundColor: isSvg ? 'transparent' : (adjustedLayerStyle?.backgroundColor ?? '#FFFFFF'),
                             }, {
                                 opacity: photoAnimationStyle.opacity,
                                 transform: photoAnimationStyle.transform,
@@ -749,6 +759,32 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 </ShapeClipView>
                             </Animated.View>
                         ) : null;
+                    }}
+                    renderTextLayer={({ layer, resolvedText, layerStyle: textLayerStyle }) => {
+                        const rawText = layer?.text || '';
+                        const isNameLayer = rawText.includes('{{headline}}') || rawText.includes('{{name}}');
+                        if (!isNameLayer || !resolvedText) return undefined;
+                        const canvasSize = { width: posterLayout.width, height: posterLayout.height };
+                        const defaultPos = getDefaultNameTextPosition({ x: 0, y: 0, fieldWidth: 0 }, canvasSize);
+                        return (
+                            <Text
+                                style={{
+                                    position: 'absolute',
+                                    left: posterLayout.offsetX + Math.round(defaultPos.x),
+                                    top: posterLayout.offsetY + Math.round(defaultPos.y),
+                                    width: Math.round(defaultPos.fieldWidth),
+                                    color: textLayerStyle?.color ?? '#FFFFFF',
+                                    fontSize: textLayerStyle?.fontSize ?? 18,
+                                    fontFamily: textLayerStyle?.fontFamily,
+                                    fontWeight: textLayerStyle?.fontWeight ?? 'bold',
+                                    textAlign: defaultPos.align,
+                                    opacity: textLayerStyle?.opacity ?? 1,
+                                }}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit>
+                                {resolvedText}
+                            </Text>
+                        );
                     }}
                 />
             ) : userPhoto && photoFrameStyle ? (
@@ -793,6 +829,7 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                 const scaleY = posterLayout?.scaleY ?? 1;
                 const offsetX = posterLayout?.offsetX ?? 0;
                 const offsetY = posterLayout?.offsetY ?? 0;
+                const defaultNamePos = getDefaultNameTextPosition({ x: 0, y: 0, fieldWidth: 0 }, { width: posterLayout.width, height: posterLayout.height });
                 return (
                     <>
                         {configTextFields.name && resolvedName ? (
@@ -800,13 +837,14 @@ const TemplatePosterPreview = ({ template, userPhoto, userName, userMessage, sho
                                 pointerEvents="none"
                                 style={{
                                     position: 'absolute',
-                                    left: (configTextFields.name.position?.x ?? 16) * scaleX + offsetX,
-                                    top: (configTextFields.name.position?.y ?? 0) * scaleY + offsetY,
+                                    left: offsetX + (defaultNamePos?.x ?? (configTextFields.name.position?.x ?? 16) * scaleX),
+                                    top: offsetY + (defaultNamePos?.y ?? (configTextFields.name.position?.y ?? 0) * scaleY),
+                                    width: defaultNamePos?.fieldWidth ?? undefined,
                                     color: configTextFields.name.color ?? '#FFFFFF',
                                     fontSize: (configTextFields.name.fontSize ?? 28) * Math.min(scaleX, scaleY),
                                     fontFamily: configTextFields.name.fontFamily,
                                     fontWeight: configTextFields.name.fontWeight ?? (configTextFields.name.bold ? 'bold' : 'normal'),
-                                    textAlign: configTextFields.name.align ?? 'center',
+                                    textAlign: defaultNamePos ? defaultNamePos.align : (configTextFields.name.align ?? 'center'),
                                     opacity: configTextFields.name.visible === false ? 0 : (contentAnimationStyle?.opacity ?? 1),
                                     transform: contentAnimationStyle?.transform || [],
                                 }}

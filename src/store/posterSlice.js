@@ -10,6 +10,7 @@ const initialState = {
     userName: '',
     isLoggedIn: false,
     userMessage: '',
+    companyName: '',
     isPremium: false,
     designLayoutIndex: 0,
     specialCategoryContext: null,
@@ -120,6 +121,9 @@ const posterSlice = createSlice({
             state.messageFontSize = null;
             state.backgroundVideoDuration = null;
             state.dynamicTextFields = {};
+            const pfAnim = payload?.config_json?.photoFrame?.animation ?? payload?.config_json?.photo_frame?.animation;
+            const templateAnimArr = payload?.config_json?.animation || [];
+            state.userPhotoAnimation = pfAnim?.id || templateAnimArr[0]?.id || 'none';
         },
         setUserPhoto(state, { payload }) {
             state.userPhoto = payload;
@@ -127,6 +131,7 @@ const posterSlice = createSlice({
         setUserPhotoAnimation(state, { payload }) { state.userPhotoAnimation = payload || 'none'; },
         setBackgroundVideoDuration(state, { payload }) { state.backgroundVideoDuration = payload || null; },
         setUserName(state, { payload }) { state.userName = payload; },
+        setCompanyName(state, { payload }) { state.companyName = payload ?? ''; },
         setUserMessage(state, { payload }) { state.userMessage = payload; },
         setPremiumStatus(state, { payload }) { state.isPremium = payload; },
         hydratePremiumProfile(state, { payload }) {
@@ -375,7 +380,7 @@ const posterSlice = createSlice({
 });
 
 export const {
-    setSelectedTemplate, setUserPhoto, setUserName, setUserMessage,
+    setSelectedTemplate, setUserPhoto, setUserName, setCompanyName, setUserMessage,
     setUserPhotoAnimation, setBackgroundVideoDuration,
     setPremiumStatus, hydratePremiumProfile, setPremiumProfileField, setPremiumProfileActiveSection,
     setSpecialCategoryContext, setSelectedTags, toggleSelectedTag, cycleDesignLayout, setDesignLayoutIndex,

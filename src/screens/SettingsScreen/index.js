@@ -13,9 +13,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch, useSelector } from 'react-redux';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { setUserName, setUserPhoto, setIsLoggedIn } from '../../store/posterSlice';
+import { setUserName, setCompanyName, setUserPhoto, setIsLoggedIn } from '../../store/posterSlice';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
-import { mergeUserProfile } from '../../utils/userStorage';
+import { getUserProfile, mergeUserProfile } from '../../utils/userStorage';
 import useImagePicker from '../../hooks/useImagePicker';
 import { removeFcmToken } from '../../services/fcmService';
 import { logout } from '../../apiService/authApi';
@@ -35,16 +35,36 @@ const SettingsScreen = ({ navigation }) => {
     const dispatch = useDispatch();
     const userName = useSelector(state => state.poster.userName);
     const userPhoto = useSelector(state => state.poster.userPhoto);
+    const companyName = useSelector(state => state.poster.companyName);
     const { pickImage, loading: isPickingProfileImage } = useImagePicker();
 
     const [settingsName, setSettingsName] = useState(userName || '');
+    const [settingsCompanyName, setSettingsCompanyName] = useState(companyName || '');
     const [settingsPhoto, setSettingsPhoto] = useState(userPhoto || '');
     const [isEditingSettingsProfile, setEditingSettingsProfile] = useState(false);
 
     useEffect(() => {
+        (async () => {
+            if (!userName || !companyName) {
+                const stored = await getUserProfile();
+                if (!userName && stored?.name) {
+                    setSettingsName(stored.name);
+                    dispatch(setUserName(stored.name));
+                }
+                if (!companyName && stored?.companyName) {
+                    setSettingsCompanyName(stored.companyName);
+                    dispatch(setCompanyName(stored.companyName));
+                }
+                if (!userPhoto && stored?.imageUri) {
+                    setSettingsPhoto(stored.imageUri);
+                    dispatch(setUserPhoto(stored.imageUri));
+                }
+            }
+        })();
         setSettingsName(userName || '');
+        setSettingsCompanyName(companyName || '');
         setSettingsPhoto(userPhoto || '');
-    }, [userName, userPhoto]);
+    }, [userName, companyName, userPhoto, dispatch]);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -109,13 +129,15 @@ const SettingsScreen = ({ navigation }) => {
 
         const profile = await mergeUserProfile({
             name: nextName,
+            companyName: settingsCompanyName.trim(),
             imageUri: settingsPhoto,
         });
         dispatch(setUserName(profile.name));
+        dispatch(setCompanyName(profile.companyName));
         dispatch(setUserPhoto(profile.imageUri));
         setEditingSettingsProfile(false);
         Alert.alert('Profile', 'Profile updated on this device.');
-    }, [dispatch, settingsName, settingsPhoto]);
+    }, [dispatch, settingsName, settingsCompanyName, settingsPhoto]);
 
     return (
         <View style={styles.settingsScreen}>
@@ -165,6 +187,23 @@ const SettingsScreen = ({ navigation }) => {
                         {isEditingSettingsProfile ? 'Save' : 'Edit'}
                     </Text>
                 </Pressable>
+            </View>
+
+            <View style={styles.settingsCompanySection}>
+                <Text style={styles.settingsCompanyLabel}>Company Name (optional)</Text>
+                {isEditingSettingsProfile ? (
+                    <TextInput
+                        style={styles.settingsCompanyInput}
+                        value={settingsCompanyName}
+                        onChangeText={setSettingsCompanyName}
+                        placeholder="Your company name"
+                        placeholderTextColor="#9A9A9A"
+                    />
+                ) : (
+                    <Text style={styles.settingsCompanyValue}>
+                        {settingsCompanyName || 'Not set'}
+                    </Text>
+                )}
             </View>
 
             <ScrollView contentContainerStyle={styles.settingsList} showsVerticalScrollIndicator={false}>
@@ -331,6 +370,37 @@ const styles = StyleSheet.create({
         fontSize: widthPixel(16),
         fontFamily: fonts.FONT_FAMILY.Regular,
         color: '#222222',
+    },
+    settingsCompanySection: {
+        marginHorizontal: widthPixel(28),
+        marginTop: heightPixel(12),
+        marginBottom: heightPixel(4),
+        paddingVertical: heightPixel(10),
+        paddingHorizontal: widthPixel(14),
+        borderRadius: widthPixel(10),
+        backgroundColor: '#F8F8FF',
+        borderWidth: widthPixel(1),
+        borderColor: '#E8E6F2',
+    },
+    settingsCompanyLabel: {
+        fontSize: widthPixel(12),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#8C8C8C',
+        marginBottom: heightPixel(4),
+    },
+    settingsCompanyInput: {
+        height: heightPixel(36),
+        borderBottomWidth: widthPixel(1),
+        borderBottomColor: '#59489B',
+        paddingVertical: 0,
+        fontSize: widthPixel(15),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#1B1B1B',
+    },
+    settingsCompanyValue: {
+        fontSize: widthPixel(15),
+        fontFamily: fonts.FONT_FAMILY.Medium,
+        color: '#1B1B1B',
     },
     settingsVersion: {
         position: 'absolute',
