@@ -5,14 +5,16 @@
 //   Style  — photo frame shape, accent colour, background overlay
 //   Stickers — tap to add sticker, drag to reposition, tap to delete
 
-import React, { useCallback, useEffect, useMemo, useState, memo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
     Alert,
+    Animated,
     Dimensions,
     Image,
     Keyboard,
     KeyboardAvoidingView,
     Modal,
+    PanResponder,
     Platform,
     Pressable,
     ScrollView,
@@ -21,6 +23,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
@@ -362,6 +365,7 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
     const textFields = p.selectedTemplate?.config_json?.textFields
         ?? p.selectedTemplate?.config?.textFields
         ?? {};
+    const legacyTextFields = p.selectedTemplate?.textFields;
 
     const handlePremiumAction = action => {
         if (locked) {
@@ -496,7 +500,8 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
     };
 
     const renderNameSection = () => {
-        const nameField = textFields?.name;
+        const nameField = textFields?.name
+            ?? (Array.isArray(legacyTextFields) ? legacyTextFields.find(f => f?.key === 'name') : null);
         if (!nameField) return null;
         return renderTextInputSection('name', nameField, {
             value: userNameInput,
@@ -506,7 +511,8 @@ const TextTab = memo(({ p, dispatch, onSave, onUnlockPremium, setUserNameInput, 
     };
 
     const renderMessageSection = () => {
-        const messageField = textFields?.message;
+        const messageField = textFields?.message
+            ?? (Array.isArray(legacyTextFields) ? legacyTextFields.find(f => f?.key === 'message') : null);
         if (!messageField) return null;
         return renderTextInputSection('message', messageField, {
             value: userMessageInput,
@@ -955,9 +961,26 @@ const EditorScreen = ({ navigation, route }) => {
     const [userNameInput, setUserNameInput] = useState(p.userName || '');
     const [userMessageInput, setUserMessageInput] = useState(p.userMessage || '');
     const [pendingCropUri, setPendingCropUri] = useState(null);
-    const [cropResizeMode, setCropResizeMode] = useState('cover');
+    const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+    const cropRef = useRef(null);
+    const cropPan = useRef(new Animated.ValueXY()).current;
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
     const [isDragMode, setIsDragMode] = useState(false);
+
+    const cropPanResponder = useMemo(() => PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+            cropPan.setOffset({ x: cropPan.x.__getValue(), y: cropPan.y.__getValue() });
+            cropPan.setValue({ x: 0, y: 0 });
+        },
+        onPanResponderMove: (_, gesture) => {
+            cropPan.setValue({ x: gesture.dx, y: gesture.dy });
+        },
+        onPanResponderRelease: () => {
+            cropPan.flattenOffset();
+        },
+    }), []);
 
     useEffect(() => {
         dispatch(resetTextFields());
@@ -1109,26 +1132,30 @@ const EditorScreen = ({ navigation, route }) => {
         const result = await pickImage({ autoStoreInProfilePhoto: false });
         if (!result?.uri) return null;
 
-        if ((result.width != null && result.width !== 300) || (result.height != null && result.height !== 300)) {
-            Alert.alert(
-                t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
-                t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
-            );
-            return null;
-        }
-
-        setCropResizeMode('cover');
+        cropPan.setValue({ x: 0, y: 0 });
+        setCropOffset({ x: 0, y: 0 });
         setPendingCropUri(result.uri);
         return result.uri;
-    }, [pickImage, t]);
+    }, [pickImage]);
 
     const commitPickedProfileImage = useCallback(async () => {
         if (!pendingCropUri) return;
-        dispatch(setUserPhoto(pendingCropUri));
-        await mergeUserProfile({ imageUri: pendingCropUri, imageFit: cropResizeMode });
-        dispatch(setPhotoPosition({ x: 0, y: 0 }));
+        try {
+            const croppedUri = await captureRef(cropRef, {
+                format: 'png',
+                quality: 1,
+                width: 300,
+                height: 300,
+            });
+            dispatch(setUserPhoto(croppedUri));
+            await mergeUserProfile({ imageUri: croppedUri, imageFit: 'cover' });
+            dispatch(setPhotoPosition({ x: 0, y: 0 }));
+        } catch (e) {
+            console.warn('Crop capture failed:', e);
+        }
         setPendingCropUri(null);
-    }, [cropResizeMode, dispatch, pendingCropUri]);
+        cropPan.setValue({ x: 0, y: 0 });
+    }, [dispatch, pendingCropUri]);
 
     const handlePreview = useCallback(() => {
         if (!p.userPhoto) {
@@ -1374,34 +1401,32 @@ const EditorScreen = ({ navigation, route }) => {
                 visible={!!pendingCropUri}
                 transparent
                 animationType="fade"
-                onRequestClose={() => setPendingCropUri(null)}>
+                onRequestClose={() => { setPendingCropUri(null); cropPan.setValue({ x: 0, y: 0 }); }}>
                 <View style={s.cropOverlay}>
                     <View style={s.cropCard}>
                         <Text style={s.cropTitle}>{t('editor.crop.title')}</Text>
                         <Text style={s.cropSub}>{t('editor.crop.subtitle')}</Text>
-                        <View style={s.cropPreviewBox}>
-                            {pendingCropUri ? (
-                                <Image
+                        {pendingCropUri ? (
+                            <View style={s.cropStage} ref={cropRef} collapsable={false}>
+                                <Animated.Image
                                     source={{ uri: pendingCropUri }}
-                                    style={s.cropPreviewImage}
-                                    resizeMode={cropResizeMode}
+                                    style={[s.cropImage, { transform: [{ translateX: cropPan.x }, { translateY: cropPan.y }] }]}
+                                    resizeMode="cover"
+                                    {...cropPanResponder.panHandlers}
                                 />
-                            ) : null}
-                        </View>
-                        <View style={s.optionChipRow}>
-                            {['cover', 'contain', 'stretch'].map(mode => (
-                                <OptionChip
-                                    key={mode}
-                                    label={t(`editor.crop.${mode}`)}
-                                    active={cropResizeMode === mode}
-                                    onPress={() => setCropResizeMode(mode)}
-                                />
-                            ))}
-                        </View>
+                                <View style={s.cropFrame} pointerEvents="none">
+                                    <View style={s.cropCornerTL} />
+                                    <View style={s.cropCornerTR} />
+                                    <View style={s.cropCornerBL} />
+                                    <View style={s.cropCornerBR} />
+                                </View>
+                            </View>
+                        ) : null}
+                        <Text style={s.cropHint}>{t('editor.crop.dragHint', { defaultValue: 'Drag to reposition' })}</Text>
                         <View style={s.cropActions}>
                             <AppButton
                                 title={t('common.cancel')}
-                                onPress={() => setPendingCropUri(null)}
+                                onPress={() => { setPendingCropUri(null); cropPan.setValue({ x: 0, y: 0 }); }}
                                 variant="outline"
                                 size="md"
                                 style={s.cropActionBtn}
@@ -2150,18 +2175,53 @@ const s = StyleSheet.create({
         color: EDITOR_COLORS.textMuted,
         textAlign: 'center',
     },
-    cropPreviewBox: {
-        height: 280,
+    cropStage: {
+        width: 300,
+        height: 300,
+        alignSelf: 'center',
         borderRadius: BORDER_RADIUS.lg,
         overflow: 'hidden',
         backgroundColor: EDITOR_COLORS.card,
         borderWidth: 1,
         borderColor: EDITOR_COLORS.border,
-        marginBottom: SPACING.md,
+        marginBottom: SPACING.sm,
     },
-    cropPreviewImage: {
+    cropImage: {
         width: '100%',
         height: '100%',
+    },
+    cropFrame: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    cropCornerTL: {
+        position: 'absolute', top: 8, left: 8,
+        width: 20, height: 20,
+        borderTopWidth: 3, borderLeftWidth: 3,
+        borderColor: '#FFFFFF',
+    },
+    cropCornerTR: {
+        position: 'absolute', top: 8, right: 8,
+        width: 20, height: 20,
+        borderTopWidth: 3, borderRightWidth: 3,
+        borderColor: '#FFFFFF',
+    },
+    cropCornerBL: {
+        position: 'absolute', bottom: 8, left: 8,
+        width: 20, height: 20,
+        borderBottomWidth: 3, borderLeftWidth: 3,
+        borderColor: '#FFFFFF',
+    },
+    cropCornerBR: {
+        position: 'absolute', bottom: 8, right: 8,
+        width: 20, height: 20,
+        borderBottomWidth: 3, borderRightWidth: 3,
+        borderColor: '#FFFFFF',
+    },
+    cropHint: {
+        textAlign: 'center',
+        fontSize: FONTS.sizes.sm,
+        color: EDITOR_COLORS.textMuted,
+        marginBottom: SPACING.sm,
     },
     cropActions: {
         flexDirection: 'row',

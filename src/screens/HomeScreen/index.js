@@ -1311,29 +1311,14 @@ const HomeScreen = ({ navigation }) => {
         const bgResult = await pickImage({ autoStoreInProfilePhoto: false });
         if (!bgResult?.uri) return;
 
-        if ((bgResult.width != null && bgResult.width !== 300) || (bgResult.height != null && bgResult.height !== 300)) {
-            Alert.alert(
-                t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
-                t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
-            );
-            return;
-        }
-
         const backgroundUri = bgResult.uri;
-        const imgWidth = 300;
-        const imgHeight = 300;
+        const imgWidth = bgResult.width ?? 300;
+        const imgHeight = bgResult.height ?? 300;
 
         let nextUserPhoto = userPhoto;
         if (!nextUserPhoto) {
             const userResult = await pickImage({ autoStoreInProfilePhoto: false });
             if (userResult?.uri) {
-                if ((userResult.width != null && userResult.width !== 300) || (userResult.height != null && userResult.height !== 300)) {
-                    Alert.alert(
-                        t('editor.dimensionError.title', { defaultValue: 'Unsupported Dimensions' }),
-                        t('editor.dimensionError.message', { defaultValue: 'Only 300 \u00d7 300 images are supported. Please select a 300 \u00d7 300 image.' }),
-                    );
-                    return;
-                }
                 nextUserPhoto = userResult.uri;
                 dispatch(setUserPhoto(userResult.uri));
             }

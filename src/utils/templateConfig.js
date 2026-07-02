@@ -1,6 +1,7 @@
 import { POSTER_SIZE } from './constants';
 import { PHOTO_ANIMATION_DEFAULTS } from './photoAnimationOptions';
 import { getDefaultPhotoFramePosition, getDefaultNameTextPosition } from './photoFrameLayout';
+import { isSvgShape } from './shapes';
 
 const PLACEHOLDER_PATTERN = /^{{\s*([^}]+)\s*}}$/;
 const VIDEO_SOURCE_PATTERN = /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i;
@@ -523,7 +524,13 @@ export const buildTemplateRenderConfig = ({
             y: Math.max(0, adjustedY),
             width: adjustedWidth,
             height: adjustedHeight,
-            shape: posterState.photoShape === 'template' ? photoFrameData.shape : posterState.photoShape,
+            shape: posterState.photoShape === 'template'
+                ? (isSvgShape(photoFrameData.shape)
+                    ? photoFrameData.shape
+                    : (photoFrameData.borderRadius >= Math.min(photoFrameData.width, photoFrameData.height) / 2
+                        ? 'circle'
+                        : 'square'))
+                : posterState.photoShape,
             borderColor: photoFrameData.borderColor,
             borderWidth: photoFrameData.borderWidth,
             animation: photoFrameAnimation,
