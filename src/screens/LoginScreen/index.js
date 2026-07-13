@@ -10,9 +10,11 @@ import {
     StatusBar,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
 import fonts, { widthPixel, heightPixel } from '../../utils/fonts';
 import Toast from '../../components/Toast';
 import { requestOtp } from '../../apiService/authApi';
+import { setSessionExpiredMessage } from '../../store/posterSlice';
 
 const COLORS = {
     pageBackground: '#F3F2FF',
@@ -29,6 +31,8 @@ const COLORS = {
 
 const LoginScreen = ({ navigation }) => {
     const { t } = useTranslation();
+    const dispatch = useDispatch();
+    const sessionExpiredMessage = useSelector(state => state.poster.sessionExpiredMessage);
     const [phone, setPhone] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
@@ -41,6 +45,13 @@ const LoginScreen = ({ navigation }) => {
             setToast(prev => ({ ...prev, visible: false }));
         }, 1800);
     };
+
+    useEffect(() => {
+        if (sessionExpiredMessage) {
+            showToast(sessionExpiredMessage, 'error');
+            dispatch(setSessionExpiredMessage(null));
+        }
+    }, [sessionExpiredMessage, dispatch]);
 
     useEffect(() => {
         return () => {

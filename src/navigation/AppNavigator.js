@@ -28,7 +28,7 @@ import { getStoredLanguage } from '../i18n/storage';
 import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 
 import { getUserProfile } from '../utils/userStorage';
-import { setUserName, setCompanyName, setUserPhoto, setIsLoggedIn } from '../store/posterSlice';
+import { setUserName, setCompanyName, setUserPhoto, setIsLoggedIn, setSessionExpiredMessage } from '../store/posterSlice';
 import { setSessionExpiredCallback } from '../apiService/apiService';
 
 const Stack = createStackNavigator();
@@ -78,8 +78,11 @@ const AppNavigator = () => {
         let mounted = true;
 
         // Register session expiry callback to switch to auth stack
-        setSessionExpiredCallback(() => {
-            if (mounted) dispatch(setIsLoggedIn(false));
+        setSessionExpiredCallback((message) => {
+            if (mounted) {
+                dispatch(setSessionExpiredMessage(message || null));
+                dispatch(setIsLoggedIn(false));
+            }
         });
 
         const initApp = async () => {

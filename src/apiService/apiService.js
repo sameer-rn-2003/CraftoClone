@@ -93,7 +93,8 @@ API.interceptors.response.use(
           console.warn('Failed to clear tokens:', storageErr);
         }
 
-        sessionExpiredCb?.();
+        const message = err?.response?.data?.message || null;
+        sessionExpiredCb?.(message);
 
         return Promise.reject(err);
       } finally {

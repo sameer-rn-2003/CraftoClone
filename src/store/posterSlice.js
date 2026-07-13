@@ -92,6 +92,9 @@ const initialState = {
     // ── Dynamic text fields (for template-driven fields beyond name/message) ──
     dynamicTextFields: {},  // { [key]: { value: '', fontSize: null, color: null, bold: false, italic: false, position: { x: 0, y: 0 }, scale: 1 } }
 
+    // ── Session ──────────────────────────────────────────────
+    sessionExpiredMessage: null,
+
     // ── Home ─────────────────────────────────────────────────
     activeCategory: 'political',
     // Notifications
@@ -360,6 +363,7 @@ const posterSlice = createSlice({
         resetDynamicTextFields(state) {
             state.dynamicTextFields = {};
         },
+        setSessionExpiredMessage(state, { payload }) { state.sessionExpiredMessage = payload; },
         setUnreadNotificationCount(state, { payload }) { state.unreadNotificationCount = Number(payload) || 0; },
         setActiveCategory(state, { payload }) { state.activeCategory = payload; },
         setTextFieldPosition: (state, action) => {
@@ -397,7 +401,8 @@ export const {
     addSavedPoster, resetEditor, setActiveCategory,setIsLoggedIn,
     setUnreadNotificationCount,
     setDynamicTextField, setDynamicTextFields, resetDynamicTextFields,
-    setTextFieldPosition, setActiveTextField, resetTextFields, resetTextFieldPosition
+    setTextFieldPosition, setActiveTextField, resetTextFields, resetTextFieldPosition,
+    setSessionExpiredMessage
 } = posterSlice.actions;
 
 export default posterSlice.reducer;
